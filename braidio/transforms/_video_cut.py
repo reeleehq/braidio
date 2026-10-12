@@ -343,10 +343,11 @@ def path_on_canvas(stored: dict, *, image_size, canvas_size) -> dict:
       the size whose blurred-fill share equals the share the author's own
       window had (:func:`_widest_side`) — none, for a window that was all
       picture; all it showed, for a whole-canvas start.
-    - **The move survives.** Where that trims a keyframe, every keyframe is
-      scaled by the same factor, so the author's zoom ratios — what makes a
-      push a push — are kept, rather than capping two keyframes to the same
-      window and freezing the camera.
+    - **The move survives, the landing is not cropped.** Each keyframe is
+      trimmed only as far as its own bound needs; only where that would lose
+      more than half the author's zoom range (two keyframes capped to one
+      window freeze the camera) do the trims spread, just enough to keep
+      that much of the move (:func:`_move_preserving_sides`).
 
     The result keeps the authored ``output_aspect``: burns' ``"refit"`` then
     rebuilds each window at the new aspect from the centre and zoom chosen
@@ -355,22 +356,30 @@ def path_on_canvas(stored: dict, *, image_size, canvas_size) -> dict:
     A 3x push on the middle of a square still, authored landscape, re-cut
     vertical. The author's end window showed the middle 59% of the still
     across, all of it picture; 59% across at 9:16 would be taller than the
-    still, so the end is trimmed to the still's height (56% across) and the
-    whole-canvas start by the same factor, keeping the 3x:
+    still, so the end is trimmed to the still's height (56% across); the
+    whole-canvas start showed as much fill as the vertical whole canvas does,
+    so it keeps it, and the push is 1.78x — over half the 3x, in log zoom:
 
     >>> landscape = {"keyframes": [{"t": 0.0, "rect": {"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0}},
     ...     {"t": 1.0, "rect": {"x": 1 / 3, "y": 1 / 3, "w": 1 / 3, "h": 1 / 3}}],
     ...     "output_aspect": 16 / 9}
     >>> out = path_on_canvas(landscape, image_size=(100, 100), canvas_size=(90, 160))
     >>> [[round(v, 4) for v in kf["rect"].values()] for kf in out["keyframes"]]
-    [[0.0254, 0.0254, 0.9492, 0.9492], [0.2188, 0.2188, 0.5625, 0.5625]]
+    [[0.0, 0.0, 1.0, 1.0], [0.2188, 0.2188, 0.5625, 0.5625]]
     """
-    old_canvas = (float(stored["output_aspect"]), 1.0)
+    authored = _authored_aspect(stored)
+    if authored is None or not stored.get("keyframes"):
+        raise ValueError(
+            "path_on_canvas: needs a path with keyframes and an output_aspect"
+        )
+    old_canvas = (authored, 1.0)
     bx, by, bw, bh = focus_on_canvas(
         _WHOLE_STILL, image_size=image_size, canvas_size=canvas_size
     )
 
     def aim(rect: dict):
+        if not (rect["w"] > 0 and rect["h"] > 0):
+            raise ValueError(f"path_on_canvas: a keyframe rect has no area: {rect}")
         on_still = focus_on_still(
             (rect["x"], rect["y"], rect["w"], rect["h"]),
             image_size=image_size,
@@ -385,19 +394,66 @@ def path_on_canvas(stored: dict, *, image_size, canvas_size) -> dict:
         return (x + w / 2.0, y + h / 2.0), side, widest
 
     aimed = [aim(kf["rect"]) for kf in stored["keyframes"]]
-    scale = min(1.0, *(widest / side for _, side, widest in aimed if side > 0))
+    sides = _move_preserving_sides(
+        [side for _, side, _ in aimed], [widest for _, _, widest in aimed]
+    )
 
     def window(centre, side) -> dict:
-        side *= scale
         cx = _slide_into(centre[0], side, bx, bx + bw)
         cy = _slide_into(centre[1], side, by, by + bh)
         return {"x": cx - side / 2.0, "y": cy - side / 2.0, "w": side, "h": side}
 
     keyframes = [
         {**kf, "rect": window(centre, side)}
-        for kf, (centre, side, _) in zip(stored["keyframes"], aimed)
+        for kf, (centre, _, _), side in zip(stored["keyframes"], aimed, sides)
     ]
     return {**stored, "keyframes": keyframes}
+
+
+#: The least share of the author's zoom range (in log zoom) a refit keeps.
+#: Fitting each keyframe alone can freeze a push whose ends both outgrow the
+#: picture; scaling all of them alike crops a landing frame that needed no
+#: trim. The refit fits each alone, and gives up just enough of a landing's
+#: own fit to keep this much of the move.
+_MIN_MOVE_KEPT = 0.5
+#: Bisection steps for the blend that keeps :data:`_MIN_MOVE_KEPT`.
+_MOVE_BLEND_STEPS = 40
+
+
+def _move_preserving_sides(sides, widest) -> list[float]:
+    """Window sides within each keyframe's fill bound that keep the move.
+
+    Each keyframe on its own is ``min(side, widest)``: the author's window, or
+    the largest it may be without showing more fill than the author saw. If
+    that keeps at least :data:`_MIN_MOVE_KEPT` of the author's zoom range, it
+    is the answer — a landing that fits is never trimmed. Otherwise the sides
+    blend (geometrically, so continuously) toward one common scale of the
+    author's sides, which keeps every ratio, by just enough to keep that much.
+
+    >>> _move_preserving_sides([1.0, 0.5], [2.0, 2.0])  # fits: untouched
+    [1.0, 0.5]
+    >>> [round(s, 3) for s in _move_preserving_sides([1.0, 0.4], [0.3, 0.3])]
+    [0.3, 0.19]
+    """
+    own = [min(s, w) for s, w in zip(sides, widest)]
+    scale = min(1.0, *(w / s for s, w in zip(sides, widest)))
+    common = [scale * s for s in sides]
+
+    def log_range(xs) -> float:
+        return math.log(max(xs) / min(xs))
+
+    need = _MIN_MOVE_KEPT * log_range(sides)
+    if log_range(own) >= need:
+        return own
+
+    def blend(alpha: float) -> list[float]:
+        return [o ** (1 - alpha) * c**alpha for o, c in zip(own, common)]
+
+    lo, hi = 0.0, 1.0
+    for _ in range(_MOVE_BLEND_STEPS):
+        mid = (lo + hi) / 2.0
+        lo, hi = (lo, mid) if log_range(blend(mid)) >= need else (mid, hi)
+    return blend(hi)
 
 
 def _authored_aspect(stored):

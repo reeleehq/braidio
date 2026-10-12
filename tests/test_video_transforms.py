@@ -1309,9 +1309,37 @@ def test_a_push_re_cut_vertical_still_pushes(tmp_path):
     growth_was = subject_share(old, authored[1]) / subject_share(old, authored[0])
     (_, start), (_, end) = path.keyframes
     growth = subject_share(new, end) / subject_share(new, start)
-    assert growth == pytest.approx(growth_was, rel=0.15)
+    # both ends outgrow the picture, so the push keeps at least half its
+    # range in log zoom (_MIN_MOVE_KEPT) rather than freezing; area grows as
+    # zoom squared, so that is growth >= growth_was ** 0.5
+    assert growth >= growth_was**0.5 * 0.9
     for rect in (start, end):
         assert _frame_census(new, rect)[1] <= 0.02
+
+
+def test_a_wide_start_does_not_crop_a_landing_that_fits(tmp_path):
+    """Review round 2 of #96: one common scale for every keyframe let a wide
+    start (trimmed to the picture) shrink a tight landing that fit on its own
+    to a third of its width. The landing must keep the whole detail."""
+    pytest.importorskip("burns")
+    from braidio.transforms import path_for_panel
+    from braidio.video import prepare_still
+
+    still_size = (640, 360)
+    detail = (307, 173, 333, 187)  # inside the author's (0.48, 0.48, 0.04) end
+    still = _subject_still(tmp_path / "s.png", still_size, subject=detail)
+    new = prepare_still(still, tmp_path / "new.jpg", size=(360, 640))
+    keyframes = [
+        {"t": 0.0, "rect": {"x": 0.0, "y": 0.05, "w": 0.9, "h": 0.9}},
+        {"t": 1.0, "rect": {"x": 0.47, "y": 0.47, "w": 0.06, "h": 0.06}},
+    ]
+    stored = {"version": 1, "keyframes": keyframes, "output_aspect": 16 / 9}
+    body = {"move": "hold", "zoom": 1.0, "seed": 0, "path": stored}
+    path = path_for_panel(body, image=str(new), aspect=9 / 16, image_size=still_size)
+    whole = _frame_census(new, path.keyframes[0][1].__class__(0, 0, 1, 1))[0]
+    red, fill = _frame_census(new, path.keyframes[-1][1])
+    assert red >= 0.95 * whole and fill <= 0.02
+    assert path.keyframes[-1][1].zoom > 2 * path.keyframes[0][1].zoom  # a push
 
 
 def _image_size(path):
@@ -1338,6 +1366,22 @@ def test_a_window_barely_on_the_still_is_not_blown_up_into_a_zoom():
             "keyframes"
         ]
         assert kf["rect"]["w"] >= 0.219 / 0.5625 - 1e-9  # the same still width
+
+
+def test_path_on_canvas_refuses_what_it_cannot_aim():
+    """Review round 2 of #96: called directly (it is exported), a nan aspect,
+    no keyframes or a zero-area rect is a ValueError naming the problem, not
+    a TypeError from deep inside."""
+    from braidio.transforms import path_on_canvas
+
+    rect = {"x": 0.1, "y": 0.1, "w": 0.5, "h": 0.5}
+    for stored in (
+        {"keyframes": [{"t": 0, "rect": rect}], "output_aspect": "nan"},
+        {"keyframes": [], "output_aspect": 16 / 9},
+        {"keyframes": [{"t": 0, "rect": {**rect, "w": 0}}], "output_aspect": 16 / 9},
+    ):
+        with pytest.raises(ValueError):
+            path_on_canvas(stored, image_size=(200, 200), canvas_size=(180, 320))
 
 
 @pytest.mark.parametrize("bad", [0, -1.0, float("inf"), float("nan"), "nan", "16/9"])

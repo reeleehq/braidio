@@ -30,20 +30,20 @@
   </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
-<link href="../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d75fae25" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/epythet.css?v=47c21ad2" />
   
   <!-- So that users can add custom icons -->
-  <script defer src="../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
-<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=152b4b09"></script>
+    <script src="../_static/documentation_options.js?v=22d3c163"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -55,8 +55,9 @@
     <link rel="next" title="braidio.textprep" href="braidio.textprep.html" />
     <link rel="prev" title="braidio.structure" href="braidio.structure.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.65" />
+  <meta name="docsearch:version" content="0.0.66" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -466,7 +467,7 @@ X that does Z”) isn’t reliably regex-detectable and is intentionally omitted
 <dl class="py class">
 <dt class="sig sig-object py" id="braidio.style.Finding">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">braidio.style.</span></span><span class="sig-name descname"><span class="pre">Finding</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pattern</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">match</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/style.html#Finding"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.style.Finding" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>One flagged platitude.</p>
 <dl class="field-list simple">
 </dl>
@@ -474,7 +475,7 @@ X that does Z”) isn’t reliably regex-detectable and is intentionally omitted
 
 <dl class="py data">
 <dt class="sig sig-object py" id="braidio.style.PLATITUDE_PATTERNS">
-<span class="sig-prename descclassname"><span class="pre">braidio.style.</span></span><span class="sig-name descname"><span class="pre">PLATITUDE_PATTERNS</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/re.html#re.Pattern" title="(in Python v3.14)"><span class="pre">Pattern</span></a><span class="p"><span class="pre">]</span></span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'director-cue':</span> <span class="pre">re.compile('\\b(?:listen</span> <span class="pre">to|notice|watch|catch)\\s+(?:how|what|the)\\b',</span> <span class="pre">re.IGNORECASE),</span> <span class="pre">'heres-the':</span> <span class="pre">re.compile(&quot;\\bhere'?s</span> <span class="pre">the\\b&quot;,</span> <span class="pre">re.IGNORECASE),</span> <span class="pre">'machinery-naming':</span> <span class="pre">re.compile('\\bthe</span> <span class="pre">(?:turn|tell|button|trick|move|thesis)\\b',</span> <span class="pre">re.IGNORECASE),</span> <span class="pre">'negation-just':</span> <span class="pre">re.compile(&quot;\\bisn'?t</span> <span class="pre">just\\b&quot;,</span> <span class="pre">re.IGNORECASE),</span> <span class="pre">'reduction':</span> <span class="pre">re.compile(&quot;\\b(?:that'?s</span> <span class="pre">the</span> <span class="pre">whole|the</span> <span class="pre">whole</span> <span class="pre">\\w+</span> <span class="pre">in|in</span> <span class="pre">(?:two|three|four|five|six|seven|eight|nine|ten|\\d+)</span> <span class="pre">words)\\b&quot;,</span> <span class="pre">re.IGNORECASE)}</span></span><a class="headerlink" href="#braidio.style.PLATITUDE_PATTERNS" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">braidio.style.</span></span><span class="sig-name descname"><span class="pre">PLATITUDE_PATTERNS</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/re.html#re.Pattern" title="(in Python v3.15)"><span class="pre">Pattern</span></a><span class="p"><span class="pre">]</span></span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'director-cue':</span> <span class="pre">re.compile('\\b(?:listen</span> <span class="pre">to|notice|watch|catch)\\s+(?:how|what|the)\\b',</span> <span class="pre">re.IGNORECASE),</span> <span class="pre">'heres-the':</span> <span class="pre">re.compile(&quot;\\bhere'?s</span> <span class="pre">the\\b&quot;,</span> <span class="pre">re.IGNORECASE),</span> <span class="pre">'machinery-naming':</span> <span class="pre">re.compile('\\bthe</span> <span class="pre">(?:turn|tell|button|trick|move|thesis)\\b',</span> <span class="pre">re.IGNORECASE),</span> <span class="pre">'negation-just':</span> <span class="pre">re.compile(&quot;\\bisn'?t</span> <span class="pre">just\\b&quot;,</span> <span class="pre">re.IGNORECASE),</span> <span class="pre">'reduction':</span> <span class="pre">re.compile(&quot;\\b(?:that'?s</span> <span class="pre">the</span> <span class="pre">whole|the</span> <span class="pre">whole</span> <span class="pre">\\w+</span> <span class="pre">in|in</span> <span class="pre">(?:two|three|four|five|six|seven|eight|nine|ten|\\d+)</span> <span class="pre">words)\\b&quot;,</span> <span class="pre">re.IGNORECASE)}</span></span><a class="headerlink" href="#braidio.style.PLATITUDE_PATTERNS" title="Link to this definition">#</a></dt>
 <dd><p>name → compiled pattern for the detectable overused moves.</p>
 </dd></dl>
 
@@ -495,7 +496,7 @@ table above plus the “kitsch” complaint on a real episode.</p>
 <code class="docutils literal notranslate"><span class="pre">eleven_multilingual_v2</span></code> the tags are inert text and this number is a lie.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span></p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -506,7 +507,7 @@ table above plus the “kitsch” complaint on a real episode.</p>
 <dd><p>Every inline <code class="docutils literal notranslate"><span class="pre">[audio</span> <span class="pre">tag]</span></code> in <code class="docutils literal notranslate"><span class="pre">text</span></code>, in order.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span></p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -520,7 +521,7 @@ gate <a class="reference internal" href="#braidio.style.audit_platitudes" title=
 this catches a script that will be read flatly however good the words are.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span></p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -531,7 +532,7 @@ this catches a script that will be read flatly however good the words are.</p>
 <dd><p>Return every <a class="reference internal" href="#braidio.style.Finding" title="braidio.style.Finding"><code class="xref py py-class docutils literal notranslate"><span class="pre">Finding</span></code></a> in <code class="docutils literal notranslate"><span class="pre">text</span></code>, in document order.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference internal" href="#braidio.style.Finding" title="braidio.style.Finding"><code class="xref py py-class docutils literal notranslate"><span class="pre">Finding</span></code></a>]</span></p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference internal" href="#braidio.style.Finding" title="braidio.style.Finding"><code class="xref py py-class docutils literal notranslate"><span class="pre">Finding</span></code></a>]</span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -542,7 +543,7 @@ this catches a script that will be read flatly however good the words are.</p>
 <dd><p>Flagged hits per <code class="docutils literal notranslate"><span class="pre">per</span></code> words (default 1000). 0.0 for empty text.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span></p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -629,8 +630,8 @@ this catches a script that will be read flatly however good the words are.</p>
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
-<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
 <div class="bd-footer__inner bd-page-width">
@@ -642,7 +643,7 @@ this catches a script that will be read flatly however good the words are.</p>
         <div class="footer-item">
 <p class="theme-version">
   <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
-  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
 </p></div>
       
     </div>

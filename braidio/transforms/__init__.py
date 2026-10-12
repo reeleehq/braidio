@@ -63,6 +63,7 @@ from braidio.transforms._video_cut import (
     panel_footage,
     panel_path,
     path_for_panel,
+    path_on_canvas,
     resolve_move,
 )
 
@@ -95,6 +96,7 @@ __all__ = [
     "panel_footage",
     "panel_path",
     "path_for_panel",
+    "path_on_canvas",
     "resolve_move",
     "VOICE_ASSIGNMENT_TRANSFORM",
     "NARRATION_RENDER_TRANSFORM",

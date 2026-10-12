@@ -1368,6 +1368,76 @@ def test_a_window_barely_on_the_still_is_not_blown_up_into_a_zoom():
         assert kf["rect"]["w"] >= 0.219 / 0.5625 - 1e-9  # the same still width
 
 
+def test_a_refit_keeps_every_move_in_its_direction_and_the_fill_bound():
+    """Review round 3 of #96: fitting each keyframe alone turned some pushes
+    into pull-outs (a big all-picture keyframe capped below a smaller one that
+    showed fill). Over a seeded sweep of 2-3 keyframe paths, still shapes and
+    delivery aspects: every segment keeps at least half its log-zoom change in
+    the author's direction, a held zoom stays held, and no keyframe shows more
+    of the blurred fill than the author's did. The move is measured on the
+    picture: the author's window capped to the still (there is no picture to
+    zoom out past) and shaped for the new canvas."""
+    import math
+    import random
+
+    from braidio.transforms import path_on_canvas
+    from braidio.transforms._video_cut import (
+        _HOLD_LOG_TOL,
+        _MIN_MOVE_KEPT,
+        _onto_picture,
+        _picture_share,
+        focus_on_canvas,
+        focus_on_still,
+    )
+
+    rng = random.Random(3)
+    shapes = [(100, 100), (400, 100), (100, 400), (178, 100)]
+    canvases = [(1080, 1920), (1920, 1080), (1080, 1080)]
+    checked = 0
+    for _ in range(600):
+        still, canvas = rng.choice(shapes), rng.choice(canvases)
+        authored = rng.choice([16 / 9, 9 / 16, 1.0])
+        if math.isclose(authored, canvas[0] / canvas[1]):
+            continue
+        rects = []
+        for _ in range(rng.choice([2, 3])):
+            w = rng.uniform(0.05, 1.0)
+            rects.append(
+                {"x": rng.uniform(0, 1 - w), "y": rng.uniform(0, 1 - w), "w": w, "h": w}
+            )
+        stored = {
+            "keyframes": [{"t": i, "rect": r} for i, r in enumerate(rects)],
+            "output_aspect": authored,
+        }
+        result = path_on_canvas(stored, image_size=still, canvas_size=canvas)
+        out = [kf["rect"] for kf in result["keyframes"]]
+
+        def on_still(r, shape):
+            box = (r["x"], r["y"], r["w"], r["h"])
+            return focus_on_still(box, image_size=still, canvas_size=shape)
+
+        def side(r):
+            moved = _onto_picture(on_still(r, (authored, 1)))
+            x, y, w, h = focus_on_canvas(moved, image_size=still, canvas_size=canvas)
+            return min(max(w, h), 1.0)
+
+        authored_sides = [side(r) for r in rects]
+        for (a, b), (c, d) in zip(
+            zip(authored_sides, authored_sides[1:]), zip(out, out[1:])
+        ):
+            was, now = math.log(a / b), math.log(c["w"] / d["w"])
+            if abs(was) <= _HOLD_LOG_TOL:
+                assert abs(now) <= _HOLD_LOG_TOL + 1e-6, (still, canvas, rects, out)
+            else:
+                assert now / was >= _MIN_MOVE_KEPT - 1e-6, (still, canvas, rects, out)
+            checked += 1
+        for r, o in zip(rects, out):
+            share_was = _picture_share(on_still(r, (authored, 1)))
+            share_now = _picture_share(on_still(o, canvas))
+            assert share_now >= share_was - 0.01
+    assert checked > 300
+
+
 def test_path_on_canvas_refuses_what_it_cannot_aim():
     """Review round 2 of #96: called directly (it is exported), a nan aspect,
     no keyframes or a zero-area rect is a ValueError naming the problem, not

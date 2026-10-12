@@ -344,10 +344,11 @@ def path_on_canvas(stored: dict, *, image_size, canvas_size) -> dict:
       window had (:func:`_widest_side`) — none, for a window that was all
       picture; all it showed, for a whole-canvas start.
     - **The move survives, the landing is not cropped.** Each keyframe is
-      trimmed only as far as its own bound needs; only where that would lose
-      more than half the author's zoom range (two keyframes capped to one
-      window freeze the camera) do the trims spread, just enough to keep
-      that much of the move (:func:`_move_preserving_sides`).
+      trimmed only as far as its own bound needs; only where that would keep
+      less than half of some segment's zoom change, or reverse it (two
+      keyframes capped to one window freeze the camera), do the trims
+      spread, just enough to keep that much of every move
+      (:func:`_move_preserving_sides`).
 
     The result keeps the authored ``output_aspect``: burns' ``"refit"`` then
     rebuilds each window at the new aspect from the centre and zoom chosen
@@ -410,12 +411,16 @@ def path_on_canvas(stored: dict, *, image_size, canvas_size) -> dict:
     return {**stored, "keyframes": keyframes}
 
 
-#: The least share of the author's zoom range (in log zoom) a refit keeps.
+#: The least share of each move a refit keeps — per segment between
+#: consecutive keyframes, in log zoom, and always in the author's direction.
 #: Fitting each keyframe alone can freeze a push whose ends both outgrow the
-#: picture; scaling all of them alike crops a landing frame that needed no
-#: trim. The refit fits each alone, and gives up just enough of a landing's
-#: own fit to keep this much of the move.
+#: picture, or even reverse it (a big all-picture keyframe capped below a
+#: smaller one that showed fill); scaling all of them alike crops a landing
+#: frame that needed no trim. The refit fits each alone, and gives up just
+#: enough of those fits to keep this much of every move.
 _MIN_MOVE_KEPT = 0.5
+#: How far (log zoom) a segment the author held at one zoom may drift.
+_HOLD_LOG_TOL = math.log(1.05)
 #: Bisection steps for the blend that keeps :data:`_MIN_MOVE_KEPT`.
 _MOVE_BLEND_STEPS = 40
 
@@ -425,35 +430,52 @@ def _move_preserving_sides(sides, widest) -> list[float]:
 
     Each keyframe on its own is ``min(side, widest)``: the author's window, or
     the largest it may be without showing more fill than the author saw. If
-    that keeps at least :data:`_MIN_MOVE_KEPT` of the author's zoom range, it
-    is the answer — a landing that fits is never trimmed. Otherwise the sides
-    blend (geometrically, so continuously) toward one common scale of the
-    author's sides, which keeps every ratio, by just enough to keep that much.
+    every segment between consecutive keyframes then still zooms the author's
+    way by at least :data:`_MIN_MOVE_KEPT` of the author's change (and a held
+    zoom stays held), that is the answer — a landing that fits is never
+    trimmed. Otherwise the sides blend, geometrically, toward one common scale
+    of the author's sides (which keeps every ratio exactly) by just enough.
+
+    Each segment's condition is linear in the blend in log space and holds at
+    the common scale, so the blends that pass form one interval ending there,
+    and bisection finds its start.
 
     >>> _move_preserving_sides([1.0, 0.5], [2.0, 2.0])  # fits: untouched
     [1.0, 0.5]
     >>> [round(s, 3) for s in _move_preserving_sides([1.0, 0.4], [0.3, 0.3])]
     [0.3, 0.19]
+
+    A push whose wide start is capped below its landing's own fit stays a push:
+
+    >>> out = _move_preserving_sides([0.5, 0.4], [0.28, 0.9])
+    >>> out[1] < out[0]
+    True
     """
-    own = [min(s, w) for s, w in zip(sides, widest)]
+    own = [math.log(min(s, w)) for s, w in zip(sides, widest)]
     scale = min(1.0, *(w / s for s, w in zip(sides, widest)))
-    common = [scale * s for s in sides]
+    common = [math.log(scale * s) for s in sides]
+    authored = [math.log(b / a) for a, b in zip(sides, sides[1:])]
 
-    def log_range(xs) -> float:
-        return math.log(max(xs) / min(xs))
+    def logs(alpha: float) -> list[float]:
+        return [(1 - alpha) * o + alpha * c for o, c in zip(own, common)]
 
-    need = _MIN_MOVE_KEPT * log_range(sides)
-    if log_range(own) >= need:
-        return own
+    def keeps_the_move(alpha: float) -> bool:
+        ls = logs(alpha)
+        for step, (a, b) in zip(authored, zip(ls, ls[1:])):
+            if abs(step) <= _HOLD_LOG_TOL:
+                if abs(b - a) > _HOLD_LOG_TOL:
+                    return False
+            elif (b - a) / step < _MIN_MOVE_KEPT:
+                return False
+        return True
 
-    def blend(alpha: float) -> list[float]:
-        return [o ** (1 - alpha) * c**alpha for o, c in zip(own, common)]
-
+    if keeps_the_move(0.0):
+        return [math.exp(v) for v in own]
     lo, hi = 0.0, 1.0
     for _ in range(_MOVE_BLEND_STEPS):
         mid = (lo + hi) / 2.0
-        lo, hi = (lo, mid) if log_range(blend(mid)) >= need else (mid, hi)
-    return blend(hi)
+        lo, hi = (lo, mid) if keeps_the_move(mid) else (mid, hi)
+    return [math.exp(v) for v in logs(hi)]
 
 
 def _authored_aspect(stored):

@@ -1169,6 +1169,11 @@ def _window(canvas_size, still_size, *, center_on_still=None, side: float):
         ((200, 200), (50, 40, 90, 80), (320, 180), (240, 180), (0.8, 0.5)),
         # a landscape still, vertical -> landscape
         ((320, 180), (50, 40, 90, 80), (180, 320), (320, 180), (1.0, 0.5)),
+        # stills a hair either side of 16:9 (review of #96: a hard
+        # "showed fill" threshold flipped the start to ~68% fill here)
+        ((356, 200), (150, 80, 190, 120), (320, 180), (180, 320), (1.0, 0.4)),
+        ((354, 200), (150, 80, 190, 120), (320, 180), (180, 320), (1.0, 0.4)),
+        ((357, 200), (150, 80, 190, 120), (320, 180), (180, 320), (1.0, 0.4)),
     ],
 )
 def test_a_re_cut_never_shows_less_subject_or_more_fill(
@@ -1270,6 +1275,90 @@ def test_a_re_cut_start_shows_the_rows_of_the_still_the_author_showed(tmp_path):
     assert picture_rows(new, path.keyframes[0][1]) == pytest.approx(
         authored_rows, abs=0.03
     )
+
+
+def test_a_push_re_cut_vertical_still_pushes(tmp_path):
+    """Review of #96: a wide still re-cut vertical cannot show either keyframe
+    of a 2.5x push without trimming it, and capping each to the picture made
+    both the same window — a push turned into a hold. The subject must grow
+    in the frame by the author's ratio, on pixels."""
+    pytest.importorskip("burns")
+    from burns import Rect
+
+    from braidio.transforms import path_for_panel
+    from braidio.video import prepare_still
+
+    still_size, subject = (356, 200), (158, 80, 198, 120)
+    still = _subject_still(tmp_path / "s.png", still_size, subject=subject)
+    old = prepare_still(still, tmp_path / "old.jpg", size=(320, 180))
+    new = prepare_still(still, tmp_path / "new.jpg", size=(180, 320))
+    keyframes = [
+        {"t": 0.0, "rect": {"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0}},
+        {"t": 1.0, "rect": {"x": 0.3, "y": 0.3, "w": 0.4, "h": 0.4}},
+    ]
+    stored = {"version": 1, "keyframes": keyframes, "output_aspect": 16 / 9}
+    body = {"move": "hold", "zoom": 1.0, "seed": 0, "path": stored}
+    path = path_for_panel(body, image=str(new), aspect=9 / 16, image_size=still_size)
+
+    def subject_share(canvas, rect):
+        red, _ = _frame_census(canvas, rect)
+        x0, y0, x1, y1 = rect.to_pixels(*_image_size(canvas))
+        return red / ((x1 - x0) * (y1 - y0))
+
+    authored = [Rect(**kf["rect"]) for kf in keyframes]
+    growth_was = subject_share(old, authored[1]) / subject_share(old, authored[0])
+    (_, start), (_, end) = path.keyframes
+    growth = subject_share(new, end) / subject_share(new, start)
+    assert growth == pytest.approx(growth_was, rel=0.15)
+    for rect in (start, end):
+        assert _frame_census(new, rect)[1] <= 0.02
+
+
+def _image_size(path):
+    from PIL import Image
+
+    with Image.open(path) as img:
+        return img.size
+
+
+def test_a_window_barely_on_the_still_is_not_blown_up_into_a_zoom():
+    """Review of #96: intersecting a window with the still turned a window that
+    overlapped it by a sliver into an 8x zoom on that sliver. Moved onto the
+    still instead, it keeps its size: never a tighter zoom than the author's."""
+    from braidio.transforms import path_on_canvas
+
+    for x in (0.0, 0.0001, 0.05):  # all fill, a sliver, a little picture
+        stored = {
+            "keyframes": [
+                {"t": 0.0, "rect": {"x": x, "y": 0.3, "w": 0.219, "h": 0.219}}
+            ],
+            "output_aspect": 16 / 9,
+        }
+        (kf,) = path_on_canvas(stored, image_size=(200, 200), canvas_size=(180, 320))[
+            "keyframes"
+        ]
+        assert kf["rect"]["w"] >= 0.219 / 0.5625 - 1e-9  # the same still width
+
+
+@pytest.mark.parametrize("bad", [0, -1.0, float("inf"), float("nan"), "nan", "16/9"])
+def test_a_malformed_output_aspect_fails_the_plan(
+    project, episode, stills, panels, bad
+):
+    """Review of #96: once a cross-aspect path could plan, an ``output_aspect``
+    of 0, a negative, inf or nan passed the plan and raised (or framed NaNs)
+    in execute. It must fail the plan, naming the value."""
+    from braidio.transforms import VIDEO_CUT_RENDER_TRANSFORM
+    from braidio.transforms._common import graph_index
+
+    still = graph_index(project)[uuid.UUID(panels[0].body["still_id"])]
+    _sized(project, still, (64, 48))
+    path = _push_on_subject((64, 48), (64, 48), zoom=2.0)
+    path["output_aspect"] = bad
+    edited = _rewrite_in_place(
+        project, panels[0], body={**panels[0].body, "path": path}
+    )
+    with pytest.raises(ValueError, match="not a positive aspect"):
+        _plan(VIDEO_CUT_RENDER_TRANSFORM, project, edited, *panels[1:])
 
 
 def _side_fill(canvas: Path, rect) -> tuple[int, int]:

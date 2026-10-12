@@ -276,20 +276,45 @@ def focus_on_still(rect, *, image_size, canvas_size):
     return ((x - bx) / bw, (y - by) / bh, w / bw, h / bh)
 
 
-def _on_picture(rect):
-    """``rect`` (still coordinates) cut down to the still itself, or ``rect``
-    unchanged when it does not overlap the still at all."""
+def _onto_picture(rect):
+    """``rect`` (still coordinates) moved onto the still: each side capped at
+    the still's and the window slid inside it, keeping its size otherwise.
+
+    Continuous in ``rect`` — a window that barely touches the still is not
+    blown up into a zoom on the sliver it overlaps.
+    """
     x, y, w, h = rect
-    x0, y0 = max(x, 0.0), max(y, 0.0)
-    x1, y1 = min(x + w, 1.0), min(y + h, 1.0)
-    if x1 <= x0 or y1 <= y0:
-        return rect
-    return (x0, y0, x1 - x0, y1 - y0)
+    w, h = min(w, 1.0), min(h, 1.0)
+    return (min(max(x, 0.0), 1.0 - w), min(max(y, 0.0), 1.0 - h), w, h)
 
 
-#: Slack, in still fractions, for "this window showed no fill": a path
-#: authored on a 1366x768 canvas rounds its edges by about a pixel.
-_ON_PICTURE_TOL = 1e-3
+def _picture_share(rect) -> float:
+    """The share of ``rect`` (still coordinates) that is the still."""
+    x, y, w, h = rect
+    ow = max(0.0, min(x + w, 1.0) - max(x, 0.0))
+    oh = max(0.0, min(y + h, 1.0) - max(y, 0.0))
+    return (ow * oh) / (w * h) if w > 0 and h > 0 else 0.0
+
+
+def _widest_side(fill: float, box_w: float, box_h: float) -> float:
+    """The largest square (canvas-shaped) window whose blurred-fill share is at
+    most ``fill``, when slid to cover as much of the ``box_w x box_h`` picture
+    as it can: up to the shorter box side it shows no fill; past it the share
+    grows as ``1 - lo/s``, then, past the longer side, ``1 - lo*hi/s**2``.
+
+    >>> _widest_side(0.0, 1.0, 0.5), _widest_side(0.5, 1.0, 0.5)
+    (0.5, 1.0)
+
+    Past both sides (a square picture, 75% fill allowed):
+
+    >>> _widest_side(0.75, 0.5, 0.5)
+    1.0
+    """
+    if fill >= 1.0:
+        return math.inf
+    lo, hi = sorted((box_w, box_h))
+    side = lo / (1.0 - fill)
+    return side if side <= hi else math.sqrt(lo * hi / (1.0 - fill))
 
 
 def _slide_into(center: float, side: float, lo: float, hi: float) -> float:
@@ -306,74 +331,96 @@ def path_on_canvas(stored: dict, *, image_size, canvas_size) -> dict:
     ``stored`` is a ``BurnsPath.to_dict()`` whose rectangles are fractions of
     the canvas :func:`braidio.video.prepare_still` made for the delivery it was
     authored at (that canvas's shape is ``output_aspect``; its pixel size does
-    not matter to fractions). Each keyframe goes old canvas -> still, keeps
-    only the part that shows the still (the fill around it was never the
-    subject), and becomes, on the new canvas, the smallest window of the new
-    delivery's shape that contains that part, centred where the author looked
-    and slid to stay on the picture wherever it fits there.
+    not matter to fractions). Each keyframe goes old canvas -> still, is moved
+    onto the still (the fill around it was never the subject), and becomes,
+    on the new canvas, a window of the new delivery's shape centred where the
+    author looked, slid to stay on the picture wherever it fits there.
 
-    A new shape must either add to the author's view or trim it. The rule is
-    **fill only where the author showed fill**: a keyframe that was all
-    picture is capped to the picture (trimming the author's view on its long
-    axis rather than adding blurred bands to a push); one that already showed
-    fill — a whole-canvas start, say — keeps all of what it showed. Either
-    way the camera looks at the same part of the still, rather than where
-    burns' canvas-relative refit alone would land.
+    A new shape must either add to the author's view or trim it. Two rules
+    decide how much, and both are continuous in the input:
+
+    - **No more fill than the author saw.** Each keyframe's window is at most
+      the size whose blurred-fill share equals the share the author's own
+      window had (:func:`_widest_side`) — none, for a window that was all
+      picture; all it showed, for a whole-canvas start.
+    - **The move survives.** Where that trims a keyframe, every keyframe is
+      scaled by the same factor, so the author's zoom ratios — what makes a
+      push a push — are kept, rather than capping two keyframes to the same
+      window and freezing the camera.
 
     The result keeps the authored ``output_aspect``: burns' ``"refit"`` then
     rebuilds each window at the new aspect from the centre and zoom chosen
     here (:func:`path_for_panel` passes it), so burns still owns the window.
 
     A 3x push on the middle of a square still, authored landscape, re-cut
-    vertical. The author's window showed the middle 59% of the still across
-    and its middle third down, all of it picture; 59% across at 9:16 would
-    be taller than the still, so the window is capped to the still's height
-    and shows its middle 56% across, top to bottom:
+    vertical. The author's end window showed the middle 59% of the still
+    across, all of it picture; 59% across at 9:16 would be taller than the
+    still, so the end is trimmed to the still's height (56% across) and the
+    whole-canvas start by the same factor, keeping the 3x:
 
     >>> landscape = {"keyframes": [{"t": 0.0, "rect": {"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0}},
     ...     {"t": 1.0, "rect": {"x": 1 / 3, "y": 1 / 3, "w": 1 / 3, "h": 1 / 3}}],
     ...     "output_aspect": 16 / 9}
     >>> out = path_on_canvas(landscape, image_size=(100, 100), canvas_size=(90, 160))
-    >>> [round(v, 4) for v in out["keyframes"][1]["rect"].values()]
-    [0.2188, 0.2188, 0.5625, 0.5625]
+    >>> [[round(v, 4) for v in kf["rect"].values()] for kf in out["keyframes"]]
+    [[0.0254, 0.0254, 0.9492, 0.9492], [0.2188, 0.2188, 0.5625, 0.5625]]
     """
     old_canvas = (float(stored["output_aspect"]), 1.0)
-    cw, ch = canvas_size
     bx, by, bw, bh = focus_on_canvas(
         _WHOLE_STILL, image_size=image_size, canvas_size=canvas_size
     )
 
-    def convert(rect: dict) -> dict:
+    def aim(rect: dict):
         on_still = focus_on_still(
             (rect["x"], rect["y"], rect["w"], rect["h"]),
             image_size=image_size,
             canvas_size=old_canvas,
         )
-        on_picture = _on_picture(on_still)
         x, y, w, h = focus_on_canvas(
-            on_picture, image_size=image_size, canvas_size=canvas_size
+            _onto_picture(on_still), image_size=image_size, canvas_size=canvas_size
         )
         # a window of the canvas's own shape is square in canvas fractions
         side = min(max(w, h), 1.0)
-        showed_fill = any(
-            abs(a - b) > _ON_PICTURE_TOL for a, b in zip(on_still, on_picture)
-        )
-        if not showed_fill:
-            side = min(side, bw, bh)
-        cx = _slide_into(x + w / 2.0, side, bx, bx + bw)
-        cy = _slide_into(y + h / 2.0, side, by, by + bh)
+        widest = _widest_side(1.0 - _picture_share(on_still), bw, bh)
+        return (x + w / 2.0, y + h / 2.0), side, widest
+
+    aimed = [aim(kf["rect"]) for kf in stored["keyframes"]]
+    scale = min(1.0, *(widest / side for _, side, widest in aimed if side > 0))
+
+    def window(centre, side) -> dict:
+        side *= scale
+        cx = _slide_into(centre[0], side, bx, bx + bw)
+        cy = _slide_into(centre[1], side, by, by + bh)
         return {"x": cx - side / 2.0, "y": cy - side / 2.0, "w": side, "h": side}
 
-    keyframes = [{**kf, "rect": convert(kf["rect"])} for kf in stored["keyframes"]]
+    keyframes = [
+        {**kf, "rect": window(centre, side)}
+        for kf, (centre, side, _) in zip(stored["keyframes"], aimed)
+    ]
     return {**stored, "keyframes": keyframes}
+
+
+def _authored_aspect(stored):
+    """A stored path's ``output_aspect`` as a finite positive float, ``None``
+    when it names none; raises ``ValueError`` for anything else."""
+    authored = (stored or {}).get("output_aspect")
+    if authored is None:
+        return None
+    try:
+        value = float(authored)
+    except (TypeError, ValueError):
+        value = math.nan
+    if not (math.isfinite(value) and value > 0):
+        raise ValueError(f"output_aspect {authored!r} is not a positive aspect")
+    return value
 
 
 def _crosses_aspect(stored, aspect: float) -> bool:
     """Whether a stored path names an ``output_aspect`` other than ``aspect``
     (as strictly as burns' own check, see :data:`_ASPECT_REL_TOL`)."""
-    authored = (stored or {}).get("output_aspect")
+    authored = _authored_aspect(stored)
     return authored is not None and not math.isclose(
-        float(authored), aspect, rel_tol=_ASPECT_REL_TOL
+        authored, aspect, rel_tol=_ASPECT_REL_TOL
     )
 
 
@@ -661,7 +708,13 @@ def _check_stored_paths(panels, settings: dict, stills) -> None:
         if panel.body.get("footage"):
             continue  # its move is not rendered, so its path frames nothing
         stored = panel.body.get("path") or {}
-        if _crosses_aspect(stored, aspect) and not _records_size(still):
+        try:
+            crosses = _crosses_aspect(stored, aspect)
+        except ValueError as exc:
+            raise ValueError(
+                f"{RENDER_NAME}: panel {panel.id} stores a path whose {exc}."
+            ) from None
+        if crosses and not _records_size(still):
             raise ValueError(
                 f"{RENDER_NAME}: panel {panel.id} stores a path authored for aspect "
                 f"{float(stored['output_aspect']):.4f}; this cut is {w}x{h} "

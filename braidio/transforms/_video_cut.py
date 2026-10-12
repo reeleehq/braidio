@@ -468,8 +468,10 @@ def _move_preserving_sides(sides, widest) -> list[float]:
         for step, (a, b) in zip(authored, zip(ls, ls[1:])):
             if abs(step) <= _HOLD_LOG_TOL:
                 drift += step
+                if abs(b - a) > _HOLD_LOG_TOL:
+                    return False  # each held segment stays held, and
                 if abs((b - anchor) - drift) > _HOLD_LOG_TOL:
-                    return False
+                    return False  # the held run as a whole
             else:
                 if (b - a) / step < _MIN_MOVE_KEPT:
                     return False

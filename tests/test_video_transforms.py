@@ -1453,6 +1453,11 @@ def test_a_held_zoom_does_not_drift_across_a_long_pan():
     widest = [0.65, 0.63, 0.61, 0.59, 0.56]  # each a little tighter
     out = _move_preserving_sides(sides, widest)
     assert math.log(max(out) / min(out)) <= _HOLD_LOG_TOL + 1e-9
+    # and no one held segment swings across the band (+9% then -8%)
+    sides = [0.5, 0.52, 0.5]
+    out = _move_preserving_sides(sides, [0.3, 2.0, 0.3])
+    for c, d in zip(out, out[1:]):
+        assert abs(math.log(d / c)) <= _HOLD_LOG_TOL + 1e-9
 
 
 def test_path_on_canvas_refuses_what_it_cannot_aim():

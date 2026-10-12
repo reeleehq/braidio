@@ -460,13 +460,20 @@ def _move_preserving_sides(sides, widest) -> list[float]:
         return [(1 - alpha) * o + alpha * c for o, c in zip(own, common)]
 
     def keeps_the_move(alpha: float) -> bool:
+        # A held run is measured from its first keyframe, against the author's
+        # own drift since then, so small per-segment drifts cannot add up (and
+        # the common scale, which reproduces the author's drift, always passes).
         ls = logs(alpha)
+        anchor, drift = ls[0], 0.0
         for step, (a, b) in zip(authored, zip(ls, ls[1:])):
             if abs(step) <= _HOLD_LOG_TOL:
-                if abs(b - a) > _HOLD_LOG_TOL:
+                drift += step
+                if abs((b - anchor) - drift) > _HOLD_LOG_TOL:
                     return False
-            elif (b - a) / step < _MIN_MOVE_KEPT:
-                return False
+            else:
+                if (b - a) / step < _MIN_MOVE_KEPT:
+                    return False
+                anchor, drift = b, 0.0
         return True
 
     if keeps_the_move(0.0):

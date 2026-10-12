@@ -1422,20 +1422,37 @@ def test_a_refit_keeps_every_move_in_its_direction_and_the_fill_bound():
             return min(max(w, h), 1.0)
 
         authored_sides = [side(r) for r in rects]
+        held_was = held_now = 0.0  # drift since the held run began
         for (a, b), (c, d) in zip(
             zip(authored_sides, authored_sides[1:]), zip(out, out[1:])
         ):
             was, now = math.log(a / b), math.log(c["w"] / d["w"])
             if abs(was) <= _HOLD_LOG_TOL:
-                assert abs(now) <= _HOLD_LOG_TOL + 1e-6, (still, canvas, rects, out)
+                held_was, held_now = held_was + was, held_now + now
+                assert abs(held_now - held_was) <= _HOLD_LOG_TOL + 1e-6, (rects, out)
             else:
                 assert now / was >= _MIN_MOVE_KEPT - 1e-6, (still, canvas, rects, out)
+                held_was = held_now = 0.0
             checked += 1
         for r, o in zip(rects, out):
             share_was = _picture_share(on_still(r, (authored, 1)))
             share_now = _picture_share(on_still(o, canvas))
             assert share_now >= share_was - 0.01
     assert checked > 300
+
+
+def test_a_held_zoom_does_not_drift_across_a_long_pan():
+    """Review round 4 of #96: a hold checked segment by segment let a 5-keyframe
+    pan at one zoom drift 16% in zoom, 5% at a time. A held run is measured
+    from its first keyframe."""
+    import math
+
+    from braidio.transforms._video_cut import _HOLD_LOG_TOL, _move_preserving_sides
+
+    sides = [0.6] * 5
+    widest = [0.65, 0.63, 0.61, 0.59, 0.56]  # each a little tighter
+    out = _move_preserving_sides(sides, widest)
+    assert math.log(max(out) / min(out)) <= _HOLD_LOG_TOL + 1e-9
 
 
 def test_path_on_canvas_refuses_what_it_cannot_aim():

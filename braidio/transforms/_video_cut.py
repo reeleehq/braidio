@@ -38,13 +38,16 @@ been deleted is never adopted: the product is the file.
 ``focus``, ``seed``), not a path pinned to one image's pixels, so swapping the
 still re-frames the move. A stored ``path`` (``BurnsPath.to_dict()``) is the
 explicit override for a hand-corrected move. A stored path authored for a
-different delivery aspect is **refused at plan time** (:func:`_check_stored_paths`):
-its rectangles are relative to the *prepared canvas* of that delivery, and burns'
-``on_aspect_mismatch="refit"`` keeps each rectangle's centre and zoom relative to
-the *new* canvas — a different spot on the still once ``prepare_still`` letterboxes
-it differently, so the refit silently frames blurred fill instead of the subject.
-Refit is safe only after converting keyframes old canvas -> still -> new canvas
-(the ``focus_on_canvas`` treatment, for paths); until then, refuse. burns shipped the resolver in
+different delivery aspect is **converted, then refit** (:func:`path_on_canvas`):
+its rectangles are relative to the *prepared canvas* of that delivery, and
+``prepare_still`` letterboxes the still differently at another aspect, so burns'
+canvas-relative ``on_aspect_mismatch="refit"`` alone would frame a different
+spot on the still (measured: a 3x landscape push re-cut vertical ended ~60%
+blurred fill). Each keyframe is first mapped old canvas -> still -> new canvas
+(the :func:`focus_on_canvas` treatment, for paths) and only then handed to
+burns' refit. The conversion needs the still's size, so a cross-aspect path
+over a still that records none is still **refused at plan time**
+(:func:`_check_stored_paths`). burns shipped the resolver in
 0.0.15 (thorwhalen/burns#20), which is braidio's declared minimum, so
 :func:`resolve_move` is a thin pass-through rather than a shim with a second
 implementation to drift from burns'. *Which behavioural version of burns
@@ -159,6 +162,9 @@ _MIN_RESOLVER_IMPL = 2
 #: braidio's own share of the framing: saliency confined to the still's box on
 #: its prepared canvas. Part of the motion key, since it moves pixels.
 _CANVAS_FRAMING = "content_box@1"
+#: Bump when :func:`path_on_canvas` frames a cross-aspect stored path
+#: differently. Part of the key of only those cuts that convert one.
+_PATH_REFIT_VERSION = "1"
 
 
 def resolver_identity() -> str:
@@ -214,7 +220,8 @@ def resolve_move(
     ``"refit"`` preserves each rectangle's centre and zoom relative to the
     *canvas*; braidio's canvases letterbox the still differently per aspect,
     so a refit path lands on a different part of the still (see the module
-    docstring). Pass ``"refit"`` only for a path whose canvas IS the still.
+    docstring). Pass ``"refit"`` only for a path whose canvas IS the still, or
+    one already converted by :func:`path_on_canvas`.
 
     ``content_box`` is the still's box on the canvas: burns runs saliency only
     inside it, so the blurred fill around a letterboxed still (and the hard
@@ -254,13 +261,264 @@ def focus_on_canvas(focus, *, image_size, canvas_size):
     return ((ox + x * fw) / cw, (oy + y * fh) / ch, w * fw / cw, h * fh / ch)
 
 
+def focus_on_still(rect, *, image_size, canvas_size):
+    """The inverse of :func:`focus_on_canvas`: a canvas rect, in still coordinates.
+
+    Parts of ``rect`` over the blurred fill land outside ``[0, 1]``.
+
+    >>> focus_on_still((0.25, 0.0, 0.5, 1.0), image_size=(100, 100), canvas_size=(200, 100))
+    (0.0, 0.0, 1.0, 1.0)
+    """
+    bx, by, bw, bh = focus_on_canvas(
+        _WHOLE_STILL, image_size=image_size, canvas_size=canvas_size
+    )
+    x, y, w, h = (float(v) for v in rect)
+    return ((x - bx) / bw, (y - by) / bh, w / bw, h / bh)
+
+
+def _onto_picture(rect):
+    """``rect`` (still coordinates) moved onto the still: each side capped at
+    the still's and the window slid inside it, keeping its size otherwise.
+
+    Continuous in ``rect`` — a window that barely touches the still is not
+    blown up into a zoom on the sliver it overlaps.
+    """
+    x, y, w, h = rect
+    w, h = min(w, 1.0), min(h, 1.0)
+    return (min(max(x, 0.0), 1.0 - w), min(max(y, 0.0), 1.0 - h), w, h)
+
+
+def _picture_share(rect) -> float:
+    """The share of ``rect`` (still coordinates) that is the still."""
+    x, y, w, h = rect
+    ow = max(0.0, min(x + w, 1.0) - max(x, 0.0))
+    oh = max(0.0, min(y + h, 1.0) - max(y, 0.0))
+    return (ow * oh) / (w * h) if w > 0 and h > 0 else 0.0
+
+
+def _widest_side(fill: float, box_w: float, box_h: float) -> float:
+    """The largest square (canvas-shaped) window whose blurred-fill share is at
+    most ``fill``, when slid to cover as much of the ``box_w x box_h`` picture
+    as it can: up to the shorter box side it shows no fill; past it the share
+    grows as ``1 - lo/s``, then, past the longer side, ``1 - lo*hi/s**2``.
+
+    >>> _widest_side(0.0, 1.0, 0.5), _widest_side(0.5, 1.0, 0.5)
+    (0.5, 1.0)
+
+    Past both sides (a square picture, 75% fill allowed):
+
+    >>> _widest_side(0.75, 0.5, 0.5)
+    1.0
+    """
+    if fill >= 1.0:
+        return math.inf
+    lo, hi = sorted((box_w, box_h))
+    side = lo / (1.0 - fill)
+    return side if side <= hi else math.sqrt(lo * hi / (1.0 - fill))
+
+
+def _slide_into(center: float, side: float, lo: float, hi: float) -> float:
+    """``center`` of a window of ``side`` slid inside ``[lo, hi]`` if it fits
+    there, else centred on that span (the still shows whole on that axis)."""
+    if side >= hi - lo:
+        return (lo + hi) / 2.0
+    return min(max(center, lo + side / 2.0), hi - side / 2.0)
+
+
+def path_on_canvas(stored: dict, *, image_size, canvas_size) -> dict:
+    """A stored path authored at its ``output_aspect``, re-aimed at ``canvas_size``.
+
+    ``stored`` is a ``BurnsPath.to_dict()`` whose rectangles are fractions of
+    the canvas :func:`braidio.video.prepare_still` made for the delivery it was
+    authored at (that canvas's shape is ``output_aspect``; its pixel size does
+    not matter to fractions). Each keyframe goes old canvas -> still, is moved
+    onto the still (the fill around it was never the subject), and becomes,
+    on the new canvas, a window of the new delivery's shape centred where the
+    author looked, slid to stay on the picture wherever it fits there.
+
+    A new shape must either add to the author's view or trim it. Two rules
+    decide how much, and both are continuous in the input:
+
+    - **No more fill than the author saw.** Each keyframe's window is at most
+      the size whose blurred-fill share equals the share the author's own
+      window had (:func:`_widest_side`) — none, for a window that was all
+      picture; all it showed, for a whole-canvas start.
+    - **The move survives, the landing is not cropped.** Each keyframe is
+      trimmed only as far as its own bound needs; only where that would keep
+      less than half of some segment's zoom change, or reverse it (two
+      keyframes capped to one window freeze the camera), do the trims
+      spread, just enough to keep that much of every move
+      (:func:`_move_preserving_sides`).
+
+    The result keeps the authored ``output_aspect``: burns' ``"refit"`` then
+    rebuilds each window at the new aspect from the centre and zoom chosen
+    here (:func:`path_for_panel` passes it), so burns still owns the window.
+
+    A 3x push on the middle of a square still, authored landscape, re-cut
+    vertical. The author's end window showed the middle 59% of the still
+    across, all of it picture; 59% across at 9:16 would be taller than the
+    still, so the end is trimmed to the still's height (56% across); the
+    whole-canvas start showed as much fill as the vertical whole canvas does,
+    so it keeps it, and the push is 1.78x — over half the 3x, in log zoom:
+
+    >>> landscape = {"keyframes": [{"t": 0.0, "rect": {"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0}},
+    ...     {"t": 1.0, "rect": {"x": 1 / 3, "y": 1 / 3, "w": 1 / 3, "h": 1 / 3}}],
+    ...     "output_aspect": 16 / 9}
+    >>> out = path_on_canvas(landscape, image_size=(100, 100), canvas_size=(90, 160))
+    >>> [[round(v, 4) for v in kf["rect"].values()] for kf in out["keyframes"]]
+    [[0.0, 0.0, 1.0, 1.0], [0.2188, 0.2188, 0.5625, 0.5625]]
+    """
+    authored = _authored_aspect(stored)
+    if authored is None or not stored.get("keyframes"):
+        raise ValueError(
+            "path_on_canvas: needs a path with keyframes and an output_aspect"
+        )
+    old_canvas = (authored, 1.0)
+    bx, by, bw, bh = focus_on_canvas(
+        _WHOLE_STILL, image_size=image_size, canvas_size=canvas_size
+    )
+
+    def aim(rect: dict):
+        if not (rect["w"] > 0 and rect["h"] > 0):
+            raise ValueError(f"path_on_canvas: a keyframe rect has no area: {rect}")
+        on_still = focus_on_still(
+            (rect["x"], rect["y"], rect["w"], rect["h"]),
+            image_size=image_size,
+            canvas_size=old_canvas,
+        )
+        x, y, w, h = focus_on_canvas(
+            _onto_picture(on_still), image_size=image_size, canvas_size=canvas_size
+        )
+        # a window of the canvas's own shape is square in canvas fractions
+        side = min(max(w, h), 1.0)
+        widest = _widest_side(1.0 - _picture_share(on_still), bw, bh)
+        return (x + w / 2.0, y + h / 2.0), side, widest
+
+    aimed = [aim(kf["rect"]) for kf in stored["keyframes"]]
+    sides = _move_preserving_sides(
+        [side for _, side, _ in aimed], [widest for _, _, widest in aimed]
+    )
+
+    def window(centre, side) -> dict:
+        cx = _slide_into(centre[0], side, bx, bx + bw)
+        cy = _slide_into(centre[1], side, by, by + bh)
+        return {"x": cx - side / 2.0, "y": cy - side / 2.0, "w": side, "h": side}
+
+    keyframes = [
+        {**kf, "rect": window(centre, side)}
+        for kf, (centre, _, _), side in zip(stored["keyframes"], aimed, sides)
+    ]
+    return {**stored, "keyframes": keyframes}
+
+
+#: The least share of each move a refit keeps — per segment between
+#: consecutive keyframes, in log zoom, and always in the author's direction.
+#: Fitting each keyframe alone can freeze a push whose ends both outgrow the
+#: picture, or even reverse it (a big all-picture keyframe capped below a
+#: smaller one that showed fill); scaling all of them alike crops a landing
+#: frame that needed no trim. The refit fits each alone, and gives up just
+#: enough of those fits to keep this much of every move.
+_MIN_MOVE_KEPT = 0.5
+#: How far (log zoom) a segment the author held at one zoom may drift.
+_HOLD_LOG_TOL = math.log(1.05)
+#: Bisection steps for the blend that keeps :data:`_MIN_MOVE_KEPT`.
+_MOVE_BLEND_STEPS = 40
+
+
+def _move_preserving_sides(sides, widest) -> list[float]:
+    """Window sides within each keyframe's fill bound that keep the move.
+
+    Each keyframe on its own is ``min(side, widest)``: the author's window, or
+    the largest it may be without showing more fill than the author saw. If
+    every segment between consecutive keyframes then still zooms the author's
+    way by at least :data:`_MIN_MOVE_KEPT` of the author's change (and a held
+    zoom stays held), that is the answer — a landing that fits is never
+    trimmed. Otherwise the sides blend, geometrically, toward one common scale
+    of the author's sides (which keeps every ratio exactly) by just enough.
+
+    Each segment's condition is linear in the blend in log space and holds at
+    the common scale, so the blends that pass form one interval ending there,
+    and bisection finds its start.
+
+    >>> _move_preserving_sides([1.0, 0.5], [2.0, 2.0])  # fits: untouched
+    [1.0, 0.5]
+    >>> [round(s, 3) for s in _move_preserving_sides([1.0, 0.4], [0.3, 0.3])]
+    [0.3, 0.19]
+
+    A push whose wide start is capped below its landing's own fit stays a push:
+
+    >>> out = _move_preserving_sides([0.5, 0.4], [0.28, 0.9])
+    >>> out[1] < out[0]
+    True
+    """
+    own = [math.log(min(s, w)) for s, w in zip(sides, widest)]
+    scale = min(1.0, *(w / s for s, w in zip(sides, widest)))
+    common = [math.log(scale * s) for s in sides]
+    authored = [math.log(b / a) for a, b in zip(sides, sides[1:])]
+
+    def logs(alpha: float) -> list[float]:
+        return [(1 - alpha) * o + alpha * c for o, c in zip(own, common)]
+
+    def keeps_the_move(alpha: float) -> bool:
+        # A held run is measured from its first keyframe, against the author's
+        # own drift since then, so small per-segment drifts cannot add up (and
+        # the common scale, which reproduces the author's drift, always passes).
+        ls = logs(alpha)
+        anchor, drift = ls[0], 0.0
+        for step, (a, b) in zip(authored, zip(ls, ls[1:])):
+            if abs(step) <= _HOLD_LOG_TOL:
+                drift += step
+                if abs(b - a) > _HOLD_LOG_TOL:
+                    return False  # each held segment stays held, and
+                if abs((b - anchor) - drift) > _HOLD_LOG_TOL:
+                    return False  # the held run as a whole
+            else:
+                if (b - a) / step < _MIN_MOVE_KEPT:
+                    return False
+                anchor, drift = b, 0.0
+        return True
+
+    if keeps_the_move(0.0):
+        return [math.exp(v) for v in own]
+    lo, hi = 0.0, 1.0
+    for _ in range(_MOVE_BLEND_STEPS):
+        mid = (lo + hi) / 2.0
+        lo, hi = (lo, mid) if keeps_the_move(mid) else (mid, hi)
+    return [math.exp(v) for v in logs(hi)]
+
+
+def _authored_aspect(stored):
+    """A stored path's ``output_aspect`` as a finite positive float, ``None``
+    when it names none; raises ``ValueError`` for anything else."""
+    authored = (stored or {}).get("output_aspect")
+    if authored is None:
+        return None
+    try:
+        value = float(authored)
+    except (TypeError, ValueError):
+        value = math.nan
+    if not (math.isfinite(value) and value > 0):
+        raise ValueError(f"output_aspect {authored!r} is not a positive aspect")
+    return value
+
+
+def _crosses_aspect(stored, aspect: float) -> bool:
+    """Whether a stored path names an ``output_aspect`` other than ``aspect``
+    (as strictly as burns' own check, see :data:`_ASPECT_REL_TOL`)."""
+    authored = _authored_aspect(stored)
+    return authored is not None and not math.isclose(
+        authored, aspect, rel_tol=_ASPECT_REL_TOL
+    )
+
+
 def path_for_panel(panel_body: dict, *, image, aspect: float, image_size=None):
     """The ``BurnsPath`` a panel body asks for over ``image``.
 
     One code path, two front doors: a stored ``path`` (a hand-corrected
-    move) is handed to :func:`resolve_move` as the move itself (a path
-    authored for another aspect is refused at plan time, see
-    :func:`_check_stored_paths`); otherwise the named ``move`` resolves against the image with
+    move) is handed to :func:`resolve_move` as the move itself — one
+    authored for another delivery aspect is first re-aimed by
+    :func:`path_on_canvas` and refit, which needs ``image_size`` (without it,
+    burns refuses the mismatch); otherwise the named ``move`` resolves against the image with
     the panel's ``zoom`` / ``focus`` / ``seed``. A stored path that names no
     ``output_aspect`` takes the cut's, so a path authored before the delivery
     size was chosen still fills the frame. ``image_size`` is the size of the
@@ -270,22 +528,28 @@ def path_for_panel(panel_body: dict, *, image, aspect: float, image_size=None):
     blurred fill. Pass it whenever ``image`` is a canvas — a caller previewing
     a move (the studio) gets the same framing as the render only if it does.
     """
+    canvas_size = None
+    if image_size is not None:
+        from PIL import Image
+
+        with Image.open(image) as img:
+            canvas_size = img.size
+    on_mismatch = "raise"
     stored = panel_body.get("path")
     if stored:
         move = dict(stored)
         if move.get("output_aspect") is None:
             move["output_aspect"] = aspect
+        elif canvas_size is not None and _crosses_aspect(move, aspect):
+            move = path_on_canvas(move, image_size=image_size, canvas_size=canvas_size)
+            on_mismatch = "refit"
     else:
         move = str(panel_body.get("move", "auto"))
     focus = panel_body.get("focus")
     if focus is not None:
         focus = (focus["x"], focus["y"], focus["w"], focus["h"])
     content_box = None
-    if image_size is not None:
-        from PIL import Image
-
-        with Image.open(image) as img:
-            canvas_size = img.size
+    if canvas_size is not None:
         content_box = focus_on_canvas(
             _WHOLE_STILL, image_size=image_size, canvas_size=canvas_size
         )
@@ -304,6 +568,7 @@ def path_for_panel(panel_body: dict, *, image, aspect: float, image_size=None):
         zoom=float(panel_body.get("zoom", 1.18)),
         focus=focus,
         seed=int(panel_body.get("seed", 0)),
+        on_aspect_mismatch=on_mismatch,
         content_box=content_box,
     )
 
@@ -506,32 +771,43 @@ def _refuse_unlicensed_under_published(profile: str, stills) -> None:
 _ASPECT_REL_TOL = 1e-9
 
 
-def _check_stored_paths(panels, settings: dict) -> None:
-    """A stored ``path`` whose ``output_aspect`` contradicts the cut's fails
-    the PLAN, before any canvas is prepared.
+def _records_size(still: Annotation) -> bool:
+    """Whether a still records the size :func:`path_on_canvas` needs (the
+    render reads the exact size, after any crop, from the picture itself)."""
+    return bool(still.body.get("width") and still.body.get("height"))
 
-    Not a refit: the path's rectangles are relative to the prepared canvas of
-    the delivery it was authored for, and ``prepare_still`` letterboxes the
-    still differently at another aspect, so burns' canvas-relative refit
+
+def _check_stored_paths(panels, settings: dict, stills) -> None:
+    """A stored ``path`` for another aspect that cannot be converted fails the
+    PLAN, before any canvas is prepared.
+
+    Converting it (:func:`path_on_canvas`) needs the still's size, because the
+    path's rectangles are relative to the prepared canvas of the delivery it
+    was authored for and ``prepare_still`` letterboxes the still differently at
+    another aspect. Without the conversion, burns' canvas-relative refit
     frames a different part of the still (measured: a 3x push on a landscape
-    subject re-cut vertical ends ~60% blurred fill). Restored after a
-    post-hoc review of thorwhalen/braidio#81; a correct refit needs the
-    keyframes converted old canvas -> still -> new canvas first.
+    subject re-cut vertical ends ~60% blurred fill; post-hoc review of
+    thorwhalen/braidio#81), so a still that records no size refuses instead.
     """
     w, h = settings["size"]
     aspect = w / h
-    for panel in panels:
+    for panel, still in zip(panels, stills):
         if panel.body.get("footage"):
             continue  # its move is not rendered, so its path frames nothing
         stored = panel.body.get("path") or {}
-        authored = stored.get("output_aspect")
-        if authored is not None and not math.isclose(
-            float(authored), aspect, rel_tol=_ASPECT_REL_TOL
-        ):
+        try:
+            crosses = _crosses_aspect(stored, aspect)
+        except ValueError as exc:
+            raise ValueError(
+                f"{RENDER_NAME}: panel {panel.id} stores a path whose {exc}."
+            ) from None
+        if crosses and not _records_size(still):
             raise ValueError(
                 f"{RENDER_NAME}: panel {panel.id} stores a path authored for aspect "
-                f"{float(authored):.4f}; this cut is {w}x{h} ({aspect:.4f}). Re-author "
-                "the path for this delivery, or clear it and let the move resolve."
+                f"{float(stored['output_aspect']):.4f}; this cut is {w}x{h} "
+                f"({aspect:.4f}), and its still {still.id} records no width/height "
+                "to convert the path with. Record the still's size, re-author the "
+                "path for this delivery, or clear it and let the move resolve."
             )
 
 
@@ -539,6 +815,7 @@ def _motion_cache_key(transform, *, audio_id, settings, panels, stills) -> str:
     from nw.transforms import cache_key as transform_cache_key
 
     parts = [str(audio_id), _json(settings), resolver_identity()]
+    aspect = settings["size"][0] / settings["size"][1]
     for panel, still in zip(panels, stills):
         start, end = _interval_s(panel)
         footage = panel.body.get("footage")
@@ -565,6 +842,10 @@ def _motion_cache_key(transform, *, audio_id, settings, panels, stills) -> str:
             _json(panel.body.get("path")),
             str(panel.body.get("seed")),
         ]
+        if _crosses_aspect(panel.body.get("path"), aspect):
+            # a converted path: keys only these cuts, so every same-aspect key
+            # is exactly what it was (and a #81-era naive refit is not served)
+            parts.append(f"path-refit@{_PATH_REFIT_VERSION}")
     return transform_cache_key(transform, "video-cut-motion", *parts)
 
 
@@ -688,8 +969,8 @@ def panel_path(project, panel: Annotation, *, size: tuple[int, int]):
     """
     resolver_identity()  # refuses an old burns with the message the render gives
     size = (int(size[0]), int(size[1]))
-    _check_stored_paths([panel], {"size": size})
     index = graph_index(project)
+    _check_stored_paths([panel], {"size": size}, [_still_of(panel, index)])
     workdir = _frames_dir(project)
     workdir.mkdir(parents=True, exist_ok=True)
     source = _panel_source(project, panel, index, workdir)
@@ -727,7 +1008,7 @@ class VideoCutRender(BaseTransform):
         _refuse_unlicensed_under_published(profile, stills)
 
         settings = _render_settings(params)
-        _check_stored_paths(panels, settings)
+        _check_stored_paths(panels, settings, stills)
         cache_key = _motion_cache_key(
             self, audio_id=audio_id, settings=settings, panels=panels, stills=stills
         )

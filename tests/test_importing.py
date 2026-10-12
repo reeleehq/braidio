@@ -1531,6 +1531,10 @@ def test_a_refusal_leaves_no_project_behind(tmp_path, source, monkeypatch):
     )
 
 
+#: Transient files a WAL-mode SQLite database keeps beside itself.
+_SQLITE_SIDECARS = ("-wal", "-shm")
+
+
 @needs_illustration
 def test_a_failed_reimport_leaves_an_existing_project_alone(
     tmp_path, source, monkeypatch
@@ -1543,7 +1547,16 @@ def test_a_failed_reimport_leaves_an_existing_project_alone(
 
     _run(tmp_path, source)
     root = tmp_path / "project"
-    before = sorted(p.name for p in root.iterdir())
+
+    def listing():
+        # The graph is a WAL-mode SQLite store (lacing.store.sqlite): its -wal /
+        # -shm sidecars come and go with connection lifetime, not with what the
+        # import wrote, so they are not part of "the project as it stood".
+        return sorted(
+            p.name for p in root.iterdir() if not p.name.endswith(_SQLITE_SIDECARS)
+        )
+
+    before = listing()
     assert before
 
     real_link = os.link
@@ -1561,7 +1574,7 @@ def test_a_failed_reimport_leaves_an_existing_project_alone(
     with pytest.raises(CrossDeviceCatalog):
         _run(tmp_path, source)
     assert root.exists(), "a failed RE-import must not delete the project"
-    assert sorted(p.name for p in root.iterdir()) == before
+    assert listing() == before
 
 
 @needs_illustration
@@ -1856,8 +1869,14 @@ def _with_footage(*in_points):
     return {
         "moves": "rendered",
         "footage": [
-            {"key": "screen", "path": "screen.mp4", "width": 1920, "height": 1080,
-             "fps": 30, "duration_s": 21.0}
+            {
+                "key": "screen",
+                "path": "screen.mp4",
+                "width": 1920,
+                "height": 1080,
+                "fps": 30,
+                "duration_s": 21.0,
+            }
         ],
         "cuts": [cut],
     }

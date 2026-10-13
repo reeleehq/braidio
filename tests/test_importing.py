@@ -943,6 +943,239 @@ def test_the_render_s_own_timeline_reaches_the_episode(tmp_path, source):
     assert breakdown.title == "A Demo Production"
 
 
+@needs_illustration
+def test_member_spans_place_every_member_and_never_overlap(tmp_path, source):
+    """``member_spans`` pairs ``ordered_member_ids[i]`` with timeline span ``i``.
+
+    The archive beat starts 0.14 s inside the scene break, the way the weave's
+    crossfade lays real mixes out. NEGATIVE CONTROL: the raw spans overlap, so
+    a reader that copied ``span.start`` would hand back overlapping intervals.
+    """
+    from braidio.project import Project
+    from braidio.transforms import episode_timeline, member_spans
+    from braidio.transforms._common import TIER_EPISODE_RENDER
+
+    cut = _doc()["cuts"][0]
+    beats = [dict(b) for b in cut["beats"]]
+    beats[3]["start"] = 12.86
+    _run(tmp_path, source, overrides={"cuts": _cuts_with(beats=beats, timeline=None)})
+    root = tmp_path / "project"
+    episode = _annotations(root, TIER_EPISODE_RENDER)[0]
+    raw = episode_timeline(Project(root), episode).beats
+    assert raw[3].start < raw[2].end, "the fixture must overlap, or this proves nothing"
+
+    spans = member_spans(Project(root), episode)
+    assert [s.member_id for s in spans] == list(episode.body["ordered_member_ids"])
+    assert [(s.start_s, s.end_s) for s in spans] == [
+        (0.0, 8.0),
+        (8.0, 12.0),
+        (12.0, 13.0),
+        (13.0, 20.0),
+    ]
+
+
+@needs_illustration
+def test_a_member_with_no_span_has_no_placement(tmp_path, source):
+    """The fixture's verbatim timeline carries one span for four members. The
+    three without one are unplaced, never placed by summing durations."""
+    from braidio.project import Project
+    from braidio.transforms import member_spans
+    from braidio.transforms._common import TIER_EPISODE_RENDER
+
+    _run(tmp_path, source)
+    root = tmp_path / "project"
+    episode = _annotations(root, TIER_EPISODE_RENDER)[0]
+    spans = member_spans(Project(root), episode)
+    assert (spans[0].start_s, spans[0].end_s) == (0.0, 8.0)
+    assert all(s.start_s is None and s.end_s is None for s in spans[1:])
+
+
+def _spans_for(beats, *, duration_s=None, **episode_body):
+    """``member_spans`` over a hand-laid timeline: one member per beat."""
+    from types import SimpleNamespace
+
+    from braidio.transforms import member_spans
+
+    rows = [
+        {"index": i, "kind": k, "label": "", "source": None,
+         "duration": round(e - s, 3), "start": s, "end": e}
+        for i, k, s, e in beats
+    ]
+    n = max([r["index"] for r in rows], default=-1) + 1
+    body = {
+        "ordered_member_ids": [f"m{i}" for i in range(episode_body.pop("members", n))],
+        "timeline": {"title": "", "settings": None, "beats": rows},
+        "duration_s": duration_s or 0.0,
+        **episode_body,
+    }
+    return member_spans(None, SimpleNamespace(body=body, id="ep"))
+
+
+def test_a_member_laid_under_what_follows_keeps_its_true_span():
+    """NEGATIVE CONTROL for the clamp. ``layout_placed`` starts an ``under`` clip
+    at the cursor and the next narration BEFORE it; squeezing that narration into
+    the sequential lane would place a take heard at 4.88 s at 9 s, for nothing."""
+    from braidio.weave import layout_placed
+
+    starts = layout_placed(
+        ["narration", "clip", "narration"], [5.0, 4.0, 3.0],
+        ["sequential", "under", "sequential"],
+        clip_edge_overlap_s=0.12, narration_crossfade_s=0.12,
+    )
+    spans = _spans_for(
+        [(0, "narration", starts[0], starts[0] + 5.0),
+         (1, "clip", starts[1], starts[1] + 4.0),
+         (2, "narration", starts[2], starts[2] + 3.0)]
+    )
+    assert spans[1].concurrent and (spans[1].start_s, spans[1].end_s) == (5.0, 9.0)
+    assert not spans[2].concurrent
+    assert (spans[2].start_s, spans[2].end_s) == (5.0, 7.88)
+
+
+def _laid_out(kinds, durs, placements, *, overlap=0.12, crossfade=0.12):
+    from braidio.weave import layout_placed
+
+    starts = layout_placed(
+        ["clip" if k == "clip" else "narration" for k in kinds], durs, placements,
+        clip_edge_overlap_s=overlap, narration_crossfade_s=crossfade,
+    )
+    return [(i, k, round(s, 3), round(s + d, 3))
+            for i, (k, s, d) in enumerate(zip(kinds, starts, durs))]
+
+
+@pytest.mark.parametrize(
+    "kinds, durs, placements, kw, under",
+    [
+        # a cold open laid under the first narration: both start at 0
+        (["clip", "narration", "narration"], [4.0, 5.0, 3.0],
+         ["under", "sequential", "sequential"], {}, {0}),
+        # no crossfade: the narration after an under clip starts at the clip
+        (["narration", "clip", "narration"], [5.0, 4.0, 3.0],
+         ["sequential", "under", "sequential"], {"crossfade": 0.0, "overlap": 0.0}, {1}),
+        # two under clips first
+        (["clip", "clip", "narration"], [4.0, 3.0, 5.0],
+         ["under", "under", "sequential"], {}, {0, 1}),
+        # all sequential, one member shorter than the clip edge: nothing is under
+        (["narration", "narration", "clip", "narration"], [5.0, 0.4, 3.0, 4.0],
+         ["sequential"] * 4, {"overlap": 0.5}, set()),
+    ],
+)
+def test_an_older_timeline_s_under_members_are_read_off_the_layout(
+    kinds, durs, placements, kw, under
+):
+    """A breakdown written before ``placement`` was recorded: the inference must
+    agree with ``layout_placed`` on every shape, ties included."""
+    spans = _spans_for(_laid_out(kinds, durs, placements, **kw))
+    assert {s.position for s in spans if s.concurrent} == under
+    lane = [s for s in spans if not s.concurrent]
+    for a, b in zip(lane, lane[1:]):
+        assert a.end_s <= b.start_s
+    assert all(s.end_s > s.start_s for s in spans), "nobody is squeezed to nothing"
+
+
+def test_the_older_timeline_inference_holds_on_real_valued_durations():
+    """Property check against ``layout_placed`` with unrounded durations: the lane
+    end and the next start are each rounded, so they can disagree by over 1 ms."""
+    import random
+
+    rng = random.Random(546)
+    for _ in range(3000):
+        n = rng.randint(2, 7)
+        kinds = [rng.choice(["narration", "clip"]) for _ in range(n)]
+        # longer than any tuck, the inference's stated assumption
+        durs = [rng.uniform(2.05, 9.0) for _ in range(n)]
+        placements = ["sequential"] + [
+            rng.choice(["sequential", "sequential", "under"]) for _ in range(n - 1)
+        ]
+        if placements[-1] == "under":
+            placements[-1] = "sequential"  # a trailing under overlays nothing
+        overlap = rng.choice([0.0, 0.12, 0.5, 1.0])
+        spans = _spans_for(_laid_out(kinds, durs, placements, overlap=overlap))
+        truth = {i for i, p in enumerate(placements) if p == "under"}
+        assert {s.position for s in spans if s.concurrent} == truth, placements
+        assert all(s.end_s > s.start_s for s in spans), "nobody is squeezed to nothing"
+
+
+def test_a_malformed_timeline_or_placement_places_nothing_or_is_ignored():
+    from types import SimpleNamespace
+
+    from braidio.timeline import TimelineBreakdown
+    from braidio.transforms import member_spans
+
+    bad = {"index": 0, "kind": "narration", "duration": None, "start": 0.0}
+    body = {"ordered_member_ids": ["m0"], "timeline": {"beats": [bad]}}
+    [span] = member_spans(None, SimpleNamespace(body=body, id="ep"))
+    assert (span.start_s, span.end_s) == (None, None)
+
+    odd = dict(bad, duration=1.0, placement=["under"])
+    assert TimelineBreakdown.from_dict({"beats": [odd]}).beats[0].placement is None
+
+
+def test_a_recorded_placement_is_read_rather_than_inferred():
+    from types import SimpleNamespace
+
+    from braidio.timeline import TimelineBreakdown, build_timeline
+    from braidio.transforms import member_spans
+
+    tl = build_timeline(
+        kinds=["clip", "narration"], durations=[4.0, 5.0],
+        placements=["under", "sequential"],
+    )
+    assert TimelineBreakdown.from_dict(tl.to_dict()) == tl
+    assert [b["placement"] for b in tl.to_dict()["beats"]] == ["under", "sequential"]
+    body = {"ordered_member_ids": ["a", "b"], "timeline": tl.to_dict()}
+    spans = member_spans(None, SimpleNamespace(body=body, id="ep"))
+    assert [s.concurrent for s in spans] == [True, False]
+    assert [(s.start_s, s.end_s) for s in spans] == [(0.0, 4.0), (0.0, 5.0)]
+
+
+def test_spans_are_bounded_by_the_mix():
+    spans = _spans_for([(0, "narration", 0.0, 25.0)], duration_s=20.0)
+    assert (spans[0].start_s, spans[0].end_s) == (0.0, 20.0)
+
+
+def test_an_unplaced_member_in_the_middle_does_not_shift_the_rest():
+    spans = _spans_for(
+        [(0, "narration", 0.0, 4.0), (2, "narration", 6.0, 9.0)]
+    )
+    assert [(s.start_s, s.end_s) for s in spans] == [(0.0, 4.0), (None, None), (6.0, 9.0)]
+
+
+@pytest.mark.parametrize(
+    "beats, members",
+    [
+        # 1-based: pairing by index would give every member its neighbour's span
+        ([(1, "narration", 0.0, 2.0), (2, "narration", 2.0, 4.0)], 2),
+        # a duplicated index
+        ([(0, "narration", 0.0, 2.0), (0, "narration", 2.0, 4.0)], 2),
+    ],
+)
+def test_a_timeline_that_does_not_pair_with_the_members_places_nothing(beats, members):
+    spans = _spans_for(beats, members=members)
+    assert len(spans) == members
+    assert all(s.start_s is None and s.end_s is None for s in spans)
+
+
+def test_an_unreadable_timeline_places_nothing():
+    from types import SimpleNamespace
+
+    from braidio.transforms import member_spans
+
+    body = {"ordered_member_ids": ["m0"], "timeline": {"beats": [{"kind": "x"}]}}
+    spans = member_spans(None, SimpleNamespace(body=body, id="ep"))
+    assert (spans[0].start_s, spans[0].end_s) == (None, None)
+
+
+@needs_illustration
+def test_a_timeline_whose_indices_are_not_positions_is_refused(tmp_path, source):
+    from braidio.importing import ImportError_
+
+    cut = _doc()["cuts"][0]
+    timeline = dict(cut["timeline"], beats=[dict(cut["timeline"]["beats"][0], index=4)])
+    with pytest.raises(ImportError_, match="not distinct positions"):
+        _run(tmp_path, source, overrides={"cuts": _cuts_with(timeline=timeline)})
+
+
 # --- gap 2: a fresh import is retrievable -----------------------------------
 
 

@@ -57,6 +57,8 @@ into the delivered artifact.
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
+from typing import Optional
 
 from falaw import Plan
 from lacing import Annotation
@@ -311,6 +313,124 @@ def _project_title(project) -> str:
         return str(getattr(project.spec, "title", "") or "")
     except Exception:  # noqa: BLE001 — a title is decoration on a timeline
         return ""
+
+
+#: Timeline offsets and durations are each rounded to the millisecond, so a
+#: lane end (rounded start + rounded duration) and the next start can differ by
+#: a little over 1 ms for the same instant.
+_PLACEMENT_EPS_S = 2.5e-3
+
+
+@dataclass(frozen=True)
+class MemberSpan:
+    """Where one member of an episode is heard on its mix.
+
+    ``start_s`` / ``end_s`` are ``None`` together when placement is unknown: the
+    timeline has no span at the member's position, or no timeline can be read
+    that pairs with the members. A caller shows that rather than inventing one.
+
+    ``concurrent`` marks a member laid *under* what follows it (a clip with
+    ``placement="under"``): it plays at the same time as its neighbours, so its
+    interval is the true one and overlaps theirs.
+    """
+
+    member_id: str
+    position: int
+    start_s: Optional[float] = None
+    end_s: Optional[float] = None
+    concurrent: bool = False
+
+
+def member_spans(project, episode: Annotation) -> tuple[MemberSpan, ...]:
+    """Each member of ``episode``, in play order, with its place on the mix.
+
+    The pairing is the one the captions and the picture track already use:
+    ``ordered_member_ids[i]`` is the member behind the timeline span whose
+    ``index`` is ``i`` (see :func:`episode_script`). Durations cannot stand in
+    for it: the weave lays members out with overlaps, pads and pauses that only
+    the timeline records.
+
+    **The sequential members come back exclusive.** The weave tucks each
+    sequential member a fraction of a second under the previous one's end (a
+    narration crossfade, a clip's faded edge), so a raw span starts before its
+    predecessor finishes. Each sequential placement begins where the previous
+    sequential one finished, which is how :func:`braidio.captions.cues_for`
+    clamps its cues; those intervals are ordered and never overlap.
+
+    **A member laid under what follows keeps its true span** and is marked
+    ``concurrent``: it plays at the same time as its neighbours, and squeezing it
+    into the sequential lane would place audio that is really heard nowhere. The
+    timeline records each span's ``placement``. A breakdown written before that
+    field existed is read the way :func:`braidio.weave.layout_placed` lays one
+    out: an ``under`` member starts exactly at the end of the sequential lane so
+    far, and the sequential member after it starts at or before it (tucked back
+    by the crossfade or the clip edge). That reading assumes members longer
+    than their tuck; a layout of parts shorter than the clip edge can start
+    several of them at 0, which only a recorded placement disambiguates.
+
+    A sequential member shorter than its tuck (a 0.3 s part under a 0.5 s clip
+    edge) is heard entirely inside its predecessor's tail; it too keeps its
+    true span and is marked ``concurrent`` rather than squeezed to nothing.
+
+    Every interval is bounded by the mix (``duration_s``, when recorded).
+
+    Placement is unknown (all ``None``) when the timeline cannot be read or
+    reconstructed, or when its indices are not positions of this member list
+    (duplicated, or past its end): pairing by index there would hand each member
+    a neighbour's interval.
+    """
+    member_ids = [str(m) for m in episode.body.get("ordered_member_ids", ())]
+    unplaced = tuple(MemberSpan(m, i) for i, m in enumerate(member_ids))
+    try:
+        beats = episode_timeline(project, episode).beats
+    except (KeyError, TypeError, ValueError):  # malformed, or no way to rebuild one
+        return unplaced
+    indices = [b.index for b in beats]
+    if len(set(indices)) != len(indices) or not all(
+        0 <= i < len(member_ids) for i in indices
+    ):
+        return unplaced
+    by_index = {b.index: b for b in beats}
+    mix_end = float(episode.body.get("duration_s") or 0.0) or None
+
+    def bounded(t: float) -> float:
+        t = max(t, 0.0)
+        return round(min(t, mix_end) if mix_end is not None else t, 3)
+
+    placed = [p for p in range(len(member_ids)) if p in by_index]
+    recorded = all(by_index[p].placement for p in placed)
+    later_min: dict[int, float] = {}
+    running = float("inf")
+    for p in reversed(placed):
+        later_min[p] = running
+        running = min(running, float(by_index[p].start))
+
+    def is_under(p: int, lane_end: float) -> bool:
+        span = by_index[p]
+        if recorded:
+            return span.placement == "under"
+        start = float(span.start)
+        return abs(start - lane_end) <= _PLACEMENT_EPS_S and later_min[p] <= start
+
+    out = list(unplaced)
+    floor = lane_end = 0.0
+    for p in placed:
+        span = by_index[p]
+        under = is_under(p, lane_end)
+        if not under:
+            lane_end = float(span.end)  # layout_placed's cursor
+        # shorter than its tuck: heard entirely inside its predecessor's tail
+        tucked = not under and float(span.end) <= floor and float(span.duration) > 0
+        if under or tucked:
+            start, end = float(span.start), float(span.end)
+        else:
+            start = max(float(span.start), floor)
+            end = max(float(span.end), start)
+            floor = end
+        out[p] = MemberSpan(
+            member_ids[p], p, bounded(start), bounded(end), concurrent=under or tucked
+        )
+    return tuple(out)
 
 
 def episode_script(project, episode: Annotation):

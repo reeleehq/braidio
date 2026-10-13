@@ -49,7 +49,12 @@ from braidio.transforms import (  # noqa: F401
     _video_panels,
     _video_cut,
 )
-from braidio.transforms._episode import episode_script, episode_timeline
+from braidio.transforms._episode import (
+    MemberSpan,
+    episode_script,
+    episode_timeline,
+    member_spans,
+)
 from braidio.transforms._video_panels import (
     Pick,
     as_pick,
@@ -85,6 +90,8 @@ __all__ = [
     "IngestedScript",
     "weave_project",
     "episode_timeline",
+    "member_spans",
+    "MemberSpan",
     "episode_script",
     "mint_seed",
     "panels_for_episode",

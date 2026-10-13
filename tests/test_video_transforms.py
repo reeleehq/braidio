@@ -938,6 +938,65 @@ def test_a_fresh_cut_whose_file_is_gone_is_re_rendered(
     assert url_to_path(second.body["url"]).exists()
 
 
+def _quote_then_run(project, panels, patched_render):
+    """Ask :func:`video_cut_reuses_existing` first, then run the same plan;
+    returns ``(quoted_reuse, drew)``. The quote must write nothing."""
+    import nw
+    from braidio.transforms import VIDEO_CUT_RENDER_TRANSFORM, video_cut_reuses_existing
+
+    t = nw.get_transform(VIDEO_CUT_RENDER_TRANSFORM)
+    plan, skel = _plan(VIDEO_CUT_RENDER_TRANSFORM, project, *panels)
+    before = {a.id: a.provenance.generated_at_time for a in nw.iter_all_annotations(project.root)}
+    quoted = video_cut_reuses_existing(project, skel)
+    after = {a.id: a.provenance.generated_at_time for a in nw.iter_all_annotations(project.root)}
+    assert after == before, "the quote wrote to the graph"
+    renders = len(patched_render)
+    t.execute(project, plan, skel)
+    return quoted, len(patched_render) > renders
+
+
+def test_the_reuse_quote_agrees_with_the_run_on_every_door(
+    project, episode, stills, panels, patched_render
+):
+    """reelee#480: a surface quotes a re-make before running it. A label edit
+    re-verifies (no frames), a move edit draws, a deleted file draws — and the
+    quote says so each time, without touching the graph."""
+    from braidio.transforms._common import graph_index, url_to_path
+
+    assert _quote_then_run(project, panels, patched_render) == (False, True)  # first cut
+    assert _quote_then_run(project, panels, patched_render) == (True, False)  # unchanged
+
+    still = graph_index(project)[uuid.UUID(panels[0].body["still_id"])]
+    _rewrite_in_place(project, still, body={**still.body, "subject": "Renamed"})
+    panels = [graph_index(project)[p.id] for p in panels]
+    assert _quote_then_run(project, panels, patched_render) == (True, False)  # editorial
+
+    edited = _rewrite_in_place(project, panels[0], body={**panels[0].body, "zoom": 1.4})
+    panels = [edited, *panels[1:]]
+    assert _quote_then_run(project, panels, patched_render) == (False, True)  # a move
+
+    newest = max(
+        (a for a in graph_index(project).values() if a.tier == "video-cuts"),
+        key=lambda a: a.provenance.generated_at_time,
+    )
+    url_to_path(newest.body["url"]).unlink()
+    assert _quote_then_run(project, panels, patched_render) == (False, True)  # file gone
+
+
+def test_the_reuse_quote_follows_execute_flags_and_refuses_other_tiers(
+    project, episode, stills, panels, patched_render
+):
+    from braidio.transforms import VIDEO_CUT_RENDER_TRANSFORM, video_cut_reuses_existing
+
+    _run(VIDEO_CUT_RENDER_TRANSFORM, project, *panels)
+    _plan_, skel = _plan(VIDEO_CUT_RENDER_TRANSFORM, project, *panels)
+    assert video_cut_reuses_existing(project, skel) is True
+    assert video_cut_reuses_existing(project, skel, use_cache=False) is False
+    assert video_cut_reuses_existing(project, skel, force=True) is False
+    with pytest.raises(ValueError, match="not a video_cut skeleton"):
+        video_cut_reuses_existing(project, panels[0])
+
+
 def test_a_cached_cut_whose_file_is_gone_is_not_adopted(
     project, episode, stills, panels, patched_render
 ):

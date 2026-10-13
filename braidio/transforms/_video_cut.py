@@ -721,29 +721,67 @@ def _reverify(project, hit: Annotation) -> Annotation:
     return refreshed
 
 
-def _reuse(project, skel: Annotation):
-    """The idempotent / compare-and-skip half every render Transform shares.
+def _reuse_candidate(project, skel: Annotation):
+    """What :func:`_reuse` would do for ``skel``, decided without writing.
 
-    Both doors check that the file is still there: a node — fresh or cached —
-    whose mp4 was deleted out of band is not a cut, it is a record of one,
-    and the next stage would fail on it.
+    ``(existing, action)`` — ``action`` is ``"fresh"`` (an equivalent node is
+    current: return it), ``"reverify"`` (a cache hit with the same parents and
+    plan: refresh its trace in place) or ``"adopt"`` (a cache hit to copy under
+    the skeleton's id) — or ``None`` when the pass has to draw. Both doors
+    check that the file is still there: a node — fresh or cached — whose mp4
+    was deleted out of band is not a cut, it is a record of one, and the next
+    stage would fail on it.
     """
     existing = fresh_equivalent(project, skel)
-    if existing is not None and not _hit_file_exists(project, existing):
-        existing = None
-    if existing is None:
-        hit = cached_output(project, TIER_VIDEO_CUT, skel.body["cache_key"])
-        if hit is not None and _hit_file_exists(project, hit):
-            same_parents = set(hit.provenance.was_derived_from) == set(
-                skel.provenance.was_derived_from
-            )
-            if same_parents and planned_value(hit) == planned_value(skel):
-                existing = _reverify(project, hit)
-            else:
-                existing = adopt_output(skel, hit)
-                project.graph.add_annotation(existing)
-    if existing is None:
+    if existing is not None and _hit_file_exists(project, existing):
+        return existing, "fresh"
+    hit = cached_output(project, TIER_VIDEO_CUT, skel.body["cache_key"])
+    if hit is None or not _hit_file_exists(project, hit):
         return None
+    same_parents = set(hit.provenance.was_derived_from) == set(
+        skel.provenance.was_derived_from
+    )
+    if same_parents and planned_value(hit) == planned_value(skel):
+        return hit, "reverify"
+    return hit, "adopt"
+
+
+def reuses_existing_cut(
+    project, skeleton, *, use_cache: bool = True, force: bool = False
+) -> bool:
+    """Whether executing a planned ``video_cut`` skeleton would reuse a cut
+    already on disk instead of drawing one — asked **before** running, free.
+
+    ``skeleton`` is what :meth:`plan` returned (the tuple, or its one
+    annotation). On ``video_cut.render`` this is the question a surface needs
+    to quote a re-make honestly: ``True`` means the motion pass is a re-verify
+    (a caption or another editorial edit — seconds), ``False`` means every
+    frame is drawn again (a picture, crop, span or move changed — minutes).
+    It reads exactly what :func:`_reuse` reads, and takes the same
+    ``use_cache`` / ``force`` as ``execute``, so the quote and the run cannot
+    disagree; it writes nothing. (A file deleted or a parent edited between
+    the quote and the run can still change the answer: the quote is advisory.)
+    """
+    skel = skeleton[0] if isinstance(skeleton, (tuple, list)) else skeleton
+    if skel.tier != TIER_VIDEO_CUT:
+        raise ValueError(f"not a video_cut skeleton: tier {skel.tier!r}")
+    if not use_cache or force:
+        return False
+    return _reuse_candidate(project, skel) is not None
+
+
+def _reuse(project, skel: Annotation):
+    """The idempotent / compare-and-skip half every render Transform shares:
+    :func:`_reuse_candidate`'s decision, applied."""
+    candidate = _reuse_candidate(project, skel)
+    if candidate is None:
+        return None
+    existing, action = candidate
+    if action == "reverify":
+        existing = _reverify(project, existing)
+    elif action == "adopt":
+        existing = adopt_output(skel, existing)
+        project.graph.add_annotation(existing)
     return TransformResult(annotations=(existing,), artifacts=(), cost_usd_actual=0.0)
 
 

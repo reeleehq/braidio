@@ -84,6 +84,9 @@ EPISODE_TRANSFORM = _episode.NAME
 VIDEO_PANELS_TRANSFORM = _video_panels.NAME
 VIDEO_CUT_RENDER_TRANSFORM = _video_cut.RENDER_NAME
 VIDEO_CUT_FINISH_TRANSFORM = _video_cut.FINISH_NAME
+#: Free, side-effect-free: would a planned video_cut skeleton reuse a cut on
+#: disk rather than draw one? (quote a re-make before running it, reelee#480)
+video_cut_reuses_existing = _video_cut.reuses_existing_cut
 
 __all__ = [
     "ingest_script",
@@ -112,6 +115,7 @@ __all__ = [
     "EPISODE_TRANSFORM",
     "VIDEO_PANELS_TRANSFORM",
     "VIDEO_CUT_RENDER_TRANSFORM",
+    "video_cut_reuses_existing",
     "VIDEO_CUT_FINISH_TRANSFORM",
 ]
 

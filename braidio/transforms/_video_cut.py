@@ -1346,7 +1346,9 @@ def _wrap_labels_for_frame(overlays, *, size, delivery):
         payload = overlay.payload
         if overlay.layout is None and isinstance(payload, Label):
             try:
-                caption(payload.text, payload.attribution, frame=frame, anchor=overlay.slot)
+                caption(
+                    payload.text, payload.attribution, frame=frame, anchor=overlay.slot
+                )
             except TextDoesNotFit:
                 overlay = overlay.with_layout(
                     caption(

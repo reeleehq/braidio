@@ -319,15 +319,20 @@ def _project_title(project) -> str:
 class MemberSpan:
     """Where one member of an episode is heard on its mix.
 
-    ``start_s`` / ``end_s`` are ``None`` together when the episode's timeline has
-    no span at the member's position: placement is then unknown, and a caller
-    shows that rather than inventing one.
+    ``start_s`` / ``end_s`` are ``None`` together when placement is unknown: the
+    timeline has no span at the member's position, or no timeline can be read
+    that pairs with the members. A caller shows that rather than inventing one.
+
+    ``concurrent`` marks a member laid *under* what follows it (a clip with
+    ``placement="under"``): it plays at the same time as its neighbours, so its
+    interval is the true one and overlaps theirs.
     """
 
     member_id: str
     position: int
     start_s: Optional[float] = None
     end_s: Optional[float] = None
+    concurrent: bool = False
 
 
 def member_spans(project, episode: Annotation) -> tuple[MemberSpan, ...]:
@@ -335,34 +340,70 @@ def member_spans(project, episode: Annotation) -> tuple[MemberSpan, ...]:
 
     The pairing is the one the captions and the picture track already use:
     ``ordered_member_ids[i]`` is the member behind the timeline span whose
-    ``index`` is ``i`` (see :func:`episode_script`). A member with no such span
-    gets no placement. Durations cannot stand in for it: the weave lays clips
-    and narration out with overlaps, pads and pauses that only the timeline
-    records.
+    ``index`` is ``i`` (see :func:`episode_script`). Durations cannot stand in
+    for it: the weave lays members out with overlaps, pads and pauses that only
+    the timeline records.
 
-    The spans are **exclusive**. The weave crossfades consecutive members, so a
-    member's ``start`` sits a fraction of a second before the previous one's
-    end. Each placement begins where the previous placed member finished,
-    which is how :func:`braidio.captions.cues_for` clamps its cues, so the
-    intervals come back ordered and never overlapping. A member whose span
-    would be empty after that clamp keeps a zero-length interval at its start.
+    **The sequential members come back exclusive.** The weave tucks each
+    sequential member a fraction of a second under the previous one's end (a
+    narration crossfade, a clip's faded edge), so a raw span starts before its
+    predecessor finishes. Each sequential placement begins where the previous
+    sequential one finished, which is how :func:`braidio.captions.cues_for`
+    clamps its cues; those intervals are ordered and never overlap.
 
-    Raises what :func:`episode_timeline` raises when a pre-timeline row cannot
-    be reconstructed.
+    **A member laid under what follows keeps its true span** and is marked
+    ``concurrent``. :func:`braidio.weave.layout_placed` starts such a member at
+    the cursor and the next sequential member *before* it, so "some later member
+    starts earlier" is exactly the signature of an ``under`` placement, and
+    squeezing it into the sequential lane would place audio that is really
+    heard nowhere.
+
+    Every interval is bounded by the mix (``duration_s``, when recorded).
+
+    Placement is unknown (all ``None``) when the timeline cannot be read or
+    reconstructed, or when its indices are not positions of this member list
+    (duplicated, or past its end): pairing by index there would hand each member
+    a neighbour's interval.
     """
-    timeline = episode_timeline(project, episode)
-    by_index = {b.index: b for b in timeline.beats}
-    out: list[MemberSpan] = []
+    member_ids = [str(m) for m in episode.body.get("ordered_member_ids", ())]
+    unplaced = tuple(MemberSpan(m, i) for i, m in enumerate(member_ids))
+    try:
+        beats = episode_timeline(project, episode).beats
+    except (LookupError, ValueError, TypeError, AttributeError):
+        return unplaced
+    indices = [b.index for b in beats]
+    if len(set(indices)) != len(indices) or not all(
+        0 <= i < len(member_ids) for i in indices
+    ):
+        return unplaced
+    by_index = {b.index: b for b in beats}
+    mix_end = float(episode.body.get("duration_s") or 0.0) or None
+
+    def bounded(t: float) -> float:
+        t = max(t, 0.0)
+        return round(min(t, mix_end) if mix_end is not None else t, 3)
+
+    placed = [p for p in range(len(member_ids)) if p in by_index]
+    # A member is laid under what follows when a later member starts before it.
+    later_min, under = float("inf"), set()
+    for p in reversed(placed):
+        if later_min < float(by_index[p].start):
+            under.add(p)
+        later_min = min(later_min, float(by_index[p].start))
+
+    out = list(unplaced)
     floor = 0.0
-    for position, member_id in enumerate(episode.body.get("ordered_member_ids", ())):
-        span = by_index.get(position)
-        if span is None:
-            out.append(MemberSpan(str(member_id), position))
-            continue
-        start = max(float(span.start), floor)
-        end = max(float(span.end), start)
-        out.append(MemberSpan(str(member_id), position, round(start, 3), round(end, 3)))
-        floor = end
+    for p in placed:
+        span = by_index[p]
+        if p in under:
+            start, end = float(span.start), float(span.end)
+        else:
+            start = max(float(span.start), floor)
+            end = max(float(span.end), start)
+            floor = end
+        out[p] = MemberSpan(
+            member_ids[p], p, bounded(start), bounded(end), concurrent=p in under
+        )
     return tuple(out)
 
 

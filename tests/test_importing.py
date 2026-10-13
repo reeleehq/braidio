@@ -990,6 +990,95 @@ def test_a_member_with_no_span_has_no_placement(tmp_path, source):
     assert all(s.start_s is None and s.end_s is None for s in spans[1:])
 
 
+def _spans_for(beats, *, duration_s=None, **episode_body):
+    """``member_spans`` over a hand-laid timeline: one member per beat."""
+    from types import SimpleNamespace
+
+    from braidio.transforms import member_spans
+
+    rows = [
+        {"index": i, "kind": k, "label": "", "source": None,
+         "duration": round(e - s, 3), "start": s, "end": e}
+        for i, k, s, e in beats
+    ]
+    n = max([r["index"] for r in rows], default=-1) + 1
+    body = {
+        "ordered_member_ids": [f"m{i}" for i in range(episode_body.pop("members", n))],
+        "timeline": {"title": "", "settings": None, "beats": rows},
+        "duration_s": duration_s or 0.0,
+        **episode_body,
+    }
+    return member_spans(None, SimpleNamespace(body=body, id="ep"))
+
+
+def test_a_member_laid_under_what_follows_keeps_its_true_span():
+    """NEGATIVE CONTROL for the clamp. ``layout_placed`` starts an ``under`` clip
+    at the cursor and the next narration BEFORE it; squeezing that narration into
+    the sequential lane would place a take heard at 4.88 s at 9 s, for nothing."""
+    from braidio.weave import layout_placed
+
+    starts = layout_placed(
+        ["narration", "clip", "narration"], [5.0, 4.0, 3.0],
+        ["sequential", "under", "sequential"],
+        clip_edge_overlap_s=0.12, narration_crossfade_s=0.12,
+    )
+    spans = _spans_for(
+        [(0, "narration", starts[0], starts[0] + 5.0),
+         (1, "clip", starts[1], starts[1] + 4.0),
+         (2, "narration", starts[2], starts[2] + 3.0)]
+    )
+    assert spans[1].concurrent and (spans[1].start_s, spans[1].end_s) == (5.0, 9.0)
+    assert not spans[2].concurrent
+    assert (spans[2].start_s, spans[2].end_s) == (5.0, 7.88)
+
+
+def test_spans_are_bounded_by_the_mix():
+    spans = _spans_for([(0, "narration", 0.0, 25.0)], duration_s=20.0)
+    assert (spans[0].start_s, spans[0].end_s) == (0.0, 20.0)
+
+
+def test_an_unplaced_member_in_the_middle_does_not_shift_the_rest():
+    spans = _spans_for(
+        [(0, "narration", 0.0, 4.0), (2, "narration", 6.0, 9.0)]
+    )
+    assert [(s.start_s, s.end_s) for s in spans] == [(0.0, 4.0), (None, None), (6.0, 9.0)]
+
+
+@pytest.mark.parametrize(
+    "beats, members",
+    [
+        # 1-based: pairing by index would give every member its neighbour's span
+        ([(1, "narration", 0.0, 2.0), (2, "narration", 2.0, 4.0)], 2),
+        # a duplicated index
+        ([(0, "narration", 0.0, 2.0), (0, "narration", 2.0, 4.0)], 2),
+    ],
+)
+def test_a_timeline_that_does_not_pair_with_the_members_places_nothing(beats, members):
+    spans = _spans_for(beats, members=members)
+    assert len(spans) == members
+    assert all(s.start_s is None and s.end_s is None for s in spans)
+
+
+def test_an_unreadable_timeline_places_nothing():
+    from types import SimpleNamespace
+
+    from braidio.transforms import member_spans
+
+    body = {"ordered_member_ids": ["m0"], "timeline": {"beats": [{"kind": "x"}]}}
+    spans = member_spans(None, SimpleNamespace(body=body, id="ep"))
+    assert (spans[0].start_s, spans[0].end_s) == (None, None)
+
+
+@needs_illustration
+def test_a_timeline_whose_indices_are_not_positions_is_refused(tmp_path, source):
+    from braidio.importing import ImportError_
+
+    cut = _doc()["cuts"][0]
+    timeline = dict(cut["timeline"], beats=[dict(cut["timeline"]["beats"][0], index=4)])
+    with pytest.raises(ImportError_, match="not distinct positions"):
+        _run(tmp_path, source, overrides={"cuts": _cuts_with(timeline=timeline)})
+
+
 # --- gap 2: a fresh import is retrievable -----------------------------------
 
 

@@ -1022,6 +1022,20 @@ def _import_into_project(
                 "it onto the wrong beat. Renumber, or carry the skipped "
                 "members."
             )
+        # The verbatim timeline is paired with the same positions (member_spans,
+        # cues_for), so its indices must be positions of these beats: a 1-based
+        # timeline hands every take its neighbour's interval, silently.
+        spans = [b.get("index") for b in (cut.timeline or {}).get("beats") or ()]
+        if len(set(spans)) != len(spans) or not all(
+            isinstance(i, int) and 0 <= i < len(indices) for i in spans
+        ):
+            raise ImportError_(
+                f"cut {cut.label!r}: the timeline's beat indices {spans[:8]} are "
+                f"not distinct positions in 0..{len(indices) - 1}. They are "
+                "paired with the episode's members by position, so a shifted "
+                "or duplicated index puts every member at a neighbour's place "
+                "on the mix."
+            )
 
     # rule 1's other door, checked HERE so a dry run catches it and a real run
     # refuses before writing anything (the write loop would fail half-way)

@@ -57,6 +57,8 @@ into the delivered artifact.
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
+from typing import Optional
 
 from falaw import Plan
 from lacing import Annotation
@@ -311,6 +313,57 @@ def _project_title(project) -> str:
         return str(getattr(project.spec, "title", "") or "")
     except Exception:  # noqa: BLE001 — a title is decoration on a timeline
         return ""
+
+
+@dataclass(frozen=True)
+class MemberSpan:
+    """Where one member of an episode is heard on its mix.
+
+    ``start_s`` / ``end_s`` are ``None`` together when the episode's timeline has
+    no span at the member's position: placement is then unknown, and a caller
+    shows that rather than inventing one.
+    """
+
+    member_id: str
+    position: int
+    start_s: Optional[float] = None
+    end_s: Optional[float] = None
+
+
+def member_spans(project, episode: Annotation) -> tuple[MemberSpan, ...]:
+    """Each member of ``episode``, in play order, with its place on the mix.
+
+    The pairing is the one the captions and the picture track already use:
+    ``ordered_member_ids[i]`` is the member behind the timeline span whose
+    ``index`` is ``i`` (see :func:`episode_script`). A member with no such span
+    gets no placement. Durations cannot stand in for it: the weave lays clips
+    and narration out with overlaps, pads and pauses that only the timeline
+    records.
+
+    The spans are **exclusive**. The weave crossfades consecutive members, so a
+    member's ``start`` sits a fraction of a second before the previous one's
+    end. Each placement begins where the previous placed member finished,
+    which is how :func:`braidio.captions.cues_for` clamps its cues, so the
+    intervals come back ordered and never overlapping. A member whose span
+    would be empty after that clamp keeps a zero-length interval at its start.
+
+    Raises what :func:`episode_timeline` raises when a pre-timeline row cannot
+    be reconstructed.
+    """
+    timeline = episode_timeline(project, episode)
+    by_index = {b.index: b for b in timeline.beats}
+    out: list[MemberSpan] = []
+    floor = 0.0
+    for position, member_id in enumerate(episode.body.get("ordered_member_ids", ())):
+        span = by_index.get(position)
+        if span is None:
+            out.append(MemberSpan(str(member_id), position))
+            continue
+        start = max(float(span.start), floor)
+        end = max(float(span.end), start)
+        out.append(MemberSpan(str(member_id), position, round(start, 3), round(end, 3)))
+        floor = end
+    return tuple(out)
 
 
 def episode_script(project, episode: Annotation):

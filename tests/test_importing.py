@@ -943,6 +943,53 @@ def test_the_render_s_own_timeline_reaches_the_episode(tmp_path, source):
     assert breakdown.title == "A Demo Production"
 
 
+@needs_illustration
+def test_member_spans_place_every_member_and_never_overlap(tmp_path, source):
+    """``member_spans`` pairs ``ordered_member_ids[i]`` with timeline span ``i``.
+
+    The archive beat starts 0.14 s inside the scene break, the way the weave's
+    crossfade lays real mixes out. NEGATIVE CONTROL: the raw spans overlap, so
+    a reader that copied ``span.start`` would hand back overlapping intervals.
+    """
+    from braidio.project import Project
+    from braidio.transforms import episode_timeline, member_spans
+    from braidio.transforms._common import TIER_EPISODE_RENDER
+
+    cut = _doc()["cuts"][0]
+    beats = [dict(b) for b in cut["beats"]]
+    beats[3]["start"] = 12.86
+    _run(tmp_path, source, overrides={"cuts": _cuts_with(beats=beats, timeline=None)})
+    root = tmp_path / "project"
+    episode = _annotations(root, TIER_EPISODE_RENDER)[0]
+    raw = episode_timeline(Project(root), episode).beats
+    assert raw[3].start < raw[2].end, "the fixture must overlap, or this proves nothing"
+
+    spans = member_spans(Project(root), episode)
+    assert [s.member_id for s in spans] == list(episode.body["ordered_member_ids"])
+    assert [(s.start_s, s.end_s) for s in spans] == [
+        (0.0, 8.0),
+        (8.0, 12.0),
+        (12.0, 13.0),
+        (13.0, 20.0),
+    ]
+
+
+@needs_illustration
+def test_a_member_with_no_span_has_no_placement(tmp_path, source):
+    """The fixture's verbatim timeline carries one span for four members. The
+    three without one are unplaced, never placed by summing durations."""
+    from braidio.project import Project
+    from braidio.transforms import member_spans
+    from braidio.transforms._common import TIER_EPISODE_RENDER
+
+    _run(tmp_path, source)
+    root = tmp_path / "project"
+    episode = _annotations(root, TIER_EPISODE_RENDER)[0]
+    spans = member_spans(Project(root), episode)
+    assert (spans[0].start_s, spans[0].end_s) == (0.0, 8.0)
+    assert all(s.start_s is None and s.end_s is None for s in spans[1:])
+
+
 # --- gap 2: a fresh import is retrievable -----------------------------------
 
 

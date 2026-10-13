@@ -1073,6 +1073,44 @@ def test_an_older_timeline_s_under_members_are_read_off_the_layout(
     assert all(s.end_s > s.start_s for s in spans), "nobody is squeezed to nothing"
 
 
+def test_the_older_timeline_inference_holds_on_real_valued_durations():
+    """Property check against ``layout_placed`` with unrounded durations: the lane
+    end and the next start are each rounded, so they can disagree by over 1 ms."""
+    import random
+
+    rng = random.Random(546)
+    for _ in range(3000):
+        n = rng.randint(2, 7)
+        kinds = [rng.choice(["narration", "clip"]) for _ in range(n)]
+        # longer than any tuck, the inference's stated assumption
+        durs = [rng.uniform(2.05, 9.0) for _ in range(n)]
+        placements = ["sequential"] + [
+            rng.choice(["sequential", "sequential", "under"]) for _ in range(n - 1)
+        ]
+        if placements[-1] == "under":
+            placements[-1] = "sequential"  # a trailing under overlays nothing
+        overlap = rng.choice([0.0, 0.12, 0.5, 1.0])
+        spans = _spans_for(_laid_out(kinds, durs, placements, overlap=overlap))
+        truth = {i for i, p in enumerate(placements) if p == "under"}
+        assert {s.position for s in spans if s.concurrent} == truth, placements
+        assert all(s.end_s > s.start_s for s in spans), "nobody is squeezed to nothing"
+
+
+def test_a_malformed_timeline_or_placement_places_nothing_or_is_ignored():
+    from types import SimpleNamespace
+
+    from braidio.timeline import TimelineBreakdown
+    from braidio.transforms import member_spans
+
+    bad = {"index": 0, "kind": "narration", "duration": None, "start": 0.0}
+    body = {"ordered_member_ids": ["m0"], "timeline": {"beats": [bad]}}
+    [span] = member_spans(None, SimpleNamespace(body=body, id="ep"))
+    assert (span.start_s, span.end_s) == (None, None)
+
+    odd = dict(bad, duration=1.0, placement=["under"])
+    assert TimelineBreakdown.from_dict({"beats": [odd]}).beats[0].placement is None
+
+
 def test_a_recorded_placement_is_read_rather_than_inferred():
     from types import SimpleNamespace
 

@@ -315,9 +315,10 @@ def _project_title(project) -> str:
         return ""
 
 
-#: Timeline offsets are rounded to the millisecond, so two starts this close
-#: are the same instant.
-_PLACEMENT_EPS_S = 1e-3
+#: Timeline offsets and durations are each rounded to the millisecond, so a
+#: lane end (rounded start + rounded duration) and the next start can differ by
+#: a little over 1 ms for the same instant.
+_PLACEMENT_EPS_S = 2.5e-3
 
 
 @dataclass(frozen=True)
@@ -363,7 +364,13 @@ def member_spans(project, episode: Annotation) -> tuple[MemberSpan, ...]:
     field existed is read the way :func:`braidio.weave.layout_placed` lays one
     out: an ``under`` member starts exactly at the end of the sequential lane so
     far, and the sequential member after it starts at or before it (tucked back
-    by the crossfade or the clip edge).
+    by the crossfade or the clip edge). That reading assumes members longer
+    than their tuck; a layout of parts shorter than the clip edge can start
+    several of them at 0, which only a recorded placement disambiguates.
+
+    A sequential member shorter than its tuck (a 0.3 s part under a 0.5 s clip
+    edge) is heard entirely inside its predecessor's tail; it too keeps its
+    true span and is marked ``concurrent`` rather than squeezed to nothing.
 
     Every interval is bounded by the mix (``duration_s``, when recorded).
 
@@ -376,7 +383,7 @@ def member_spans(project, episode: Annotation) -> tuple[MemberSpan, ...]:
     unplaced = tuple(MemberSpan(m, i) for i, m in enumerate(member_ids))
     try:
         beats = episode_timeline(project, episode).beats
-    except (KeyError, ValueError):  # a malformed record, or no way to rebuild one
+    except (KeyError, TypeError, ValueError):  # malformed, or no way to rebuild one
         return unplaced
     indices = [b.index for b in beats]
     if len(set(indices)) != len(indices) or not all(
@@ -410,14 +417,18 @@ def member_spans(project, episode: Annotation) -> tuple[MemberSpan, ...]:
     for p in placed:
         span = by_index[p]
         under = is_under(p, lane_end)
-        if under:
+        if not under:
+            lane_end = float(span.end)  # layout_placed's cursor
+        # shorter than its tuck: heard entirely inside its predecessor's tail
+        tucked = not under and float(span.end) <= floor and float(span.duration) > 0
+        if under or tucked:
             start, end = float(span.start), float(span.end)
         else:
             start = max(float(span.start), floor)
             end = max(float(span.end), start)
-            floor, lane_end = end, float(span.end)
+            floor = end
         out[p] = MemberSpan(
-            member_ids[p], p, bounded(start), bounded(end), concurrent=under
+            member_ids[p], p, bounded(start), bounded(end), concurrent=under or tucked
         )
     return tuple(out)
 

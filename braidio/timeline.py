@@ -167,7 +167,11 @@ class TimelineBreakdown:
                 source_end=(b["source"][1] if b.get("source") else None),
                 duration=float(b["duration"]),
                 start=float(b["start"]),
-                placement=(str(b["placement"]) if b.get("placement") else None),
+                placement=(
+                    b.get("placement")
+                    if b.get("placement") in ("sequential", "under")
+                    else None
+                ),
             )
             for b in d.get("beats", ())
         )

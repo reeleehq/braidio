@@ -746,7 +746,9 @@ def _reuse_candidate(project, skel: Annotation):
     return hit, "adopt"
 
 
-def reuses_existing_cut(project, skeleton) -> bool:
+def reuses_existing_cut(
+    project, skeleton, *, use_cache: bool = True, force: bool = False
+) -> bool:
     """Whether executing a planned ``video_cut`` skeleton would reuse a cut
     already on disk instead of drawing one — asked **before** running, free.
 
@@ -755,11 +757,16 @@ def reuses_existing_cut(project, skeleton) -> bool:
     to quote a re-make honestly: ``True`` means the motion pass is a re-verify
     (a caption or another editorial edit — seconds), ``False`` means every
     frame is drawn again (a picture, crop, span or move changed — minutes).
-    It reads exactly what :func:`_reuse` reads, so the quote and the run
-    cannot disagree; it writes nothing. A run with ``use_cache=False`` or
-    ``force=True`` draws regardless.
+    It reads exactly what :func:`_reuse` reads, and takes the same
+    ``use_cache`` / ``force`` as ``execute``, so the quote and the run cannot
+    disagree; it writes nothing. (A file deleted or a parent edited between
+    the quote and the run can still change the answer: the quote is advisory.)
     """
     skel = skeleton[0] if isinstance(skeleton, (tuple, list)) else skeleton
+    if skel.tier != TIER_VIDEO_CUT:
+        raise ValueError(f"not a video_cut skeleton: tier {skel.tier!r}")
+    if not use_cache or force:
+        return False
     return _reuse_candidate(project, skel) is not None
 
 

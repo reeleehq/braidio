@@ -983,6 +983,20 @@ def test_the_reuse_quote_agrees_with_the_run_on_every_door(
     assert _quote_then_run(project, panels, patched_render) == (False, True)  # file gone
 
 
+def test_the_reuse_quote_follows_execute_flags_and_refuses_other_tiers(
+    project, episode, stills, panels, patched_render
+):
+    from braidio.transforms import VIDEO_CUT_RENDER_TRANSFORM, video_cut_reuses_existing
+
+    _run(VIDEO_CUT_RENDER_TRANSFORM, project, *panels)
+    _plan_, skel = _plan(VIDEO_CUT_RENDER_TRANSFORM, project, *panels)
+    assert video_cut_reuses_existing(project, skel) is True
+    assert video_cut_reuses_existing(project, skel, use_cache=False) is False
+    assert video_cut_reuses_existing(project, skel, force=True) is False
+    with pytest.raises(ValueError, match="not a video_cut skeleton"):
+        video_cut_reuses_existing(project, panels[0])
+
+
 def test_a_cached_cut_whose_file_is_gone_is_not_adopted(
     project, episode, stills, panels, patched_render
 ):

@@ -1737,6 +1737,47 @@ def test_a_caption_too_long_even_for_the_taller_budget_still_raises():
         )
 
 
+def test_a_vertical_finish_hands_tituli_the_wrapped_caption(
+    project, episode, stills, panels, patched_render, monkeypatch
+):
+    """thorwhalen/braidio#77, through the transform: ``finish`` on a 1080x1920
+    cut must give tituli a laid-out caption for a subject that overflows the
+    default budget. Guards the wiring, not just ``_wrap_labels_for_frame``."""
+    pytest.importorskip("tituli")
+    import tituli.video
+
+    from braidio.transforms import (
+        VIDEO_CUT_FINISH_TRANSFORM,
+        VIDEO_CUT_RENDER_TRANSFORM,
+    )
+
+    still_a = stills[0]
+    _rewrite_in_place(
+        project, still_a, body={**still_a.body, "subject": _LONG_SUBJECT}
+    )
+    motion = _run(
+        VIDEO_CUT_RENDER_TRANSFORM,
+        project,
+        *panels,
+        params={"size": (1080, 1920), "fps": 6},
+    ).annotations[0]
+    seen = []
+
+    def _record(video, overlays, dst, **kw):
+        seen.extend(overlays)
+        raise RuntimeError("stop after the overlay hand-off")
+
+    monkeypatch.setattr(tituli.video, "overlay", _record)
+    with pytest.raises(RuntimeError, match="hand-off"):
+        _run(VIDEO_CUT_FINISH_TRANSFORM, project, motion)
+    long_label = [
+        o for o in seen if getattr(o.payload, "text", None) == _LONG_SUBJECT
+    ]
+    assert long_label and all(o.layout is not None for o in long_label)
+    short_label = [o for o in seen if getattr(o.payload, "text", None) == "Carol"]
+    assert short_label and all(o.layout is None for o in short_label)
+
+
 def test_motion_key_names_the_move_resolver(
     project, episode, stills, panels, monkeypatch
 ):

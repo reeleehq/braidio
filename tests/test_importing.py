@@ -1032,6 +1032,65 @@ def test_a_member_laid_under_what_follows_keeps_its_true_span():
     assert (spans[2].start_s, spans[2].end_s) == (5.0, 7.88)
 
 
+def _laid_out(kinds, durs, placements, *, overlap=0.12, crossfade=0.12):
+    from braidio.weave import layout_placed
+
+    starts = layout_placed(
+        ["clip" if k == "clip" else "narration" for k in kinds], durs, placements,
+        clip_edge_overlap_s=overlap, narration_crossfade_s=crossfade,
+    )
+    return [(i, k, round(s, 3), round(s + d, 3))
+            for i, (k, s, d) in enumerate(zip(kinds, starts, durs))]
+
+
+@pytest.mark.parametrize(
+    "kinds, durs, placements, kw, under",
+    [
+        # a cold open laid under the first narration: both start at 0
+        (["clip", "narration", "narration"], [4.0, 5.0, 3.0],
+         ["under", "sequential", "sequential"], {}, {0}),
+        # no crossfade: the narration after an under clip starts at the clip
+        (["narration", "clip", "narration"], [5.0, 4.0, 3.0],
+         ["sequential", "under", "sequential"], {"crossfade": 0.0, "overlap": 0.0}, {1}),
+        # two under clips first
+        (["clip", "clip", "narration"], [4.0, 3.0, 5.0],
+         ["under", "under", "sequential"], {}, {0, 1}),
+        # all sequential, one member shorter than the clip edge: nothing is under
+        (["narration", "narration", "clip", "narration"], [5.0, 0.4, 3.0, 4.0],
+         ["sequential"] * 4, {"overlap": 0.5}, set()),
+    ],
+)
+def test_an_older_timeline_s_under_members_are_read_off_the_layout(
+    kinds, durs, placements, kw, under
+):
+    """A breakdown written before ``placement`` was recorded: the inference must
+    agree with ``layout_placed`` on every shape, ties included."""
+    spans = _spans_for(_laid_out(kinds, durs, placements, **kw))
+    assert {s.position for s in spans if s.concurrent} == under
+    lane = [s for s in spans if not s.concurrent]
+    for a, b in zip(lane, lane[1:]):
+        assert a.end_s <= b.start_s
+    assert all(s.end_s > s.start_s for s in spans), "nobody is squeezed to nothing"
+
+
+def test_a_recorded_placement_is_read_rather_than_inferred():
+    from types import SimpleNamespace
+
+    from braidio.timeline import TimelineBreakdown, build_timeline
+    from braidio.transforms import member_spans
+
+    tl = build_timeline(
+        kinds=["clip", "narration"], durations=[4.0, 5.0],
+        placements=["under", "sequential"],
+    )
+    assert TimelineBreakdown.from_dict(tl.to_dict()) == tl
+    assert [b["placement"] for b in tl.to_dict()["beats"]] == ["under", "sequential"]
+    body = {"ordered_member_ids": ["a", "b"], "timeline": tl.to_dict()}
+    spans = member_spans(None, SimpleNamespace(body=body, id="ep"))
+    assert [s.concurrent for s in spans] == [True, False]
+    assert [(s.start_s, s.end_s) for s in spans] == [(0.0, 4.0), (0.0, 5.0)]
+
+
 def test_spans_are_bounded_by_the_mix():
     spans = _spans_for([(0, "narration", 0.0, 25.0)], duration_s=20.0)
     assert (spans[0].start_s, spans[0].end_s) == (0.0, 20.0)

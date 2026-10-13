@@ -68,6 +68,10 @@ class BeatSpan:
     source_end: float | None = None
     duration: float = 0.0  # rendered length (s)
     start: float = 0.0  # offset on the episode timeline (s)
+    # "sequential" | "under" (layout_placed's), or None for a breakdown written
+    # before it was recorded. An "under" beat overlays what follows it, so where
+    # it is heard cannot be read off the order of the starts alone.
+    placement: str | None = None
 
     @property
     def end(self) -> float:
@@ -134,6 +138,9 @@ class TimelineBreakdown:
                     "duration": b.duration,
                     "start": b.start,
                     "end": b.end,
+                    # only when recorded, so an older breakdown round-trips to
+                    # the same bytes and stales nothing
+                    **({"placement": b.placement} if b.placement is not None else {}),
                 }
                 for b in self.beats
             ],
@@ -160,6 +167,7 @@ class TimelineBreakdown:
                 source_end=(b["source"][1] if b.get("source") else None),
                 duration=float(b["duration"]),
                 start=float(b["start"]),
+                placement=(str(b["placement"]) if b.get("placement") else None),
             )
             for b in d.get("beats", ())
         )
@@ -222,6 +230,7 @@ def build_timeline(
             source_end=(source_spans[i][1] if source_spans[i] else None),
             duration=round(float(durations[i]), 3),
             start=round(float(starts[i]), 3),
+            placement=placements[i],
         )
         for i in range(n)
     )

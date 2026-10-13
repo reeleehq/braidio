@@ -1025,9 +1025,14 @@ def _import_into_project(
         # The verbatim timeline is paired with the same positions (member_spans,
         # cues_for), so its indices must be positions of these beats: a 1-based
         # timeline hands every take its neighbour's interval, silently.
-        spans = [b.get("index") for b in (cut.timeline or {}).get("beats") or ()]
+        try:  # read the way TimelineBreakdown.from_dict reads them
+            spans = [
+                int(b["index"]) for b in (cut.timeline or {}).get("beats") or ()
+            ]
+        except (KeyError, TypeError, ValueError):
+            spans = [None]
         if len(set(spans)) != len(spans) or not all(
-            isinstance(i, int) and 0 <= i < len(indices) for i in spans
+            i is not None and 0 <= i < len(indices) for i in spans
         ):
             raise ImportError_(
                 f"cut {cut.label!r}: the timeline's beat indices {spans[:8]} are "

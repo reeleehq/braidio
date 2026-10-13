@@ -315,6 +315,11 @@ def _project_title(project) -> str:
         return ""
 
 
+#: Timeline offsets are rounded to the millisecond, so two starts this close
+#: are the same instant.
+_PLACEMENT_EPS_S = 1e-3
+
+
 @dataclass(frozen=True)
 class MemberSpan:
     """Where one member of an episode is heard on its mix.
@@ -352,11 +357,13 @@ def member_spans(project, episode: Annotation) -> tuple[MemberSpan, ...]:
     clamps its cues; those intervals are ordered and never overlap.
 
     **A member laid under what follows keeps its true span** and is marked
-    ``concurrent``. :func:`braidio.weave.layout_placed` starts such a member at
-    the cursor and the next sequential member *before* it, so "some later member
-    starts earlier" is exactly the signature of an ``under`` placement, and
-    squeezing it into the sequential lane would place audio that is really
-    heard nowhere.
+    ``concurrent``: it plays at the same time as its neighbours, and squeezing it
+    into the sequential lane would place audio that is really heard nowhere. The
+    timeline records each span's ``placement``. A breakdown written before that
+    field existed is read the way :func:`braidio.weave.layout_placed` lays one
+    out: an ``under`` member starts exactly at the end of the sequential lane so
+    far, and the sequential member after it starts at or before it (tucked back
+    by the crossfade or the clip edge).
 
     Every interval is bounded by the mix (``duration_s``, when recorded).
 
@@ -369,7 +376,7 @@ def member_spans(project, episode: Annotation) -> tuple[MemberSpan, ...]:
     unplaced = tuple(MemberSpan(m, i) for i, m in enumerate(member_ids))
     try:
         beats = episode_timeline(project, episode).beats
-    except (LookupError, ValueError, TypeError, AttributeError):
+    except (KeyError, ValueError):  # a malformed record, or no way to rebuild one
         return unplaced
     indices = [b.index for b in beats]
     if len(set(indices)) != len(indices) or not all(
@@ -384,25 +391,33 @@ def member_spans(project, episode: Annotation) -> tuple[MemberSpan, ...]:
         return round(min(t, mix_end) if mix_end is not None else t, 3)
 
     placed = [p for p in range(len(member_ids)) if p in by_index]
-    # A member is laid under what follows when a later member starts before it.
-    later_min, under = float("inf"), set()
+    recorded = all(by_index[p].placement for p in placed)
+    later_min: dict[int, float] = {}
+    running = float("inf")
     for p in reversed(placed):
-        if later_min < float(by_index[p].start):
-            under.add(p)
-        later_min = min(later_min, float(by_index[p].start))
+        later_min[p] = running
+        running = min(running, float(by_index[p].start))
+
+    def is_under(p: int, lane_end: float) -> bool:
+        span = by_index[p]
+        if recorded:
+            return span.placement == "under"
+        start = float(span.start)
+        return abs(start - lane_end) <= _PLACEMENT_EPS_S and later_min[p] <= start
 
     out = list(unplaced)
-    floor = 0.0
+    floor = lane_end = 0.0
     for p in placed:
         span = by_index[p]
-        if p in under:
+        under = is_under(p, lane_end)
+        if under:
             start, end = float(span.start), float(span.end)
         else:
             start = max(float(span.start), floor)
             end = max(float(span.end), start)
-            floor = end
+            floor, lane_end = end, float(span.end)
         out[p] = MemberSpan(
-            member_ids[p], p, bounded(start), bounded(end), concurrent=p in under
+            member_ids[p], p, bounded(start), bounded(end), concurrent=under
         )
     return tuple(out)
 

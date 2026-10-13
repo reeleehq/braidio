@@ -54,6 +54,12 @@ def _execute(project, skeleton):
     )
 
 
+def _node_count(project) -> int:
+    import nw
+
+    return sum(1 for _ in nw.iter_all_annotations(project.root))
+
+
 def test_a_member_missing_at_execute_time_is_refused_not_persisted(woven):
     project, episode = woven
     ids = list(episode.body["ordered_member_ids"])
@@ -64,8 +70,10 @@ def test_a_member_missing_at_execute_time_is_refused_not_persisted(woven):
             "body": {**episode.body, "ordered_member_ids": [ids[0], ghost, *ids[1:]]},
         }
     )
+    before = _node_count(project)
     with pytest.raises(ValueError, match=ghost):
         _execute(project, skeleton)
+    assert _node_count(project) == before  # nothing was persisted
 
 
 def test_a_complete_member_list_keeps_ids_and_timeline_in_step(woven):
@@ -73,3 +81,15 @@ def test_a_complete_member_list_keeps_ids_and_timeline_in_step(woven):
     skeleton = episode.model_copy(update={"id": uuid.uuid4()})
     (done,) = _execute(project, skeleton).annotations
     assert len(done.body["timeline"]["beats"]) == len(done.body["ordered_member_ids"])
+
+
+def test_reconstructing_a_timeline_refuses_a_missing_member_too(woven):
+    from braidio.transforms import episode_timeline
+
+    project, episode = woven
+    ids = list(episode.body["ordered_member_ids"])
+    ghost = str(uuid.uuid4())
+    body = {k: v for k, v in episode.body.items() if k != "timeline"}
+    body["ordered_member_ids"] = [ids[0], ghost, *ids[1:]]
+    with pytest.raises(ValueError, match=ghost):
+        episode_timeline(project, episode.model_copy(update={"body": body}))

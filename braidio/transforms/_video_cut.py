@@ -119,6 +119,13 @@ _CUTS_DIR = ("data", "cuts")
 DEFAULT_CREDITS_S = 8.0
 #: Default caption wrap (a player's two lines).
 DEFAULT_CAPTION_CHARS = 42
+#: The frame a label's default line budget is sized for: tituli's 3 lines
+#: fit a 16:9 frame. A narrower frame has the height for more lines, just not
+#: the width, so its budget grows in proportion (thorwhalen/braidio#77).
+_LABEL_REFERENCE_ASPECT = 16 / 9
+#: The most lines a still's caption may wrap to on a narrow frame. Past this
+#: the caption is a paragraph, not a label, and the author should shorten it.
+_MAX_LABEL_LINES = 6
 #: Default delivery for tituli's reserved zones (the subtitle band + controls).
 DEFAULT_DELIVERY = "youtube"
 #: The tituli slot each label-track kind lands in when the body names none.
@@ -1286,6 +1293,74 @@ def _card_named_by(text, overlays) -> str:
     return "an overlay tituli could not identify"
 
 
+def _label_lines_for(size, default: int) -> int:
+    """The line budget for a still's caption on a ``size`` frame.
+
+    ``default`` (tituli's own budget) on any frame as wide as 16:9; more, in
+    proportion to how much narrower the frame is, up to ``_MAX_LABEL_LINES``.
+
+    >>> _label_lines_for((1920, 1080), 3)
+    3
+    >>> _label_lines_for((1080, 1080), 3)
+    6
+    >>> _label_lines_for((1080, 1920), 3)
+    6
+    >>> _label_lines_for((1440, 1080), 3)
+    4
+    """
+    width, height = size
+    scaled = math.ceil(default * _LABEL_REFERENCE_ASPECT * height / width)
+    return max(default, min(_MAX_LABEL_LINES, scaled))
+
+
+def _wrap_labels_for_frame(overlays, *, size, delivery):
+    """``overlays`` with each still caption tituli cannot set in its default
+    line budget given a taller budget instead (thorwhalen/braidio#77).
+
+    A still's ``subject`` is one string shared by every cut of a production,
+    but legibility is per-delivery: type is sized as a fraction of frame
+    *height* and must fit the frame's *width*, so a 9:16 cut has about half the
+    room per line that a 16:9 cut has — and twice the lines to spend. The
+    least surprising behaviour is therefore the one tituli already has
+    (shrink, then wrap, never truncate) given the budget the frame can afford.
+
+    Only a caption that would otherwise be refused is touched: one that fits
+    keeps its payload and so renders exactly as it always has. A caption that
+    does not fit even the taller budget still raises ``TextDoesNotFit`` (the
+    author shortens it; a dropped or ellipsised credit is a licence failure
+    nobody sees). Cards, and attributions (always two lines), are untouched.
+    """
+    import inspect
+
+    from tituli import Label
+    from tituli.compose import TextDoesNotFit, caption
+    from tituli.frame import Frame
+
+    default = inspect.signature(caption).parameters["max_lines"].default
+    lines = _label_lines_for(size, default)
+    if lines <= default:
+        return list(overlays)
+    frame = Frame.blank(size).with_delivery(delivery)
+    out = []
+    for overlay in overlays:
+        payload = overlay.payload
+        if overlay.layout is None and isinstance(payload, Label):
+            try:
+                caption(payload.text, payload.attribution, frame=frame, anchor=overlay.slot)
+            except TextDoesNotFit:
+                overlay = overlay.with_layout(
+                    caption(
+                        payload.text,
+                        payload.attribution,
+                        frame=frame,
+                        anchor=overlay.slot,
+                        max_lines=lines,
+                    )
+                )
+        out.append(overlay)
+    return out
+
+
 def _caption_overflow_error(exc, overlays, *, size, delivery: str):
     """Re-raise a ``tituli.compose.TextDoesNotFit`` naming the still and the
     delivery it happened on (thorwhalen/braidio#77 item 4).
@@ -1663,6 +1738,9 @@ def _composite(
 
         staged = staging / f"{skel.id}_labels.mp4"
         try:
+            overlays = _wrap_labels_for_frame(
+                overlays, size=size, delivery=settings["delivery"]
+            )
             overlay(
                 current,
                 overlays,

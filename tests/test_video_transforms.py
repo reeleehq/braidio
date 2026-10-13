@@ -1673,6 +1673,111 @@ def test_an_attribution_overflow_also_names_the_still(
     assert "could not identify" not in str(exc_info.value)
 
 
+_LONG_SUBJECT = (
+    "A Central Park concert audience, Schaefer Bandstand — not the 1971 "
+    "Beach Boys concert, a later crowd"
+)
+
+
+def _label_overlay(subject, key="a"):
+    from tituli import Label, TimedOverlay
+
+    return TimedOverlay(
+        None, 0.0, 4.0, slot="top-left", payload=Label(subject, "Jane Doe, CC BY-SA 4.0", key=key)
+    )
+
+
+def test_a_tall_frame_wraps_a_caption_a_wide_frame_would_refuse():
+    """thorwhalen/braidio#77: the same still that sets in 3 lines at 16:9 needs
+    5 at 9:16. The tall frame has the height for them, so it gets them rather
+    than refusing the cut — and nothing is truncated."""
+    pytest.importorskip("tituli")
+    from tituli.compose import TextDoesNotFit, caption
+    from tituli.frame import Frame
+
+    from braidio.transforms._video_cut import _wrap_labels_for_frame
+
+    overlay = _label_overlay(_LONG_SUBJECT)
+    vertical = Frame.blank((1080, 1920)).with_delivery("youtube")
+    with pytest.raises(TextDoesNotFit):  # the premise: the default budget fails
+        caption(overlay.payload.text, overlay.payload.attribution, frame=vertical, anchor="top-left")
+    (wrapped,) = _wrap_labels_for_frame(
+        [overlay], size=(1080, 1920), delivery="youtube"
+    )
+    assert wrapped.layout is not None
+    assert wrapped.payload is overlay.payload  # still names its still for errors
+    # the whole subject is on the layout: wrapped, not ellipsised
+    assert "…" not in str(wrapped.layout) and "..." not in str(wrapped.layout)
+
+
+def test_a_caption_that_already_fits_is_left_exactly_as_it_was():
+    """Existing vertical cuts must render byte-identically: only an overlay
+    that would have been refused is given a layout."""
+    pytest.importorskip("tituli")
+    from braidio.transforms._video_cut import _wrap_labels_for_frame
+
+    short = _label_overlay("Central Park")
+    (out,) = _wrap_labels_for_frame([short], size=(1080, 1920), delivery="youtube")
+    assert out is short
+    long_ = _label_overlay(_LONG_SUBJECT)
+    (out,) = _wrap_labels_for_frame([long_], size=(1920, 1080), delivery="youtube")
+    assert out is long_  # a 16:9 frame has no taller budget to offer
+
+
+def test_a_caption_too_long_even_for_the_taller_budget_still_raises():
+    """Raise, never truncate: the wrap is a bigger budget, not a bypass."""
+    pytest.importorskip("tituli")
+    from tituli.compose import TextDoesNotFit
+
+    from braidio.transforms._video_cut import _wrap_labels_for_frame
+
+    with pytest.raises(TextDoesNotFit):
+        _wrap_labels_for_frame(
+            [_label_overlay(_LONG_SUBJECT * 6)], size=(1080, 1920), delivery="youtube"
+        )
+
+
+def test_a_vertical_finish_hands_tituli_the_wrapped_caption(
+    project, episode, stills, panels, patched_render, monkeypatch
+):
+    """thorwhalen/braidio#77, through the transform: ``finish`` on a 1080x1920
+    cut must give tituli a laid-out caption for a subject that overflows the
+    default budget. Guards the wiring, not just ``_wrap_labels_for_frame``."""
+    pytest.importorskip("tituli")
+    import tituli.video
+
+    from braidio.transforms import (
+        VIDEO_CUT_FINISH_TRANSFORM,
+        VIDEO_CUT_RENDER_TRANSFORM,
+    )
+
+    still_a = stills[0]
+    _rewrite_in_place(
+        project, still_a, body={**still_a.body, "subject": _LONG_SUBJECT}
+    )
+    motion = _run(
+        VIDEO_CUT_RENDER_TRANSFORM,
+        project,
+        *panels,
+        params={"size": (1080, 1920), "fps": 6},
+    ).annotations[0]
+    seen = []
+
+    def _record(video, overlays, dst, **kw):
+        seen.extend(overlays)
+        raise RuntimeError("stop after the overlay hand-off")
+
+    monkeypatch.setattr(tituli.video, "overlay", _record)
+    with pytest.raises(RuntimeError, match="hand-off"):
+        _run(VIDEO_CUT_FINISH_TRANSFORM, project, motion)
+    long_label = [
+        o for o in seen if getattr(o.payload, "text", None) == _LONG_SUBJECT
+    ]
+    assert long_label and all(o.layout is not None for o in long_label)
+    short_label = [o for o in seen if getattr(o.payload, "text", None) == "Carol"]
+    assert short_label and all(o.layout is None for o in short_label)
+
+
 def test_motion_key_names_the_move_resolver(
     project, episode, stills, panels, monkeypatch
 ):

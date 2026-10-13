@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=22d3c163"></script>
+    <script src="../../_static/documentation_options.js?v=86ab457a"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -410,7 +410,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.66" />
+  <meta name="docsearch:version" content="0.0.67" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -786,6 +786,10 @@ window.runMermaid = runMermaid;</script>
     <span class="n">source_end</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">duration</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>  <span class="c1"># rendered length (s)</span>
     <span class="n">start</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>  <span class="c1"># offset on the episode timeline (s)</span>
+    <span class="c1"># "sequential" | "under" (layout_placed's), or None for a breakdown written</span>
+    <span class="c1"># before it was recorded. An "under" beat overlays what follows it, so where</span>
+    <span class="c1"># it is heard cannot be read off the order of the starts alone.</span>
+    <span class="n">placement</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">end</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
@@ -861,6 +865,9 @@ window.runMermaid = runMermaid;</script>
                     <span class="s2">"duration"</span><span class="p">:</span> <span class="n">b</span><span class="o">.</span><span class="n">duration</span><span class="p">,</span>
                     <span class="s2">"start"</span><span class="p">:</span> <span class="n">b</span><span class="o">.</span><span class="n">start</span><span class="p">,</span>
                     <span class="s2">"end"</span><span class="p">:</span> <span class="n">b</span><span class="o">.</span><span class="n">end</span><span class="p">,</span>
+                    <span class="c1"># only when recorded, so an older breakdown round-trips to</span>
+                    <span class="c1"># the same bytes and stales nothing</span>
+                    <span class="o">**</span><span class="p">({</span><span class="s2">"placement"</span><span class="p">:</span> <span class="n">b</span><span class="o">.</span><span class="n">placement</span><span class="p">}</span> <span class="k">if</span> <span class="n">b</span><span class="o">.</span><span class="n">placement</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">{}),</span>
                 <span class="p">}</span>
                 <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">beats</span>
             <span class="p">],</span>
@@ -889,6 +896,11 @@ window.runMermaid = runMermaid;</script>
                 <span class="n">source_end</span><span class="o">=</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="s2">"source"</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">b</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"source"</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span><span class="p">),</span>
                 <span class="n">duration</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="s2">"duration"</span><span class="p">]),</span>
                 <span class="n">start</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="s2">"start"</span><span class="p">]),</span>
+                <span class="n">placement</span><span class="o">=</span><span class="p">(</span>
+                    <span class="n">b</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"placement"</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">b</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"placement"</span><span class="p">)</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"sequential"</span><span class="p">,</span> <span class="s2">"under"</span><span class="p">)</span>
+                    <span class="k">else</span> <span class="kc">None</span>
+                <span class="p">),</span>
             <span class="p">)</span>
             <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"beats"</span><span class="p">,</span> <span class="p">())</span>
         <span class="p">)</span>
@@ -958,6 +970,7 @@ window.runMermaid = runMermaid;</script>
             <span class="n">source_end</span><span class="o">=</span><span class="p">(</span><span class="n">source_spans</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">source_spans</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">else</span> <span class="kc">None</span><span class="p">),</span>
             <span class="n">duration</span><span class="o">=</span><span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">durations</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="mi">3</span><span class="p">),</span>
             <span class="n">start</span><span class="o">=</span><span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">starts</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="mi">3</span><span class="p">),</span>
+            <span class="n">placement</span><span class="o">=</span><span class="n">placements</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
         <span class="p">)</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
     <span class="p">)</span>

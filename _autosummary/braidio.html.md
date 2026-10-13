@@ -109,7 +109,7 @@ in the *Hamilton* repo — braidio has its own #18 about something else.
 | [`RightsViolation`](#braidio.RightsViolation)   | A render would play source audio the profile it claims forbids.   |
 |--------------------------------------------------------------------|-------------------------------------------------------------------|
 
-### *class* braidio.BeatSpan(index, kind, label='', source_start=None, source_end=None, duration=0.0, start=0.0)
+### *class* braidio.BeatSpan(index, kind, label='', source_start=None, source_end=None, duration=0.0, start=0.0, placement=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 

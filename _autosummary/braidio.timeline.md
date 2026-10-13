@@ -35,7 +35,7 @@ output after the fact.
 |------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------|
 | [`TimelineBreakdown`](#braidio.timeline.TimelineBreakdown)([beats, title, settings])         | The ordered beats of a production, with per-kind totals and an HTML view. |
 
-### *class* braidio.timeline.BeatSpan(index, kind, label='', source_start=None, source_end=None, duration=0.0, start=0.0)
+### *class* braidio.timeline.BeatSpan(index, kind, label='', source_start=None, source_end=None, duration=0.0, start=0.0, placement=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 

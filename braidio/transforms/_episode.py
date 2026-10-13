@@ -285,14 +285,12 @@ def episode_timeline(project, episode: Annotation) -> TimelineBreakdown:
     structure, _bed = _structure_and_bed(
         next((p for p in parents if p.tier == TIER_PRODUCTION_STRUCTURE), None)
     )
-    member_ids = [uuid.UUID(s) for s in episode.body.get("ordered_member_ids", ())]
-    members = [index[mid] for mid in member_ids if mid in index]
-    if len(members) != len(member_ids):
-        missing = [str(m) for m in member_ids if m not in index]
-        raise ValueError(
-            f"episode {episode.id}: cannot reconstruct its timeline — members "
-            f"{missing} are no longer in the graph. Re-weave the project instead."
-        )
+    members = _resolve_members(
+        episode,
+        index,
+        what="cannot reconstruct its timeline",
+        fix="Re-weave the project instead.",
+    )
     durations = [
         _member_duration(project, m, config=config, structure=structure)
         for m in members
@@ -541,6 +539,24 @@ def _clip_parents(members, index):
         yield require_tier(parents, TIER_AUDIO_CLIP)
 
 
+def _resolve_members(episode: Annotation, index: dict, *, what: str, fix: str) -> list:
+    """The members named by ``episode.body["ordered_member_ids"]``, in order.
+
+    Raises if any is absent from ``index``. A timeline is paired to its members
+    by POSITION (``member_spans``, ``episode_script`` + ``captions.cues_for``,
+    the picture track), so a member silently skipped would shift every member
+    after it (braidio#98). ``what`` / ``fix`` word the error for the caller.
+    """
+    member_ids = [uuid.UUID(s) for s in episode.body.get("ordered_member_ids", ())]
+    missing = [str(m) for m in member_ids if m not in index]
+    if missing:
+        raise ValueError(
+            f"episode {episode.id}: {what} — members {missing} are no longer in the "
+            f"graph. {fix}"
+        )
+    return [index[m] for m in member_ids]
+
+
 @register_transform(NAME)
 class WeaveToEpisode(BaseTransform):
     """All members — renders and scene breaks — (+ weave-config, + the
@@ -619,8 +635,12 @@ class WeaveToEpisode(BaseTransform):
                     cache_hit_savings_usd=0.0,
                 )
         index = graph_index(project)
-        member_ids = [uuid.UUID(s) for s in skel.body.get("ordered_member_ids", ())]
-        members = [index[mid] for mid in member_ids if mid in index]
+        members = _resolve_members(
+            skel,
+            index,
+            what="cannot render",
+            fix="Re-run the weave so the skeleton is planned over the current graph.",
+        )
 
         parents = resolve_parents(skel, index)
         cfg = require_tier(parents, TIER_WEAVE_CONFIG)

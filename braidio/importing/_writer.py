@@ -1026,9 +1026,7 @@ def _import_into_project(
         # cues_for), so its indices must be positions of these beats: a 1-based
         # timeline hands every take its neighbour's interval, silently.
         try:  # read the way TimelineBreakdown.from_dict reads them
-            spans = [
-                int(b["index"]) for b in (cut.timeline or {}).get("beats") or ()
-            ]
+            spans = [int(b["index"]) for b in (cut.timeline or {}).get("beats") or ()]
         except (KeyError, TypeError, ValueError):
             spans = [None]
         if len(set(spans)) != len(spans) or not all(

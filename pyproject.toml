@@ -48,7 +48,7 @@ authors = [
 # mixing>=0.0.28: narrate() calls text_to_speech(return_cache_status=...) (added
 #   there) so a mixing-cache hit reports cost_usd_actual=$0 (braidio#8).
 dependencies = [
-    "mixing>=0.0.28",
+    "mixing[media]>=0.0.28",
     "elevenlabs",
 ]
 

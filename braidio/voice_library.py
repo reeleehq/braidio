@@ -73,15 +73,23 @@ class SharedVoice:
         return Voice(self.voice_id, self.name, gender, self.accent, note)
 
 
-def http_get_page(params: dict, *, api_key: str | None = None, timeout: float = 30) -> dict:
+def http_get_page(
+    params: dict, *, api_key: str | None = None, timeout: float = 30
+) -> dict:
     """One page of ``GET /v1/shared-voices`` (the default ``get_page``)."""
-    key = api_key or os.environ.get("ELEVENLABS_API_KEY") or os.environ.get("ELEVEN_API_KEY")
+    key = (
+        api_key
+        or os.environ.get("ELEVENLABS_API_KEY")
+        or os.environ.get("ELEVEN_API_KEY")
+    )
     if not key:
         raise RuntimeError(
             "Set ELEVENLABS_API_KEY to browse the shared Voice Library "
             "(https://elevenlabs.io/app/settings/api-keys)."
         )
-    params = {k: str(v).lower() if isinstance(v, bool) else v for k, v in params.items()}
+    params = {
+        k: str(v).lower() if isinstance(v, bool) else v for k, v in params.items()
+    }
     url = f"{SHARED_VOICES_URL}?{urllib.parse.urlencode(params, doseq=True)}"
     req = urllib.request.Request(url, headers={"xi-api-key": key})
     with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310 - fixed https host
@@ -174,7 +182,12 @@ def dedup_voices(
     loosen (e.g. an embedding-cluster id once a quality gate exists).
     """
     key = key or (
-        lambda v: (v.public_owner_id or v.voice_id, _base_name(v.name), v.gender, v.accent)
+        lambda v: (
+            v.public_owner_id or v.voice_id,
+            _base_name(v.name),
+            v.gender,
+            v.accent,
+        )
     )
     seen, out = set(), []
     for v in voices:

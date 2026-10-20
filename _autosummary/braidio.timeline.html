@@ -34,6 +34,7 @@
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d75fae25" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/epythet.css?v=47c21ad2" />
   
@@ -43,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=8d9581ea"></script>
+    <script src="../_static/documentation_options.js?v=ba6d0b80"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -57,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.71" />
+  <meta name="docsearch:version" content="0.0.72" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -341,6 +342,7 @@
 <li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">braidio.timeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.tts.html">braidio.tts</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.video.html">braidio.video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="braidio.voice_library.html">braidio.voice_library</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.weave.html">braidio.weave</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.weave_config.html">braidio.weave_config</a></li>
 </ul>
@@ -463,7 +465,7 @@ output after the fact.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="braidio.timeline.TimelineBreakdown">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">braidio.timeline.</span></span><span class="sig-name descname"><span class="pre">TimelineBreakdown</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">beats</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">settings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/timeline.html#TimelineBreakdown"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.timeline.TimelineBreakdown" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">braidio.timeline.</span></span><span class="sig-name descname"><span class="pre">TimelineBreakdown</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">beats</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">tuple()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">settings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/timeline.html#TimelineBreakdown"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.timeline.TimelineBreakdown" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>The ordered beats of a production, with per-kind totals and an HTML view.</p>
 <p><code class="docutils literal notranslate"><span class="pre">settings</span></code> is the <strong>render record</strong>: the settings that actually produced
@@ -492,17 +494,17 @@ breakdown gets the record for free.</p>
 <dd><p>Rebuild a breakdown from <code class="xref py py-meth docutils literal notranslate"><span class="pre">to_dict()</span></code> output (the persisted form).</p>
 <p><code class="docutils literal notranslate"><span class="pre">totals</span></code> and <code class="docutils literal notranslate"><span class="pre">duration</span></code> are derived, so they are recomputed rather
 than read back — the beats are the record.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#braidio.timeline.TimelineBreakdown" title="braidio.timeline.TimelineBreakdown"><code class="xref py py-class docutils literal notranslate"><span class="pre">TimelineBreakdown</span></code></a></span></p>
-</dd>
-</dl>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tl</span> <span class="o">=</span> <span class="n">build_timeline</span><span class="p">(</span><span class="n">kinds</span><span class="o">=</span><span class="p">[</span><span class="s2">"narration"</span><span class="p">,</span> <span class="s2">"clip"</span><span class="p">],</span> <span class="n">durations</span><span class="o">=</span><span class="p">[</span><span class="mf">4.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">],</span>
 <span class="gp">... </span>                    <span class="n">labels</span><span class="o">=</span><span class="p">[</span><span class="s2">"a"</span><span class="p">,</span> <span class="s2">"b"</span><span class="p">],</span> <span class="n">source_spans</span><span class="o">=</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">)])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">TimelineBreakdown</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">tl</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span> <span class="o">==</span> <span class="n">tl</span>
 <span class="go">True</span>
 </pre></div>
 </div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#braidio.timeline.TimelineBreakdown" title="braidio.timeline.TimelineBreakdown"><code class="xref py py-class docutils literal notranslate"><span class="pre">TimelineBreakdown</span></code></a></span></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -577,11 +579,6 @@ always the config’s: a caller may pass no config at all (<code class="docutils
 call), the concat path resolves its crossfade from either the config or the
 <code class="docutils literal notranslate"><span class="pre">crossfade_s</span></code> argument, and <code class="docutils literal notranslate"><span class="pre">normalize</span></code> is a render argument rather than
 a weave choice.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>]</span></p>
-</dd>
-</dl>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">braidio.delivery</span><span class="w"> </span><span class="kn">import</span> <span class="n">V2_TUNED</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">braidio.weave_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">WeaveConfig</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">rec</span> <span class="o">=</span> <span class="n">render_settings</span><span class="p">(</span>
@@ -596,6 +593,11 @@ a weave choice.</p>
 <span class="go">('eleven_multilingual_v2', 'published')</span>
 </pre></div>
 </div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>]</span></p>
+</dd>
+</dl>
 </dd></dl>
 
 </section>

@@ -17,7 +17,7 @@ consistency); `eleven_v3` adds inline audio tags for real expressive control.
 | [`Delivery`](#braidio.delivery.Delivery)(name, model_id[, voice_settings, ...])   | A named narration delivery: which model + voice settings to synthesize with.   |
 |----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------|
 
-### *class* braidio.delivery.Delivery(name, model_id, voice_settings=<factory>, supports_audio_tags=False, supports_speed=True, note='')
+### *class* braidio.delivery.Delivery(name, model_id, voice_settings=dict(), supports_audio_tags=False, supports_speed=True, note='')
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 

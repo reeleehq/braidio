@@ -76,7 +76,7 @@ Bases: [`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Enum`](h
 
 Which projection of the production we render.
 
-### *class* braidio.rights.RenderPlan(profile, beats=<factory>, dropped=<factory>, substituted=<factory>)
+### *class* braidio.rights.RenderPlan(profile, beats=list(), dropped=list(), substituted=list())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 

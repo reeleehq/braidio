@@ -66,9 +66,6 @@ Per still: the best share of a naming field’s words that `anchor_text` says.
 The maximum over `NAMING_FIELDS`, so a long Commons title does not
 dilute a short, exact subject.
 
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]
-
 ```pycon
 >>> beach = {"key": "central-park-decay",
 ...          "subject": "The Beach Boys in Central Park, 1971",
@@ -77,16 +74,19 @@ dilute a short, exact subject.
 [0.0]
 ```
 
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]
+
 ### braidio.relevance.register_relevance_scorer(name, scorer)
 
 Make `scorer` addressable by `name` (e.g. an illustration rerank adapter).
 
-* **Return type:**
-  [`None`](https://docs.python.org/3/builtins/constants.html#None)
-
 ```pycon
 >>> register_relevance_scorer("lexical", lexical_relevance)  # idempotent
 ```
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 ### braidio.relevance.resolve_scorer(spec)
 
@@ -99,10 +99,10 @@ A scorer from a registered name, a callable, or `None` (the default).
 
 The id a panel records for `spec`: its registered name, else its qualname.
 
-* **Return type:**
-  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
-
 ```pycon
 >>> scorer_id(None), scorer_id(lexical_relevance)
 ('lexical', 'lexical')
 ```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)

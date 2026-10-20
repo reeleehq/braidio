@@ -34,6 +34,7 @@
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d75fae25" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/epythet.css?v=47c21ad2" />
   
@@ -43,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=8d9581ea"></script>
+    <script src="../_static/documentation_options.js?v=ba6d0b80"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -57,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.71" />
+  <meta name="docsearch:version" content="0.0.72" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -341,6 +342,7 @@
 <li class="toctree-l2"><a class="reference internal" href="braidio.timeline.html">braidio.timeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.tts.html">braidio.tts</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.video.html">braidio.video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="braidio.voice_library.html">braidio.voice_library</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.weave.html">braidio.weave</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.weave_config.html">braidio.weave_config</a></li>
 </ul>
@@ -541,17 +543,17 @@ rate for exact ledgers; set it to <code class="docutils literal notranslate"><sp
 <p>ElevenLabs charges for everything sent — including <code class="docutils literal notranslate"><span class="pre">eleven_v3</span></code> audio tags
 like <code class="docutils literal notranslate"><span class="pre">[excited]</span></code> — so this is just <code class="docutils literal notranslate"><span class="pre">len(text)</span></code>. A named function keeps the
 billing definition in one place if it ever needs to change.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span></p>
-</dd>
-</dl>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">billable_chars</span><span class="p">(</span><span class="s2">"hello"</span><span class="p">)</span>
 <span class="go">5</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">billable_chars</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
 <span class="go">0</span>
 </pre></div>
 </div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -561,11 +563,6 @@ billing definition in one place if it ever needs to change.</p>
 <p>Free/local work (segment extraction, weaving) contributes nothing. The returned
 <a class="reference internal" href="#braidio.cost.CostRollup" title="braidio.cost.CostRollup"><code class="xref py py-class docutils literal notranslate"><span class="pre">CostRollup</span></code></a> reports exact characters and an honest dollar sum (a lower
 bound when some text is unpriced; see <a class="reference internal" href="#braidio.cost.usd_per_1k_chars" title="braidio.cost.usd_per_1k_chars"><code class="xref py py-func docutils literal notranslate"><span class="pre">usd_per_1k_chars()</span></code></a>).</p>
-<dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#braidio.cost.CostRollup" title="braidio.cost.CostRollup"><code class="xref py py-class docutils literal notranslate"><span class="pre">CostRollup</span></code></a></span></p>
-</dd>
-</dl>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">braidio</span><span class="w"> </span><span class="kn">import</span> <span class="n">Script</span><span class="p">,</span> <span class="n">Narration</span><span class="p">,</span> <span class="n">SegmentBeat</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">Script</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">"x"</span><span class="p">,</span> <span class="n">id_slug</span><span class="o">=</span><span class="s2">"01"</span><span class="p">,</span> <span class="n">beats</span><span class="o">=</span><span class="p">[</span>
 <span class="gp">... </span>    <span class="n">Narration</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="s2">"a"</span> <span class="o">*</span> <span class="mi">500</span><span class="p">),</span> <span class="n">SegmentBeat</span><span class="p">(</span><span class="n">reference</span><span class="o">=</span><span class="s2">"clip:1"</span><span class="p">)])</span>
@@ -573,6 +570,11 @@ bound when some text is unpriced; see <a class="reference internal" href="#braid
 <span class="go">500</span>
 </pre></div>
 </div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#braidio.cost.CostRollup" title="braidio.cost.CostRollup"><code class="xref py py-class docutils literal notranslate"><span class="pre">CostRollup</span></code></a></span></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -581,15 +583,15 @@ bound when some text is unpriced; see <a class="reference internal" href="#braid
 <dd><p>Estimated USD to synthesize <code class="docutils literal notranslate"><span class="pre">text</span></code>; <code class="docutils literal notranslate"><span class="pre">0.0</span></code> for empty, <code class="docutils literal notranslate"><span class="pre">None</span></code> if unpriced.</p>
 <p>Empty text is genuinely free (<code class="docutils literal notranslate"><span class="pre">0.0</span></code>) regardless of the rate; non-empty text
 is <code class="docutils literal notranslate"><span class="pre">None</span></code> only when <a class="reference internal" href="#braidio.cost.usd_per_1k_chars" title="braidio.cost.usd_per_1k_chars"><code class="xref py py-func docutils literal notranslate"><span class="pre">usd_per_1k_chars()</span></code></a> is unpriced.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tts_cost_usd</span><span class="p">(</span><span class="s2">""</span><span class="p">)</span>
+<span class="go">0.0</span>
+</pre></div>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>]</span></p>
 </dd>
 </dl>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tts_cost_usd</span><span class="p">(</span><span class="s2">""</span><span class="p">)</span>
-<span class="go">0.0</span>
-</pre></div>
-</div>
 </dd></dl>
 
 <dl class="py function">

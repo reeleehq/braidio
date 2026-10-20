@@ -41,7 +41,7 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One beat’s place on the timeline.
 
-### *class* braidio.timeline.TimelineBreakdown(beats=<factory>, title='', settings=None)
+### *class* braidio.timeline.TimelineBreakdown(beats=tuple(), title='', settings=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -72,15 +72,15 @@ Rebuild a breakdown from `to_dict()` output (the persisted form).
 `totals` and `duration` are derived, so they are recomputed rather
 than read back — the beats are the record.
 
-* **Return type:**
-  [`TimelineBreakdown`](#braidio.timeline.TimelineBreakdown)
-
 ```pycon
 >>> tl = build_timeline(kinds=["narration", "clip"], durations=[4.0, 2.0],
 ...                     labels=["a", "b"], source_spans=[None, (1.0, 3.0)])
 >>> TimelineBreakdown.from_dict(tl.to_dict()) == tl
 True
 ```
+
+* **Return type:**
+  [`TimelineBreakdown`](#braidio.timeline.TimelineBreakdown)
 
 #### shares()
 
@@ -140,9 +140,6 @@ call), the concat path resolves its crossfade from either the config or the
 `crossfade_s` argument, and `normalize` is a render argument rather than
 a weave choice.
 
-* **Return type:**
-  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
-
 ```pycon
 >>> from braidio.delivery import V2_TUNED
 >>> from braidio.weave_config import WeaveConfig
@@ -157,3 +154,6 @@ a weave choice.
 >>> rec["delivery"]["model_id"], rec["profile"]
 ('eleven_multilingual_v2', 'published')
 ```
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]

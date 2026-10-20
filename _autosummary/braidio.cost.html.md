@@ -101,15 +101,15 @@ ElevenLabs charges for everything sent — including `eleven_v3` audio tags
 like `[excited]` — so this is just `len(text)`. A named function keeps the
 billing definition in one place if it ever needs to change.
 
-* **Return type:**
-  [`int`](https://docs.python.org/3/builtins/functions.html#int)
-
 ```pycon
 >>> billable_chars("hello")
 5
 >>> billable_chars(None)
 0
 ```
+
+* **Return type:**
+  [`int`](https://docs.python.org/3/builtins/functions.html#int)
 
 ### braidio.cost.estimate_cost(source, , model_id=None)
 
@@ -119,9 +119,6 @@ Free/local work (segment extraction, weaving) contributes nothing. The returned
 [`CostRollup`](#braidio.cost.CostRollup) reports exact characters and an honest dollar sum (a lower
 bound when some text is unpriced; see [`usd_per_1k_chars()`](#braidio.cost.usd_per_1k_chars)).
 
-* **Return type:**
-  [`CostRollup`](#braidio.cost.CostRollup)
-
 ```pycon
 >>> from braidio import Script, Narration, SegmentBeat
 >>> s = Script(title="x", id_slug="01", beats=[
@@ -130,6 +127,9 @@ bound when some text is unpriced; see [`usd_per_1k_chars()`](#braidio.cost.usd_p
 500
 ```
 
+* **Return type:**
+  [`CostRollup`](#braidio.cost.CostRollup)
+
 ### braidio.cost.tts_cost_usd(text, , model_id=None)
 
 Estimated USD to synthesize `text`; `0.0` for empty, `None` if unpriced.
@@ -137,13 +137,13 @@ Estimated USD to synthesize `text`; `0.0` for empty, `None` if unpriced.
 Empty text is genuinely free (`0.0`) regardless of the rate; non-empty text
 is `None` only when [`usd_per_1k_chars()`](#braidio.cost.usd_per_1k_chars) is unpriced.
 
-* **Return type:**
-  [`Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]
-
 ```pycon
 >>> tts_cost_usd("")
 0.0
 ```
+
+* **Return type:**
+  [`Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]
 
 ### braidio.cost.usd_per_1k_chars(model_id=None)
 

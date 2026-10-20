@@ -1,0 +1,22 @@
+braidio.voice\_library
+======================
+
+.. automodule:: braidio.voice_library
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      curate
+      dedup_voices
+      diverse_pool
+      fetch_shared_voices
+      http_get_page
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      SharedVoice
+   

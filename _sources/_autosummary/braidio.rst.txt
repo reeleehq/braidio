@@ -135,5 +135,6 @@
    transforms
    tts
    video
+   voice_library
    weave
    weave_config

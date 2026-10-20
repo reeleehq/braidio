@@ -1,4 +1,4 @@
-> built 2026-10-14 12:40 UTC from 40cdebd (main) · braidio 0.0.71. Details: build_info.json
+> built 2026-10-20 10:56 UTC from d20b9d1 (main) · braidio 0.0.72. Details: build_info.json
 
 # index.html.md
 
@@ -581,15 +581,15 @@ ElevenLabs charges for everything sent — including `eleven_v3` audio tags
 like `[excited]` — so this is just `len(text)`. A named function keeps the
 billing definition in one place if it ever needs to change.
 
-* **Return type:**
-  [`int`](https://docs.python.org/3/builtins/functions.html#int)
-
 ```pycon
 >>> billable_chars("hello")
 5
 >>> billable_chars(None)
 0
 ```
+
+* **Return type:**
+  [`int`](https://docs.python.org/3/builtins/functions.html#int)
 
 ### braidio.cost.estimate_cost(source, , model_id=None)
 
@@ -599,9 +599,6 @@ Free/local work (segment extraction, weaving) contributes nothing. The returned
 [`CostRollup`](_autosummary/braidio.cost.html.md#braidio.cost.CostRollup) reports exact characters and an honest dollar sum (a lower
 bound when some text is unpriced; see [`usd_per_1k_chars()`](_autosummary/braidio.cost.html.md#braidio.cost.usd_per_1k_chars)).
 
-* **Return type:**
-  [`CostRollup`](_autosummary/braidio.cost.html.md#braidio.cost.CostRollup)
-
 ```pycon
 >>> from braidio import Script, Narration, SegmentBeat
 >>> s = Script(title="x", id_slug="01", beats=[
@@ -610,6 +607,9 @@ bound when some text is unpriced; see [`usd_per_1k_chars()`](_autosummary/braidi
 500
 ```
 
+* **Return type:**
+  [`CostRollup`](_autosummary/braidio.cost.html.md#braidio.cost.CostRollup)
+
 ### braidio.cost.tts_cost_usd(text, , model_id=None)
 
 Estimated USD to synthesize `text`; `0.0` for empty, `None` if unpriced.
@@ -617,13 +617,13 @@ Estimated USD to synthesize `text`; `0.0` for empty, `None` if unpriced.
 Empty text is genuinely free (`0.0`) regardless of the rate; non-empty text
 is `None` only when [`usd_per_1k_chars()`](_autosummary/braidio.cost.html.md#braidio.cost.usd_per_1k_chars) is unpriced.
 
-* **Return type:**
-  [`Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]
-
 ```pycon
 >>> tts_cost_usd("")
 0.0
 ```
+
+* **Return type:**
+  [`Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]
 
 ### braidio.cost.usd_per_1k_chars(model_id=None)
 
@@ -775,7 +775,7 @@ consistency); `eleven_v3` adds inline audio tags for real expressive control.
 | [`Delivery`](_autosummary/braidio.delivery.html.md#braidio.delivery.Delivery)(name, model_id[, voice_settings, ...])   | A named narration delivery: which model + voice settings to synthesize with.   |
 |----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------|
 
-### *class* braidio.delivery.Delivery(name, model_id, voice_settings=<factory>, supports_audio_tags=False, supports_speed=True, note='')
+### *class* braidio.delivery.Delivery(name, model_id, voice_settings=dict(), supports_audio_tags=False, supports_speed=True, note='')
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -839,7 +839,7 @@ history is braidio#25.
 | [`Format`](_autosummary/braidio.formats.html.md#braidio.formats.Format)(id, name, summary[, aka, cast, ...])   | A named commentary-format preset: a bundle of high-quality defaults.   |
 |------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
 
-### *class* braidio.formats.Format(id, name, summary, aka=(), cast=None, narration_voice=None, narration_delivery=Delivery(name='v2-presenter', model_id='eleven_multilingual_v2', voice_settings={'stability': 0.35, 'similarity_boost': 0.75, 'style': 0.35, 'use_speaker_boost': True, 'speed': 0.98}, supports_audio_tags=False, supports_speed=True, note='Host/presenter commentary — lively (== v2-tuned), for the spine voice.'), weave=<factory>, structure=<factory>, roles=<factory>, clip_placement='before', music_bed='light', scripting='')
+### *class* braidio.formats.Format(id, name, summary, aka=(), cast=None, narration_voice=None, narration_delivery=Delivery(name='v2-presenter', model_id='eleven_multilingual_v2', voice_settings={'stability': 0.35, 'similarity_boost': 0.75, 'style': 0.35, 'use_speaker_boost': True, 'speed': 0.98}, supports_audio_tags=False, supports_speed=True, note='Host/presenter commentary — lively (== v2-tuned), for the spine voice.'), weave=WeaveConfig(), structure=MusicStructure(), roles=dict(), clip_placement='before', music_bed='light', scripting='')
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -1068,7 +1068,7 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One subtitle: `[start_s, end_s)` and the text shown.
 
-### *class* braidio.Delivery(name, model_id, voice_settings=<factory>, supports_audio_tags=False, supports_speed=True, note='')
+### *class* braidio.Delivery(name, model_id, voice_settings=dict(), supports_audio_tags=False, supports_speed=True, note='')
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -1101,7 +1101,7 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One flagged platitude.
 
-### *class* braidio.Format(id, name, summary, aka=(), cast=None, narration_voice=None, narration_delivery=Delivery(name='v2-presenter', model_id='eleven_multilingual_v2', voice_settings={'stability': 0.35, 'similarity_boost': 0.75, 'style': 0.35, 'use_speaker_boost': True, 'speed': 0.98}, supports_audio_tags=False, supports_speed=True, note='Host/presenter commentary — lively (== v2-tuned), for the spine voice.'), weave=<factory>, structure=<factory>, roles=<factory>, clip_placement='before', music_bed='light', scripting='')
+### *class* braidio.Format(id, name, summary, aka=(), cast=None, narration_voice=None, narration_delivery=Delivery(name='v2-presenter', model_id='eleven_multilingual_v2', voice_settings={'stability': 0.35, 'similarity_boost': 0.75, 'style': 0.35, 'use_speaker_boost': True, 'speed': 0.98}, supports_audio_tags=False, supports_speed=True, note='Host/presenter commentary — lively (== v2-tuned), for the spine voice.'), weave=WeaveConfig(), structure=MusicStructure(), roles=dict(), clip_placement='before', music_bed='light', scripting='')
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -1279,7 +1279,7 @@ Bases: [`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Enum`](h
 
 Which projection of the production we render.
 
-### *class* braidio.RenderPlan(profile, beats=<factory>, dropped=<factory>, substituted=<factory>)
+### *class* braidio.RenderPlan(profile, beats=list(), dropped=list(), substituted=list())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -1329,7 +1329,7 @@ is expressed with; the talk on either side is unchanged.
 section that starts here (e.g. `"rebuttal"`) for the timeline breakdown.
 A scene break synthesizes nothing, so it costs nothing.
 
-### *class* braidio.Script(title, id_slug, beats=<factory>)
+### *class* braidio.Script(title, id_slug, beats=list())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -1400,7 +1400,7 @@ A [`SegmentSource`](_autosummary/braidio.html.md#braidio.SegmentSource) over tim
 Binds the generic [`find_segment()`](_autosummary/braidio.html.md#braidio.find_segment) matcher to a concrete asset so the
 weave engine can `resolve(reference) -> ResolvedSegment`.
 
-### *class* braidio.TimelineBreakdown(beats=<factory>, title='', settings=None)
+### *class* braidio.TimelineBreakdown(beats=tuple(), title='', settings=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -1431,15 +1431,15 @@ Rebuild a breakdown from `to_dict()` output (the persisted form).
 `totals` and `duration` are derived, so they are recomputed rather
 than read back — the beats are the record.
 
-* **Return type:**
-  [`TimelineBreakdown`](_autosummary/braidio.timeline.html.md#braidio.timeline.TimelineBreakdown)
-
 ```pycon
 >>> tl = build_timeline(kinds=["narration", "clip"], durations=[4.0, 2.0],
 ...                     labels=["a", "b"], source_spans=[None, (1.0, 3.0)])
 >>> TimelineBreakdown.from_dict(tl.to_dict()) == tl
 True
 ```
+
+* **Return type:**
+  [`TimelineBreakdown`](_autosummary/braidio.timeline.html.md#braidio.timeline.TimelineBreakdown)
 
 #### shares()
 
@@ -1589,15 +1589,15 @@ ElevenLabs charges for everything sent — including `eleven_v3` audio tags
 like `[excited]` — so this is just `len(text)`. A named function keeps the
 billing definition in one place if it ever needs to change.
 
-* **Return type:**
-  [`int`](https://docs.python.org/3/builtins/functions.html#int)
-
 ```pycon
 >>> billable_chars("hello")
 5
 >>> billable_chars(None)
 0
 ```
+
+* **Return type:**
+  [`int`](https://docs.python.org/3/builtins/functions.html#int)
 
 ### braidio.build_timeline(, kinds, durations, placements=None, labels=None, source_spans=None, clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, title='', settings=None)
 
@@ -1791,9 +1791,6 @@ Free/local work (segment extraction, weaving) contributes nothing. The returned
 [`CostRollup`](_autosummary/braidio.html.md#braidio.CostRollup) reports exact characters and an honest dollar sum (a lower
 bound when some text is unpriced; see [`usd_per_1k_chars()`](_autosummary/braidio.html.md#braidio.usd_per_1k_chars)).
 
-* **Return type:**
-  [`CostRollup`](_autosummary/braidio.cost.html.md#braidio.cost.CostRollup)
-
 ```pycon
 >>> from braidio import Script, Narration, SegmentBeat
 >>> s = Script(title="x", id_slug="01", beats=[
@@ -1801,6 +1798,9 @@ bound when some text is unpriced; see [`usd_per_1k_chars()`](_autosummary/braidi
 >>> estimate_cost(s).characters  # only the narration counts; the clip is free
 500
 ```
+
+* **Return type:**
+  [`CostRollup`](_autosummary/braidio.cost.html.md#braidio.cost.CostRollup)
 
 ### braidio.extract_padded(asset_path, start_s, end_s, out_path, , pre_roll_s=0.4, post_roll_s=0.3, fade_in_s=0.5, fade_out_s=0.8, min_len_s=2.2)
 
@@ -2038,9 +2038,6 @@ call), the concat path resolves its crossfade from either the config or the
 `crossfade_s` argument, and `normalize` is a render argument rather than
 a weave choice.
 
-* **Return type:**
-  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
-
 ```pycon
 >>> from braidio.delivery import V2_TUNED
 >>> from braidio.weave_config import WeaveConfig
@@ -2055,6 +2052,9 @@ a weave choice.
 >>> rec["delivery"]["model_id"], rec["profile"]
 ('eleven_multilingual_v2', 'published')
 ```
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
 
 ### braidio.resolve_voice_id(voice_id=None)
 
@@ -2121,13 +2121,13 @@ Estimated USD to synthesize `text`; `0.0` for empty, `None` if unpriced.
 Empty text is genuinely free (`0.0`) regardless of the rate; non-empty text
 is `None` only when [`usd_per_1k_chars()`](_autosummary/braidio.html.md#braidio.usd_per_1k_chars) is unpriced.
 
-* **Return type:**
-  [`Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]
-
 ```pycon
 >>> tts_cost_usd("")
 0.0
 ```
+
+* **Return type:**
+  [`Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]
 
 ### braidio.usd_per_1k_chars(model_id=None)
 
@@ -2171,31 +2171,32 @@ whole-span file. Falls back to a plain concat feel when
 
 ### Modules
 
-| [`captions`](_autosummary/braidio.captions.html.md#module-braidio.captions)         | Subtitles for a rendered production, built from the script it was rendered from.                           |
-|-------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------|
-| [`compose`](_autosummary/braidio.compose.html.md#module-braidio.compose)           | Config-driven narration composition (#20) — the reusable entrypoint.                                       |
-| [`conversation`](_autosummary/braidio.conversation.html.md#module-braidio.conversation) | Conversational register: render an exchange as people *talking to each other*.                             |
-| [`cost`](_autosummary/braidio.cost.html.md#module-braidio.cost)                 | Cost model for braidio's paid operations (ElevenLabs TTS).                                                 |
-| [`defaults`](_autosummary/braidio.defaults.html.md#module-braidio.defaults)         | User-overridable, persisted defaults for how braidio renders a voice.                                      |
-| [`delivery`](_autosummary/braidio.delivery.html.md#module-braidio.delivery)         | Narration *delivery* presets — model + voice settings (issue #10, expressiveness).                         |
-| [`formats`](_autosummary/braidio.formats.html.md#module-braidio.formats)           | Ready-made **format templates** — high-quality presets under standard names.                               |
-| [`kinds`](_autosummary/braidio.kinds.html.md#module-braidio.kinds)               | Production kinds braidio defines.                                                                          |
-| [`multivoice`](_autosummary/braidio.multivoice.html.md#module-braidio.multivoice)     | Multi-voice narration: cycle a pool of voices across segments (issue #10).                                 |
-| [`music`](_autosummary/braidio.music.html.md#module-braidio.music)               | Music bed — an instrumental underscore laid under the whole production, ducked.                            |
-| [`pacing`](_autosummary/braidio.pacing.html.md#module-braidio.pacing)             | Intra-beat narration pacing — how one narration beat becomes spoken *turns*.                               |
-| [`relevance`](_autosummary/braidio.relevance.html.md#module-braidio.relevance)       | How well a still relates to the words spoken over it — the scorer seam.                                    |
-| [`render`](_autosummary/braidio.render.html.md#module-braidio.render)             | Render a [`Script`](_autosummary/braidio.script.html.md#braidio.script.Script) into an audio file. |
-| [`rights`](_autosummary/braidio.rights.html.md#module-braidio.rights)             | Render profiles: enforce personal-vs-published rights as data.                                             |
-| [`script`](_autosummary/braidio.script.html.md#module-braidio.script)             | Composition model — the ordered beats a render walks.                                                      |
-| [`sources`](_autosummary/braidio.sources.html.md#module-braidio.sources)           | Segment sources: resolve a *reference* to a cuttable `[start, end]` window.                                |
-| [`structure`](_autosummary/braidio.structure.html.md#module-braidio.structure)       | Structural music — stings at scene breaks, fade-to-spotlight on exhibits.                                  |
-| [`style`](_autosummary/braidio.style.html.md#module-braidio.style)               | Style audit — flag the recycled rhetorical tics in commentary text.                                        |
-| [`textprep`](_autosummary/braidio.textprep.html.md#module-braidio.textprep)         | Text preparation for scripts — clean OCR'd source, tidy authored lines.                                    |
-| [`timeline`](_autosummary/braidio.timeline.html.md#module-braidio.timeline)         | Timeline breakdown — what a production spends its time on, and in what order.                              |
-| [`tts`](_autosummary/braidio.tts.html.md#module-braidio.tts)                   | ElevenLabs narration synthesis.                                                                            |
-| [`video`](_autosummary/braidio.video.html.md#module-braidio.video)               | Turn a rendered production into a Ken Burns film over still images.                                        |
-| [`weave`](_autosummary/braidio.weave.html.md#module-braidio.weave)               | Weave narration + audio clips on a timeline (#21) — the reusable mix engine.                               |
-| [`weave_config`](_autosummary/braidio.weave_config.html.md#module-braidio.weave_config) | WeaveConfig — every editing choice for weaving narration + segments (#20).                                 |
+| [`captions`](_autosummary/braidio.captions.html.md#module-braidio.captions)           | Subtitles for a rendered production, built from the script it was rendered from.                           |
+|---------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------|
+| [`compose`](_autosummary/braidio.compose.html.md#module-braidio.compose)             | Config-driven narration composition (#20) — the reusable entrypoint.                                       |
+| [`conversation`](_autosummary/braidio.conversation.html.md#module-braidio.conversation)   | Conversational register: render an exchange as people *talking to each other*.                             |
+| [`cost`](_autosummary/braidio.cost.html.md#module-braidio.cost)                   | Cost model for braidio's paid operations (ElevenLabs TTS).                                                 |
+| [`defaults`](_autosummary/braidio.defaults.html.md#module-braidio.defaults)           | User-overridable, persisted defaults for how braidio renders a voice.                                      |
+| [`delivery`](_autosummary/braidio.delivery.html.md#module-braidio.delivery)           | Narration *delivery* presets — model + voice settings (issue #10, expressiveness).                         |
+| [`formats`](_autosummary/braidio.formats.html.md#module-braidio.formats)             | Ready-made **format templates** — high-quality presets under standard names.                               |
+| [`kinds`](_autosummary/braidio.kinds.html.md#module-braidio.kinds)                 | Production kinds braidio defines.                                                                          |
+| [`multivoice`](_autosummary/braidio.multivoice.html.md#module-braidio.multivoice)       | Multi-voice narration: cycle a pool of voices across segments (issue #10).                                 |
+| [`music`](_autosummary/braidio.music.html.md#module-braidio.music)                 | Music bed — an instrumental underscore laid under the whole production, ducked.                            |
+| [`pacing`](_autosummary/braidio.pacing.html.md#module-braidio.pacing)               | Intra-beat narration pacing — how one narration beat becomes spoken *turns*.                               |
+| [`relevance`](_autosummary/braidio.relevance.html.md#module-braidio.relevance)         | How well a still relates to the words spoken over it — the scorer seam.                                    |
+| [`render`](_autosummary/braidio.render.html.md#module-braidio.render)               | Render a [`Script`](_autosummary/braidio.script.html.md#braidio.script.Script) into an audio file. |
+| [`rights`](_autosummary/braidio.rights.html.md#module-braidio.rights)               | Render profiles: enforce personal-vs-published rights as data.                                             |
+| [`script`](_autosummary/braidio.script.html.md#module-braidio.script)               | Composition model — the ordered beats a render walks.                                                      |
+| [`sources`](_autosummary/braidio.sources.html.md#module-braidio.sources)             | Segment sources: resolve a *reference* to a cuttable `[start, end]` window.                                |
+| [`structure`](_autosummary/braidio.structure.html.md#module-braidio.structure)         | Structural music — stings at scene breaks, fade-to-spotlight on exhibits.                                  |
+| [`style`](_autosummary/braidio.style.html.md#module-braidio.style)                 | Style audit — flag the recycled rhetorical tics in commentary text.                                        |
+| [`textprep`](_autosummary/braidio.textprep.html.md#module-braidio.textprep)           | Text preparation for scripts — clean OCR'd source, tidy authored lines.                                    |
+| [`timeline`](_autosummary/braidio.timeline.html.md#module-braidio.timeline)           | Timeline breakdown — what a production spends its time on, and in what order.                              |
+| [`tts`](_autosummary/braidio.tts.html.md#module-braidio.tts)                     | ElevenLabs narration synthesis.                                                                            |
+| [`video`](_autosummary/braidio.video.html.md#module-braidio.video)                 | Turn a rendered production into a Ken Burns film over still images.                                        |
+| [`voice_library`](_autosummary/braidio.voice_library.html.md#module-braidio.voice_library) | Voice-pool sourcing and curation from the ElevenLabs shared Voice Library.                                 |
+| [`weave`](_autosummary/braidio.weave.html.md#module-braidio.weave)                 | Weave narration + audio clips on a timeline (#21) — the reusable mix engine.                               |
+| [`weave_config`](_autosummary/braidio.weave_config.html.md#module-braidio.weave_config)   | WeaveConfig — every editing choice for weaving narration + segments (#20).                                 |
 
 
 # _autosummary/braidio.kinds.html.md
@@ -2523,9 +2524,6 @@ jittered speed outside it is silently useless, so the planner clamps.
 
 Name the boundary implied by `text`’s trailing punctuation.
 
-* **Return type:**
-  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
-
 ```pycon
 >>> classify_boundary("So that's the charge sheet.")
 'sentence'
@@ -2538,6 +2536,9 @@ Name the boundary implied by `text`’s trailing punctuation.
 >>> classify_boundary("no punctuation here")
 'none'
 ```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 ### braidio.pacing.plan_turns(text, , unit='sentence', min_turn=1, max_turn=3, seed=7, gap_s=0.0, speed_base=1.0, speed_jitter=0.0, gap_scale_cap_s=3.0)
 
@@ -2558,9 +2559,6 @@ crossfade and to the next beat’s `Narration.lead_gap_s`.
 control); a float centers a per-turn jitter of `±speed_jitter` on it,
 scaled by the boundary’s final lengthening and clamped to [`SPEED_RANGE`](_autosummary/braidio.pacing.html.md#braidio.pacing.SPEED_RANGE).
 
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`NarrationTurn`](_autosummary/braidio.pacing.html.md#braidio.pacing.NarrationTurn)]
-
 ```pycon
 >>> turns = plan_turns("One. Two. Three. Four.", min_turn=2, max_turn=2, gap_s=0.3)
 >>> [(t.text, t.gap_after_s) for t in turns]
@@ -2569,17 +2567,20 @@ scaled by the boundary’s final lengthening and clamped to [`SPEED_RANGE`](_aut
 0.44
 ```
 
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`NarrationTurn`](_autosummary/braidio.pacing.html.md#braidio.pacing.NarrationTurn)]
+
 ### braidio.pacing.planned_gap_total_s(turns)
 
 Total silence a plan inserts inside the beat (for reporting / tests).
-
-* **Return type:**
-  [`float`](https://docs.python.org/3/builtins/functions.html#float)
 
 ```pycon
 >>> planned_gap_total_s(plan_turns("A. B. C.", min_turn=1, max_turn=1, gap_s=0.3))
 0.6
 ```
+
+* **Return type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float)
 
 ### braidio.pacing.split_paragraphs(text)
 
@@ -2596,15 +2597,15 @@ Returns a list of paragraphs, each a list of units, so a caller can keep
 turns from straddling a paragraph break (which would swallow the strongest
 pause in the beat). `unit="beat"` returns one paragraph of one unit.
 
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]
-
 ```pycon
 >>> split_units("A one. A two.\n\nB one.", unit="sentence")
 [['A one.', 'A two.'], ['B one.']]
 >>> split_units("Yes, really. No.", unit="clause")
 [['Yes,', 'really.', 'No.']]
 ```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]
 
 
 # _autosummary/braidio.relevance.html.md
@@ -2677,9 +2678,6 @@ Per still: the best share of a naming field’s words that `anchor_text` says.
 The maximum over `NAMING_FIELDS`, so a long Commons title does not
 dilute a short, exact subject.
 
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]
-
 ```pycon
 >>> beach = {"key": "central-park-decay",
 ...          "subject": "The Beach Boys in Central Park, 1971",
@@ -2688,16 +2686,19 @@ dilute a short, exact subject.
 [0.0]
 ```
 
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]
+
 ### braidio.relevance.register_relevance_scorer(name, scorer)
 
 Make `scorer` addressable by `name` (e.g. an illustration rerank adapter).
 
-* **Return type:**
-  [`None`](https://docs.python.org/3/builtins/constants.html#None)
-
 ```pycon
 >>> register_relevance_scorer("lexical", lexical_relevance)  # idempotent
 ```
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 ### braidio.relevance.resolve_scorer(spec)
 
@@ -2710,13 +2711,13 @@ A scorer from a registered name, a callable, or `None` (the default).
 
 The id a panel records for `spec`: its registered name, else its qualname.
 
-* **Return type:**
-  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
-
 ```pycon
 >>> scorer_id(None), scorer_id(lexical_relevance)
 ('lexical', 'lexical')
 ```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 
 # _autosummary/braidio.render.html.md
@@ -2871,7 +2872,7 @@ Bases: [`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Enum`](h
 
 Which projection of the production we render.
 
-### *class* braidio.rights.RenderPlan(profile, beats=<factory>, dropped=<factory>, substituted=<factory>)
+### *class* braidio.rights.RenderPlan(profile, beats=list(), dropped=list(), substituted=list())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -3037,7 +3038,7 @@ is expressed with; the talk on either side is unchanged.
 section that starts here (e.g. `"rebuttal"`) for the timeline breakdown.
 A scene break synthesizes nothing, so it costs nothing.
 
-### *class* braidio.script.Script(title, id_slug, beats=<factory>)
+### *class* braidio.script.Script(title, id_slug, beats=list())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -3566,7 +3567,7 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One beat’s place on the timeline.
 
-### *class* braidio.timeline.TimelineBreakdown(beats=<factory>, title='', settings=None)
+### *class* braidio.timeline.TimelineBreakdown(beats=tuple(), title='', settings=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -3597,15 +3598,15 @@ Rebuild a breakdown from `to_dict()` output (the persisted form).
 `totals` and `duration` are derived, so they are recomputed rather
 than read back — the beats are the record.
 
-* **Return type:**
-  [`TimelineBreakdown`](_autosummary/braidio.timeline.html.md#braidio.timeline.TimelineBreakdown)
-
 ```pycon
 >>> tl = build_timeline(kinds=["narration", "clip"], durations=[4.0, 2.0],
 ...                     labels=["a", "b"], source_spans=[None, (1.0, 3.0)])
 >>> TimelineBreakdown.from_dict(tl.to_dict()) == tl
 True
 ```
+
+* **Return type:**
+  [`TimelineBreakdown`](_autosummary/braidio.timeline.html.md#braidio.timeline.TimelineBreakdown)
 
 #### shares()
 
@@ -3665,9 +3666,6 @@ call), the concat path resolves its crossfade from either the config or the
 `crossfade_s` argument, and `normalize` is a render argument rather than
 a weave choice.
 
-* **Return type:**
-  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
-
 ```pycon
 >>> from braidio.delivery import V2_TUNED
 >>> from braidio.weave_config import WeaveConfig
@@ -3682,6 +3680,9 @@ a weave choice.
 >>> rec["delivery"]["model_id"], rec["profile"]
 ('eleven_multilingual_v2', 'published')
 ```
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
 
 
 # _autosummary/braidio.tts.html.md
@@ -3871,9 +3872,6 @@ cares builds [`Panel`](_autosummary/braidio.video.html.md#braidio.video.Panel) o
 and `beat_index` to choose. This function is what you want when the stills
 are interchangeable texture.
 
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Panel`](_autosummary/braidio.video.html.md#braidio.video.Panel)]
-
 ### Examples
 
 ```pycon
@@ -3884,18 +3882,21 @@ are interchangeable texture.
 ['push', 'drift', 'push']
 ```
 
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Panel`](_autosummary/braidio.video.html.md#braidio.video.Panel)]
+
 ### braidio.video.concat_argv(listing, , audio_path, out_path, total_frames, fps=30, ffmpeg='ffmpeg', crf=18)
 
 Join the pieces a concat `listing` names, under `audio_path`, as the delivered mp4.
-
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 
 ```pycon
 >>> argv = concat_argv("l.txt", audio_path="a.wav", out_path="o.mp4", total_frames=90)
 >>> argv[argv.index("-t") + 1], argv[argv.index("-f") + 1]
 ('3.000', 'concat')
 ```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 
 ### braidio.video.credits_card(lines, dst, , heading='Credits', footer='', size=(1920, 1080))
 
@@ -3927,14 +3928,14 @@ Rounding each duration alone would let a film of many short panels slide
 off its narration by a frame per cut; rounding each boundary keeps every
 cut within half a frame of where the audio says it is.
 
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`int`](https://docs.python.org/3/builtins/functions.html#int)]
-
 ```pycon
 >>> ps = [Panel(0, 1.01, "a"), Panel(1.01, 2.02, "b"), Panel(2.02, 3.03, "c")]
 >>> frame_counts(ps, fps=30)
 [30, 31, 30]
 ```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`int`](https://docs.python.org/3/builtins/functions.html#int)]
 
 ### braidio.video.missing_dependencies()
 
@@ -4036,14 +4037,14 @@ Group consecutive panels into `("footage" | "stills", indices)` runs.
 Each footage panel is its own run (it has its own in-point); consecutive
 stills share one, rendered as a single Ken Burns pass.
 
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`int`](https://docs.python.org/3/builtins/functions.html#int)]]]
-
 ```pycon
 >>> P = lambda f=None: Panel(0, 1, "a.jpg", footage=f)
 >>> runs([P(), P(), P(Footage("v.mp4")), P(Footage("v.mp4", 3)), P()])
 [('stills', [0, 1]), ('footage', [2]), ('footage', [3]), ('stills', [4])]
 ```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`int`](https://docs.python.org/3/builtins/functions.html#int)]]]
 
 ### braidio.video.save_atomically(img, dst, \*\*encode)
 
@@ -4066,9 +4067,6 @@ and — should the source run out early — held on its last frame rather than
 cutting short, so the picture never slides off the narration. Pieces are
 near-lossless (they are re-encoded once more, by [`concat_argv()`](_autosummary/braidio.video.html.md#braidio.video.concat_argv)).
 
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
-
 ```pycon
 >>> argv = segment_argv("rec.mp4", 2.5, 60, out_path="p.mp4", size=(1080, 1920))
 >>> argv[argv.index("-ss") + 1], argv[argv.index("-t") + 1]
@@ -4076,6 +4074,117 @@ near-lossless (they are re-encoded once more, by [`concat_argv()`](_autosummary/
 >>> "trim=end_frame=60" in argv[argv.index("-vf") + 1]
 True
 ```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+
+# _autosummary/braidio.voice_library.html.md
+
+# braidio.voice_library
+
+Voice-pool sourcing and curation from the ElevenLabs shared Voice Library.
+
+The premade pools in [`braidio.multivoice`](_autosummary/braidio.multivoice.html.md#module-braidio.multivoice) are the safe default. For a large
+“many people / interviews” cast, the shared Voice Library has thousands of
+voices of uneven quality, so they go through a pipeline before use:
+
+1. [`fetch_shared_voices()`](_autosummary/braidio.voice_library.html.md#braidio.voice_library.fetch_shared_voices) pages through `GET /v1/shared-voices`;
+2. [`curate()`](_autosummary/braidio.voice_library.html.md#braidio.voice_library.curate) keeps the ones fit for narration (use case, language,
+   popularity, notice period, an explicit deny list);
+3. [`dedup_voices()`](_autosummary/braidio.voice_library.html.md#braidio.voice_library.dedup_voices) drops near-identical entries;
+4. [`diverse_pool()`](_autosummary/braidio.voice_library.html.md#braidio.voice_library.diverse_pool) picks `n` voices spread across gender, accent and age,
+   returned as [`Voice`](_autosummary/braidio.multivoice.html.md#braidio.multivoice.Voice) so `assign_voices` and
+   `render_multivoice` take them unchanged.
+
+The network edge is the `get_page` keyword (`params -> response dict`); the
+default calls the API with `$ELEVENLABS_API_KEY`, and tests pass a fake. A
+shared voice may have to be added to the account’s library
+(`POST /v1/voices/add/{public_owner_id}/{voice_id}`) before TTS can use it;
+[`SharedVoice`](_autosummary/braidio.voice_library.html.md#braidio.voice_library.SharedVoice) keeps `public_owner_id` for that step.
+
+### Functions
+
+| [`curate`](_autosummary/braidio.voice_library.html.md#braidio.voice_library.curate)(voices, \*[, use_cases, languages, ...])   | Voices fit for narration, most-used first.                                  |
+|----------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
+| [`dedup_voices`](_autosummary/braidio.voice_library.html.md#braidio.voice_library.dedup_voices)(voices, \*[, key])                   | Drop near-identical voices, keeping the first of each group (order = rank). |
+| [`diverse_pool`](_autosummary/braidio.voice_library.html.md#braidio.voice_library.diverse_pool)(voices, n, \*[, spread, seed])       | `n` voices spread as evenly as possible over the `spread` attributes.       |
+| [`fetch_shared_voices`](_autosummary/braidio.voice_library.html.md#braidio.voice_library.fetch_shared_voices)(\*[, max_voices, ...])        | Yield shared voices, page by page, until `max_voices` or the end.           |
+| [`http_get_page`](_autosummary/braidio.voice_library.html.md#braidio.voice_library.http_get_page)(params, \*[, api_key, timeout])     | One page of `GET /v1/shared-voices` (the default `get_page`).               |
+
+### Classes
+
+| [`SharedVoice`](_autosummary/braidio.voice_library.html.md#braidio.voice_library.SharedVoice)(voice_id, name[, ...])   | One shared-library voice, with the fields curation needs.   |
+|---------------------------------------------------------------------------------------|-------------------------------------------------------------|
+
+### *class* braidio.voice_library.SharedVoice(voice_id, name, public_owner_id='', gender='', age='', accent='', language='', use_case='', descriptive='', category='', cloned_by_count=0, usage_character_count_1y=0, notice_period=None, free_users_allowed=True, preview_url='', extra=dict())
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+One shared-library voice, with the fields curation needs.
+
+#### to_voice()
+
+As a [`Voice`](_autosummary/braidio.multivoice.html.md#braidio.multivoice.Voice) (gender `M`/`F`/`N`).
+
+* **Return type:**
+  [`Voice`](_autosummary/braidio.multivoice.html.md#braidio.multivoice.Voice)
+
+### braidio.voice_library.curate(voices, , use_cases=('narrative_story', 'conversational', 'informative_educational'), languages=('en',), min_cloned_by=0, min_usage_1y=0, min_notice_days=None, free_users_only=False, deny_ids=(), allow_ids=None)
+
+Voices fit for narration, most-used first. `None` disables a filter.
+
+`allow_ids` (an audition allowlist) keeps only those ids; `deny_ids`
+drops voices auditioned as unfit. `min_notice_days` keeps only voices
+their owner cannot withdraw at short notice (protects a long production); an
+unknown notice period counts as 0, so it is dropped. `languages` match on
+the code before any region (`"en-US"` is `"en"`).
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SharedVoice`](_autosummary/braidio.voice_library.html.md#braidio.voice_library.SharedVoice)]
+
+### braidio.voice_library.dedup_voices(voices, , key=None)
+
+Drop near-identical voices, keeping the first of each group (order = rank).
+
+Default key: same owner, base name, gender and accent — the shape of an
+owner re-uploading one voice under variants. Pass `key` to tighten or
+loosen (e.g. an embedding-cluster id once a quality gate exists).
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`SharedVoice`](_autosummary/braidio.voice_library.html.md#braidio.voice_library.SharedVoice)]
+
+### braidio.voice_library.diverse_pool(voices, n, , spread=('gender', 'accent', 'age'), seed=0)
+
+`n` voices spread as evenly as possible over the `spread` attributes.
+
+Round-robins over the `spread[0]` groups (gender: an even M/F split
+when `n` is even), and within each group prefers attribute values not yet
+used, so the pool differs in accent and age too. Values are compared
+case-insensitively; voices with no `spread[0]` value (or a gender other
+than male/female) only fill places the main groups cannot. Input order is
+the preference order (pass [`curate()`](_autosummary/braidio.voice_library.html.md#braidio.voice_library.curate)’s ranking); `seed` only picks
+which group goes first.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Voice`](_autosummary/braidio.multivoice.html.md#braidio.multivoice.Voice)]
+
+### braidio.voice_library.fetch_shared_voices(, max_voices=500, page_size=100, get_page=None, \*\*filters)
+
+Yield shared voices, page by page, until `max_voices` or the end.
+
+`filters` are passed as API query parameters (e.g. `language="en"`,
+`use_cases=["narrative_story"]`, `gender="female"`, `sort="cloned_by_count"`).
+
+* **Return type:**
+  [`Iterator`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterator)[[`SharedVoice`](_autosummary/braidio.voice_library.html.md#braidio.voice_library.SharedVoice)]
+
+### braidio.voice_library.http_get_page(params, , api_key=None, timeout=30)
+
+One page of `GET /v1/shared-voices` (the default `get_page`).
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
 
 # _autosummary/braidio.weave.html.md
@@ -4257,7 +4366,7 @@ Return a copy with fields overridden (e.g. `cfg.with_(min_turn=1)`).
 
 # About this build
 
-This documentation was built on **2026-10-14 12:40 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/40cdebd5e60f289ef95f776d752fdd156195f5a6"><code>40cdebd</code></a> on branch <code>main</code>, for **braidio 0.0.71** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-20 10:56 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/d20b9d11faaa6f3ea359e6cf832057953cb4ab71"><code>d20b9d1</code></a> on branch <code>main</code>, for **braidio 0.0.72** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -4266,9 +4375,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/40cdebd5e60f289ef95f776d752fdd156195f5a6"><code>40cdebd5e60f289ef95f776d752fdd156195f5a6</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/d20b9d11faaa6f3ea359e6cf832057953cb4ab71"><code>d20b9d11faaa6f3ea359e6cf832057953cb4ab71</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | <code>0.0.71</code>                                                                                                                                     |
+| Tags at this commit | <code>0.0.72</code>                                                                                                                                     |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -4277,16 +4386,16 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/38565038035">38565038035</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/39410958622">39410958622</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>441f4a7ea081faeecbde16ea44a52280c0938ceb</code> (in the history of the built commit) |
+| Event commit | <code>d7ba71f1146e76db05ae7c176e6606e1981d8f17</code> (in the history of the built commit) |
 
 ## Tools
 
 |          |         |
 |----------|---------|
-| epythet  | 0.2.17  |
-| Sphinx   | 9.1.0   |
+| epythet  | 0.2.19  |
+| Sphinx   | 9.1.1   |
 | docutils | 0.22.4  |
 | Python   | 3.12.15 |
 
@@ -4304,14 +4413,14 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.71/">0.0.71</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/braidio/0.0.72/">0.0.72</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 40cdebd5e60f289ef95f776d752fdd156195f5a6
-pip install "epythet==0.2.17"
+git checkout d20b9d11faaa6f3ea359e6cf832057953cb4ab71
+pip install "epythet==0.2.19"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
 

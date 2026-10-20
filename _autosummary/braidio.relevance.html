@@ -34,6 +34,7 @@
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d75fae25" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/epythet.css?v=47c21ad2" />
   
@@ -43,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=8d9581ea"></script>
+    <script src="../_static/documentation_options.js?v=ba6d0b80"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -57,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.71" />
+  <meta name="docsearch:version" content="0.0.72" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -341,6 +342,7 @@
 <li class="toctree-l2"><a class="reference internal" href="braidio.timeline.html">braidio.timeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.tts.html">braidio.tts</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.video.html">braidio.video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="braidio.voice_library.html">braidio.voice_library</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.weave.html">braidio.weave</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.weave_config.html">braidio.weave_config</a></li>
 </ul>
@@ -488,11 +490,6 @@ has to answer, not a verdict that the picture is bad.</p>
 <dd><p>Per still: the best share of a naming field’s words that <code class="docutils literal notranslate"><span class="pre">anchor_text</span></code> says.</p>
 <p>The maximum over <code class="xref py py-data docutils literal notranslate"><span class="pre">NAMING_FIELDS</span></code>, so a long Commons title does not
 dilute a short, exact subject.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>]</span></p>
-</dd>
-</dl>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">beach</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"key"</span><span class="p">:</span> <span class="s2">"central-park-decay"</span><span class="p">,</span>
 <span class="gp">... </span>         <span class="s2">"subject"</span><span class="p">:</span> <span class="s2">"The Beach Boys in Central Park, 1971"</span><span class="p">,</span>
 <span class="gp">... </span>         <span class="s2">"title"</span><span class="p">:</span> <span class="s2">"Beach Boys Good Vibrations from Central Park 1971"</span><span class="p">}</span>
@@ -500,20 +497,25 @@ dilute a short, exact subject.</p>
 <span class="go">[0.0]</span>
 </pre></div>
 </div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>]</span></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="braidio.relevance.register_relevance_scorer">
 <span class="sig-prename descclassname"><span class="pre">braidio.relevance.</span></span><span class="sig-name descname"><span class="pre">register_relevance_scorer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scorer</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/relevance.html#register_relevance_scorer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.relevance.register_relevance_scorer" title="Link to this definition">#</a></dt>
 <dd><p>Make <code class="docutils literal notranslate"><span class="pre">scorer</span></code> addressable by <code class="docutils literal notranslate"><span class="pre">name</span></code> (e.g. an illustration rerank adapter).</p>
-<dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span></p>
-</dd>
-</dl>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">register_relevance_scorer</span><span class="p">(</span><span class="s2">"lexical"</span><span class="p">,</span> <span class="n">lexical_relevance</span><span class="p">)</span>  <span class="c1"># idempotent</span>
 </pre></div>
 </div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -531,15 +533,15 @@ dilute a short, exact subject.</p>
 <dt class="sig sig-object py" id="braidio.relevance.scorer_id">
 <span class="sig-prename descclassname"><span class="pre">braidio.relevance.</span></span><span class="sig-name descname"><span class="pre">scorer_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spec</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/relevance.html#scorer_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.relevance.scorer_id" title="Link to this definition">#</a></dt>
 <dd><p>The id a panel records for <code class="docutils literal notranslate"><span class="pre">spec</span></code>: its registered name, else its qualname.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">scorer_id</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span> <span class="n">scorer_id</span><span class="p">(</span><span class="n">lexical_relevance</span><span class="p">)</span>
+<span class="go">('lexical', 'lexical')</span>
+</pre></div>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span></p>
 </dd>
 </dl>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">scorer_id</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span> <span class="n">scorer_id</span><span class="p">(</span><span class="n">lexical_relevance</span><span class="p">)</span>
-<span class="go">('lexical', 'lexical')</span>
-</pre></div>
-</div>
 </dd></dl>
 
 </section>

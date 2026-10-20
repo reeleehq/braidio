@@ -75,7 +75,7 @@ is expressed with; the talk on either side is unchanged.
 section that starts here (e.g. `"rebuttal"`) for the timeline breakdown.
 A scene break synthesizes nothing, so it costs nothing.
 
-### *class* braidio.script.Script(title, id_slug, beats=<factory>)
+### *class* braidio.script.Script(title, id_slug, beats=list())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 

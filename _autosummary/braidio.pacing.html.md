@@ -99,9 +99,6 @@ jittered speed outside it is silently useless, so the planner clamps.
 
 Name the boundary implied by `text`’s trailing punctuation.
 
-* **Return type:**
-  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
-
 ```pycon
 >>> classify_boundary("So that's the charge sheet.")
 'sentence'
@@ -114,6 +111,9 @@ Name the boundary implied by `text`’s trailing punctuation.
 >>> classify_boundary("no punctuation here")
 'none'
 ```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 ### braidio.pacing.plan_turns(text, , unit='sentence', min_turn=1, max_turn=3, seed=7, gap_s=0.0, speed_base=1.0, speed_jitter=0.0, gap_scale_cap_s=3.0)
 
@@ -134,9 +134,6 @@ crossfade and to the next beat’s `Narration.lead_gap_s`.
 control); a float centers a per-turn jitter of `±speed_jitter` on it,
 scaled by the boundary’s final lengthening and clamped to [`SPEED_RANGE`](#braidio.pacing.SPEED_RANGE).
 
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`NarrationTurn`](#braidio.pacing.NarrationTurn)]
-
 ```pycon
 >>> turns = plan_turns("One. Two. Three. Four.", min_turn=2, max_turn=2, gap_s=0.3)
 >>> [(t.text, t.gap_after_s) for t in turns]
@@ -145,17 +142,20 @@ scaled by the boundary’s final lengthening and clamped to [`SPEED_RANGE`](#bra
 0.44
 ```
 
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`NarrationTurn`](#braidio.pacing.NarrationTurn)]
+
 ### braidio.pacing.planned_gap_total_s(turns)
 
 Total silence a plan inserts inside the beat (for reporting / tests).
-
-* **Return type:**
-  [`float`](https://docs.python.org/3/builtins/functions.html#float)
 
 ```pycon
 >>> planned_gap_total_s(plan_turns("A. B. C.", min_turn=1, max_turn=1, gap_s=0.3))
 0.6
 ```
+
+* **Return type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float)
 
 ### braidio.pacing.split_paragraphs(text)
 
@@ -172,12 +172,12 @@ Returns a list of paragraphs, each a list of units, so a caller can keep
 turns from straddling a paragraph break (which would swallow the strongest
 pause in the beat). `unit="beat"` returns one paragraph of one unit.
 
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]
-
 ```pycon
 >>> split_units("A one. A two.\n\nB one.", unit="sentence")
 [['A one.', 'A two.'], ['B one.']]
 >>> split_units("Yes, really. No.", unit="clause")
 [['Yes,', 'really.', 'No.']]
 ```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]

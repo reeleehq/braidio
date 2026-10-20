@@ -87,9 +87,6 @@ cares builds [`Panel`](#braidio.video.Panel) objects directly and uses each span
 and `beat_index` to choose. This function is what you want when the stills
 are interchangeable texture.
 
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Panel`](#braidio.video.Panel)]
-
 ### Examples
 
 ```pycon
@@ -100,18 +97,21 @@ are interchangeable texture.
 ['push', 'drift', 'push']
 ```
 
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Panel`](#braidio.video.Panel)]
+
 ### braidio.video.concat_argv(listing, , audio_path, out_path, total_frames, fps=30, ffmpeg='ffmpeg', crf=18)
 
 Join the pieces a concat `listing` names, under `audio_path`, as the delivered mp4.
-
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 
 ```pycon
 >>> argv = concat_argv("l.txt", audio_path="a.wav", out_path="o.mp4", total_frames=90)
 >>> argv[argv.index("-t") + 1], argv[argv.index("-f") + 1]
 ('3.000', 'concat')
 ```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 
 ### braidio.video.credits_card(lines, dst, , heading='Credits', footer='', size=(1920, 1080))
 
@@ -143,14 +143,14 @@ Rounding each duration alone would let a film of many short panels slide
 off its narration by a frame per cut; rounding each boundary keeps every
 cut within half a frame of where the audio says it is.
 
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`int`](https://docs.python.org/3/builtins/functions.html#int)]
-
 ```pycon
 >>> ps = [Panel(0, 1.01, "a"), Panel(1.01, 2.02, "b"), Panel(2.02, 3.03, "c")]
 >>> frame_counts(ps, fps=30)
 [30, 31, 30]
 ```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`int`](https://docs.python.org/3/builtins/functions.html#int)]
 
 ### braidio.video.missing_dependencies()
 
@@ -252,14 +252,14 @@ Group consecutive panels into `("footage" | "stills", indices)` runs.
 Each footage panel is its own run (it has its own in-point); consecutive
 stills share one, rendered as a single Ken Burns pass.
 
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`int`](https://docs.python.org/3/builtins/functions.html#int)]]]
-
 ```pycon
 >>> P = lambda f=None: Panel(0, 1, "a.jpg", footage=f)
 >>> runs([P(), P(), P(Footage("v.mp4")), P(Footage("v.mp4", 3)), P()])
 [('stills', [0, 1]), ('footage', [2]), ('footage', [3]), ('stills', [4])]
 ```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`int`](https://docs.python.org/3/builtins/functions.html#int)]]]
 
 ### braidio.video.save_atomically(img, dst, \*\*encode)
 
@@ -282,9 +282,6 @@ and — should the source run out early — held on its last frame rather than
 cutting short, so the picture never slides off the narration. Pieces are
 near-lossless (they are re-encoded once more, by [`concat_argv()`](#braidio.video.concat_argv)).
 
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
-
 ```pycon
 >>> argv = segment_argv("rec.mp4", 2.5, 60, out_path="p.mp4", size=(1080, 1920))
 >>> argv[argv.index("-ss") + 1], argv[argv.index("-t") + 1]
@@ -292,3 +289,6 @@ near-lossless (they are re-encoded once more, by [`concat_argv()`](#braidio.vide
 >>> "trim=end_frame=60" in argv[argv.index("-vf") + 1]
 True
 ```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]

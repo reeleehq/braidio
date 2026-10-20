@@ -34,6 +34,7 @@
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d75fae25" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/epythet.css?v=47c21ad2" />
   
@@ -43,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=8d9581ea"></script>
+    <script src="../_static/documentation_options.js?v=ba6d0b80"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,12 +53,12 @@
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="braidio.weave" href="braidio.weave.html" />
+    <link rel="next" title="braidio.voice_library" href="braidio.voice_library.html" />
     <link rel="prev" title="braidio.tts" href="braidio.tts.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.71" />
+  <meta name="docsearch:version" content="0.0.72" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -341,6 +342,7 @@
 <li class="toctree-l2"><a class="reference internal" href="braidio.timeline.html">braidio.timeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.tts.html">braidio.tts</a></li>
 <li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">braidio.video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="braidio.voice_library.html">braidio.voice_library</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.weave.html">braidio.weave</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.weave_config.html">braidio.weave_config</a></li>
 </ul>
@@ -528,11 +530,6 @@ an authoring decision — it needs to know what is being said — so a caller th
 cares builds <a class="reference internal" href="#braidio.video.Panel" title="braidio.video.Panel"><code class="xref py py-class docutils literal notranslate"><span class="pre">Panel</span></code></a> objects directly and uses each span’s <code class="docutils literal notranslate"><span class="pre">label</span></code>
 and <code class="docutils literal notranslate"><span class="pre">beat_index</span></code> to choose. This function is what you want when the stills
 are interchangeable texture.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference internal" href="#braidio.video.Panel" title="braidio.video.Panel"><code class="xref py py-class docutils literal notranslate"><span class="pre">Panel</span></code></a>]</span></p>
-</dd>
-</dl>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">spans</span> <span class="o">=</span> <span class="p">[</span><span class="n">Span</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">Span</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">Span</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">2</span><span class="p">)]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">still</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">assign_stills</span><span class="p">(</span><span class="n">spans</span><span class="p">,</span> <span class="p">[</span><span class="s2">"a.jpg"</span><span class="p">,</span> <span class="s2">"b.jpg"</span><span class="p">])]</span>
@@ -541,22 +538,27 @@ are interchangeable texture.</p>
 <span class="go">['push', 'drift', 'push']</span>
 </pre></div>
 </div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference internal" href="#braidio.video.Panel" title="braidio.video.Panel"><code class="xref py py-class docutils literal notranslate"><span class="pre">Panel</span></code></a>]</span></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="braidio.video.concat_argv">
 <span class="sig-prename descclassname"><span class="pre">braidio.video.</span></span><span class="sig-name descname"><span class="pre">concat_argv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">listing</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">audio_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">total_frames</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ffmpeg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ffmpeg'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">crf</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">18</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/video.html#concat_argv"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.video.concat_argv" title="Link to this definition">#</a></dt>
 <dd><p>Join the pieces a concat <code class="docutils literal notranslate"><span class="pre">listing</span></code> names, under <code class="docutils literal notranslate"><span class="pre">audio_path</span></code>, as the delivered mp4.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span></p>
-</dd>
-</dl>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">argv</span> <span class="o">=</span> <span class="n">concat_argv</span><span class="p">(</span><span class="s2">"l.txt"</span><span class="p">,</span> <span class="n">audio_path</span><span class="o">=</span><span class="s2">"a.wav"</span><span class="p">,</span> <span class="n">out_path</span><span class="o">=</span><span class="s2">"o.mp4"</span><span class="p">,</span> <span class="n">total_frames</span><span class="o">=</span><span class="mi">90</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">argv</span><span class="p">[</span><span class="n">argv</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">"-t"</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">argv</span><span class="p">[</span><span class="n">argv</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">"-f"</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
 <span class="go">('3.000', 'concat')</span>
 </pre></div>
 </div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -589,16 +591,16 @@ fix it. Pass a bigger <code class="docutils literal notranslate"><span class="pr
 <p>Rounding each duration alone would let a film of many short panels slide
 off its narration by a frame per cut; rounding each boundary keeps every
 cut within half a frame of where the audio says it is.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>]</span></p>
-</dd>
-</dl>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ps</span> <span class="o">=</span> <span class="p">[</span><span class="n">Panel</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1.01</span><span class="p">,</span> <span class="s2">"a"</span><span class="p">),</span> <span class="n">Panel</span><span class="p">(</span><span class="mf">1.01</span><span class="p">,</span> <span class="mf">2.02</span><span class="p">,</span> <span class="s2">"b"</span><span class="p">),</span> <span class="n">Panel</span><span class="p">(</span><span class="mf">2.02</span><span class="p">,</span> <span class="mf">3.03</span><span class="p">,</span> <span class="s2">"c"</span><span class="p">)]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">frame_counts</span><span class="p">(</span><span class="n">ps</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
 <span class="go">[30, 31, 30]</span>
 </pre></div>
 </div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>]</span></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -716,16 +718,16 @@ the footage path encodes its own pieces).</p></li>
 <dd><p>Group consecutive panels into <code class="docutils literal notranslate"><span class="pre">(&quot;footage&quot;</span> <span class="pre">|</span> <span class="pre">&quot;stills&quot;,</span> <span class="pre">indices)</span></code> runs.</p>
 <p>Each footage panel is its own run (it has its own in-point); consecutive
 stills share one, rendered as a single Ken Burns pass.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>]]]</span></p>
-</dd>
-</dl>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">P</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">f</span><span class="o">=</span><span class="kc">None</span><span class="p">:</span> <span class="n">Panel</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"a.jpg"</span><span class="p">,</span> <span class="n">footage</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">runs</span><span class="p">([</span><span class="n">P</span><span class="p">(),</span> <span class="n">P</span><span class="p">(),</span> <span class="n">P</span><span class="p">(</span><span class="n">Footage</span><span class="p">(</span><span class="s2">"v.mp4"</span><span class="p">)),</span> <span class="n">P</span><span class="p">(</span><span class="n">Footage</span><span class="p">(</span><span class="s2">"v.mp4"</span><span class="p">,</span> <span class="mi">3</span><span class="p">)),</span> <span class="n">P</span><span class="p">()])</span>
 <span class="go">[('stills', [0, 1]), ('footage', [2]), ('footage', [3]), ('stills', [4])]</span>
 </pre></div>
 </div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>]]]</span></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -751,11 +753,6 @@ otherwise cache the truncation under its content key for good.</p>
 and — should the source run out early — held on its last frame rather than
 cutting short, so the picture never slides off the narration. Pieces are
 near-lossless (they are re-encoded once more, by <a class="reference internal" href="#braidio.video.concat_argv" title="braidio.video.concat_argv"><code class="xref py py-func docutils literal notranslate"><span class="pre">concat_argv()</span></code></a>).</p>
-<dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span></p>
-</dd>
-</dl>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">argv</span> <span class="o">=</span> <span class="n">segment_argv</span><span class="p">(</span><span class="s2">"rec.mp4"</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">,</span> <span class="mi">60</span><span class="p">,</span> <span class="n">out_path</span><span class="o">=</span><span class="s2">"p.mp4"</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">1080</span><span class="p">,</span> <span class="mi">1920</span><span class="p">))</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">argv</span><span class="p">[</span><span class="n">argv</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">"-ss"</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">argv</span><span class="p">[</span><span class="n">argv</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">"-t"</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
 <span class="go">('2.500', '3.000')</span>
@@ -763,6 +760,11 @@ near-lossless (they are re-encoded once more, by <a class="reference internal" h
 <span class="go">True</span>
 </pre></div>
 </div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span></p>
+</dd>
+</dl>
 </dd></dl>
 
 </section>
@@ -787,11 +789,11 @@ near-lossless (they are re-encoded once more, by <a class="reference internal" h
       </div>
     </a>
     <a class="right-next"
-       href="braidio.weave.html"
+       href="braidio.voice_library.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">braidio.weave</p>
+        <p class="prev-next-title">braidio.voice_library</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

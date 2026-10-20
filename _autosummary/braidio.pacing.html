@@ -34,6 +34,7 @@
 <link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d75fae25" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/epythet.css?v=47c21ad2" />
   
@@ -43,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=8d9581ea"></script>
+    <script src="../_static/documentation_options.js?v=ba6d0b80"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -57,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.71" />
+  <meta name="docsearch:version" content="0.0.72" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -341,6 +342,7 @@
 <li class="toctree-l2"><a class="reference internal" href="braidio.timeline.html">braidio.timeline</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.tts.html">braidio.tts</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.video.html">braidio.video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="braidio.voice_library.html">braidio.voice_library</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.weave.html">braidio.weave</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.weave_config.html">braidio.weave_config</a></li>
 </ul>
@@ -540,11 +542,6 @@ jittered speed outside it is silently useless, so the planner clamps.</p>
 <dt class="sig sig-object py" id="braidio.pacing.classify_boundary">
 <span class="sig-prename descclassname"><span class="pre">braidio.pacing.</span></span><span class="sig-name descname"><span class="pre">classify_boundary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/pacing.html#classify_boundary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.pacing.classify_boundary" title="Link to this definition">#</a></dt>
 <dd><p>Name the boundary implied by <code class="docutils literal notranslate"><span class="pre">text</span></code>’s trailing punctuation.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span></p>
-</dd>
-</dl>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">classify_boundary</span><span class="p">(</span><span class="s2">"So that's the charge sheet."</span><span class="p">)</span>
 <span class="go">'sentence'</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">classify_boundary</span><span class="p">(</span><span class="s1">'He said "no," and left,'</span><span class="p">)</span>
@@ -557,6 +554,11 @@ jittered speed outside it is silently useless, so the planner clamps.</p>
 <span class="go">'none'</span>
 </pre></div>
 </div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -575,11 +577,6 @@ crossfade and to the next beat’s <code class="docutils literal notranslate"><s
 <p><code class="docutils literal notranslate"><span class="pre">speed_base=None</span></code> plans no speed at all (eleven v3, which has no speed
 control); a float centers a per-turn jitter of <code class="docutils literal notranslate"><span class="pre">±speed_jitter</span></code> on it,
 scaled by the boundary’s final lengthening and clamped to <a class="reference internal" href="#braidio.pacing.SPEED_RANGE" title="braidio.pacing.SPEED_RANGE"><code class="xref py py-data docutils literal notranslate"><span class="pre">SPEED_RANGE</span></code></a>.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference internal" href="#braidio.pacing.NarrationTurn" title="braidio.pacing.NarrationTurn"><code class="xref py py-class docutils literal notranslate"><span class="pre">NarrationTurn</span></code></a>]</span></p>
-</dd>
-</dl>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">turns</span> <span class="o">=</span> <span class="n">plan_turns</span><span class="p">(</span><span class="s2">"One. Two. Three. Four."</span><span class="p">,</span> <span class="n">min_turn</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">max_turn</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">gap_s</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="p">[(</span><span class="n">t</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">gap_after_s</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">turns</span><span class="p">]</span>
 <span class="go">[('One. Two.', 0.3), ('Three. Four.', 0.0)]</span>
@@ -587,21 +584,26 @@ scaled by the boundary’s final lengthening and clamped to <a class="reference 
 <span class="go">0.44</span>
 </pre></div>
 </div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference internal" href="#braidio.pacing.NarrationTurn" title="braidio.pacing.NarrationTurn"><code class="xref py py-class docutils literal notranslate"><span class="pre">NarrationTurn</span></code></a>]</span></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="braidio.pacing.planned_gap_total_s">
 <span class="sig-prename descclassname"><span class="pre">braidio.pacing.</span></span><span class="sig-name descname"><span class="pre">planned_gap_total_s</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">turns</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/pacing.html#planned_gap_total_s"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.pacing.planned_gap_total_s" title="Link to this definition">#</a></dt>
 <dd><p>Total silence a plan inserts inside the beat (for reporting / tests).</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">planned_gap_total_s</span><span class="p">(</span><span class="n">plan_turns</span><span class="p">(</span><span class="s2">"A. B. C."</span><span class="p">,</span> <span class="n">min_turn</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_turn</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">gap_s</span><span class="o">=</span><span class="mf">0.3</span><span class="p">))</span>
+<span class="go">0.6</span>
+</pre></div>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span></p>
 </dd>
 </dl>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">planned_gap_total_s</span><span class="p">(</span><span class="n">plan_turns</span><span class="p">(</span><span class="s2">"A. B. C."</span><span class="p">,</span> <span class="n">min_turn</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_turn</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">gap_s</span><span class="o">=</span><span class="mf">0.3</span><span class="p">))</span>
-<span class="go">0.6</span>
-</pre></div>
-</div>
 </dd></dl>
 
 <dl class="py function">
@@ -622,17 +624,17 @@ scaled by the boundary’s final lengthening and clamped to <a class="reference 
 <p>Returns a list of paragraphs, each a list of units, so a caller can keep
 turns from straddling a paragraph break (which would swallow the strongest
 pause in the beat). <code class="docutils literal notranslate"><span class="pre">unit=&quot;beat&quot;</span></code> returns one paragraph of one unit.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]]</span></p>
-</dd>
-</dl>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">split_units</span><span class="p">(</span><span class="s2">"A one. A two.</span><span class="se">\n\n</span><span class="s2">B one."</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s2">"sentence"</span><span class="p">)</span>
 <span class="go">[['A one.', 'A two.'], ['B one.']]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">split_units</span><span class="p">(</span><span class="s2">"Yes, really. No."</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s2">"clause"</span><span class="p">)</span>
 <span class="go">[['Yes,', 'really.', 'No.']]</span>
 </pre></div>
 </div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]]</span></p>
+</dd>
+</dl>
 </dd></dl>
 
 </section>

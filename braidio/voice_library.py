@@ -81,6 +81,7 @@ def http_get_page(params: dict, *, api_key: str | None = None, timeout: float = 
             "Set ELEVENLABS_API_KEY to browse the shared Voice Library "
             "(https://elevenlabs.io/app/settings/api-keys)."
         )
+    params = {k: str(v).lower() if isinstance(v, bool) else v for k, v in params.items()}
     url = f"{SHARED_VOICES_URL}?{urllib.parse.urlencode(params, doseq=True)}"
     req = urllib.request.Request(url, headers={"xi-api-key": key})
     with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310 - fixed https host
@@ -100,10 +101,13 @@ def fetch_shared_voices(
     ``use_cases=["narrative_story"]``, ``gender="female"``, ``sort="cloned_by_count"``).
     """
     get_page = get_page or http_get_page
+    page_size = min(page_size, max_voices)
     n, page = 0, 0
     while n < max_voices:
         body = get_page({**filters, "page_size": page_size, "page": page})
-        for d in body.get("voices", []):
+        if not body.get("voices"):
+            return  # an empty page ends the listing whatever ``has_more`` says
+        for d in body["voices"]:
             yield SharedVoice.from_api(d)
             n += 1
             if n >= max_voices:
@@ -129,7 +133,9 @@ def curate(
 
     ``allow_ids`` (an audition allowlist) keeps only those ids; ``deny_ids``
     drops voices auditioned as unfit. ``min_notice_days`` keeps only voices
-    their owner cannot withdraw at short notice (protects a long production).
+    their owner cannot withdraw at short notice (protects a long production); an
+    unknown notice period counts as 0, so it is dropped. ``languages`` match on
+    the code before any region (``"en-US"`` is ``"en"``).
     """
     use_cases = set(use_cases) if use_cases is not None else None
     languages = set(languages) if languages is not None else None
@@ -138,7 +144,7 @@ def curate(
     def keep(v: SharedVoice) -> bool:
         return (
             (use_cases is None or v.use_case in use_cases)
-            and (languages is None or v.language in languages)
+            and (languages is None or v.language.split("-")[0].lower() in languages)
             and v.cloned_by_count >= min_cloned_by
             and v.usage_character_count_1y >= min_usage_1y
             and (min_notice_days is None or (v.notice_period or 0) >= min_notice_days)
@@ -152,8 +158,10 @@ def curate(
 
 
 def _base_name(name: str) -> str:
-    """``"Brian - deep narrator v2"`` → ``"brian"``: the name before any qualifier."""
-    return re.split(r"[\s\-–—|(:,]", name.strip().lower(), maxsplit=1)[0]
+    """``"Brian - deep narrator v2"`` / ``"Brian (v2)"`` → ``"brian"``: the name before
+    any qualifier, with a trailing version token dropped."""
+    head = re.split(r"\s+[-–—|]\s+|[(:,|]", name.strip().lower(), maxsplit=1)[0]
+    return re.sub(r"\s+v?\d+$", "", head).strip()
 
 
 def dedup_voices(
@@ -165,7 +173,9 @@ def dedup_voices(
     owner re-uploading one voice under variants. Pass ``key`` to tighten or
     loosen (e.g. an embedding-cluster id once a quality gate exists).
     """
-    key = key or (lambda v: (v.public_owner_id, _base_name(v.name), v.gender, v.accent))
+    key = key or (
+        lambda v: (v.public_owner_id or v.voice_id, _base_name(v.name), v.gender, v.accent)
+    )
     seen, out = set(), []
     for v in voices:
         k = key(v)
@@ -186,30 +196,48 @@ def diverse_pool(
 
     Round-robins over the ``spread[0]`` groups (gender: an even M/F split
     when ``n`` is even), and within each group prefers attribute values not yet
-    used, so the pool differs in accent and age too. Input order is the
-    preference order (pass :func:`curate`'s ranking); ``seed`` shuffles ties.
+    used, so the pool differs in accent and age too. Values are compared
+    case-insensitively; voices with no ``spread[0]`` value (or a gender other
+    than male/female) only fill places the main groups cannot. Input order is
+    the preference order (pass :func:`curate`'s ranking); ``seed`` only picks
+    which group goes first.
     """
     rng = random.Random(seed)
+
+    def val(v: SharedVoice, a: str) -> str:
+        return str(getattr(v, a) or "").lower()
+
     groups: dict[str, list[SharedVoice]] = {}
+    fill: list[SharedVoice] = []
     for v in voices:
-        groups.setdefault(getattr(v, spread[0]) if spread else "", []).append(v)
-    if n > sum(map(len, groups.values())):
-        raise ValueError(f"asked for {n} voices, only {sum(map(len, groups.values()))} curated")
+        g = val(v, spread[0]) if spread else "all"
+        if not g or (spread[0] == "gender" and g not in ("male", "female")):
+            fill.append(v)
+        else:
+            groups.setdefault(g, []).append(v)
+    total = sum(map(len, groups.values())) + len(fill)
+    if n > total:
+        raise ValueError(f"asked for {n} voices, only {total} curated")
     order = sorted(groups)
     rng.shuffle(order)
+    if fill:
+        groups["\0fill"] = fill
+        order.append("\0fill")  # reached only once the main groups run dry
     used: dict[str, set] = {a: set() for a in spread[1:]}
     picked: list[SharedVoice] = []
     while len(picked) < n:
-        for g in order:
-            if len(picked) == n or not groups[g]:
+        live = [g for g in order if groups[g]]
+        main_left = any(groups[g] for g in order if g != "\0fill")
+        for g in live:
+            if len(picked) == n or (g == "\0fill" and main_left):
                 continue
             cands = groups[g]
             best = min(
                 range(len(cands)),
-                key=lambda i: (sum(getattr(cands[i], a) in used[a] for a in used), i),
+                key=lambda i: (sum(val(cands[i], a) in used[a] for a in used), i),
             )
             v = cands.pop(best)
             for a in used:
-                used[a].add(getattr(v, a))
+                used[a].add(val(v, a))
             picked.append(v)
     return [v.to_voice() for v in picked]

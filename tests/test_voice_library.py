@@ -84,3 +84,27 @@ def test_default_fetch_needs_key(monkeypatch):
     monkeypatch.delenv("ELEVEN_API_KEY", raising=False)
     with pytest.raises(RuntimeError, match="ELEVENLABS_API_KEY"):
         http_get_page({})
+
+
+def test_fetch_stops_on_empty_page_with_has_more():
+    get = lambda params: {"voices": [], "has_more": True}  # noqa: E731
+    assert list(fetch_shared_voices(get_page=get)) == []
+
+
+def test_dedup_keeps_distinct_titled_names_and_ownerless():
+    sv = lambda i, name, owner="o": SharedVoice.from_api(  # noqa: E731
+        {**_v(i), "name": name, "public_owner_id": owner})
+    a, b = sv(1, "Dr. Smith"), sv(2, "Dr. Jones")
+    assert dedup_voices([a, b]) == [a, b]
+    c, d = sv(3, "Anna", ""), sv(4, "Anna", "")
+    assert dedup_voices([c, d]) == [c, d]
+    assert dedup_voices([sv(5, "Anna v2"), sv(6, "Anna - warm")]) == [sv(5, "Anna v2")]
+
+
+def test_neutral_voices_only_fill_and_case_insensitive():
+    vs = [SharedVoice.from_api(_v(i, gender=g)) for i, g in enumerate(
+        ["Male", "male", "female", "neutral", ""])]
+    pool = diverse_pool(vs, 4)
+    assert sorted(v.gender for v in pool[:3]) == ["F", "M", "M"] and pool[3].gender == "N"
+    assert [v.voice_id for v in curate(
+        [SharedVoice.from_api(_v(1, language="en-US"))])] == ["v1"]

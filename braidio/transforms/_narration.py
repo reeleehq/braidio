@@ -106,8 +106,9 @@ def _beat_turns(beat, config: dict, *, model_id: str, settings: dict) -> list:
 
     The fast path's planner (:func:`braidio.render.plan_beat_turns`), so a
     ``segmentation_unit`` other than ``"beat"`` cuts a beat the same way on both
-    paths. Seeded by the beat's script position, as the fast path is by its plan
-    position (the same number when the rights profile drops nothing).
+    paths. Seeded by the beat's script position (``beat_id`` here,
+    ``PlannedBeat.from_index`` on the fast path), which a dropped beat leaves
+    unchanged.
     """
     return plan_beat_turns(
         beat.body.get("text", ""),
@@ -236,8 +237,9 @@ class NarrationRenderTTS(BaseTransform):
                 voice_settings=settings,
                 narrate_fn=synthesize,
             )
-            if paced != out_path:
-                shutil.move(paced, out_path)
+            shutil.move(paced, out_path)
+            for leftover in out_path.parent.glob(f"{skel.id}-turn*"):
+                leftover.unlink()  # per-turn parts and gaps: only the mix is a node
             was_cached = all(cached)
         else:
             _, was_cached = braidio.narrate(

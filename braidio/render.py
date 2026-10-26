@@ -387,7 +387,7 @@ def render_production(
                 config=config,
                 supports_speed=delivery.supports_speed,
                 settings=beat_settings,
-                seed_offset=i,
+                seed_offset=pb.from_index,  # the script position, as the graph's beat_id
             )
             if turns:
                 raw = narrate_turns(

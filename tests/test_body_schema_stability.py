@@ -280,6 +280,7 @@ PINNED: dict[str, dict] = {
             "plays_clip": "string|null = null",
             "style": "string|null = null",
             "text": "string",
+            "voice": "string|null = null",
         },
     },
     "DialogueBeatBodyV1": {

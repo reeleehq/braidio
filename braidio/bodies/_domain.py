@@ -110,6 +110,9 @@ class NarrativeBeatBodyV1(BaseModel):
         default_factory=tuple,
         description="Ids this beat is derived from (commentary / source / clip nodes).",
     )
+    voice: Optional[str] = Field(
+        None, description="Per-beat voice id; overrides the weave-config pool."
+    )
     plays_clip: Optional[str] = Field(
         None, description="Id of an audio-clip/v1 to play here."
     )

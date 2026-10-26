@@ -38,7 +38,7 @@ from braidio.sources import SegmentSource
 from braidio.structure import DEFAULT_STRUCTURE, prepare_pause, prepare_sting
 from braidio.tts import narrate
 from braidio.weave import TimelineItem, extract_padded, weave_timeline
-from braidio.weave_config import WeaveConfig
+from braidio.weave_config import WeaveConfig, speaker_key
 
 _DEFAULT_LUFS = -16.0
 _TRUE_PEAK = -1.5
@@ -362,7 +362,10 @@ def render_production(
             speakers.append(None)
             continue
         if pb.kind == "narration":
-            beat_voice = getattr(orig, "voice", None) or voice_id  # per-beat override
+            # per-beat override > the render's voice > the config's pool pick
+            beat_voice = getattr(orig, "voice", None) or voice_id
+            if beat_voice is None and config is not None:
+                beat_voice = config.cast_voice(pb.from_index)
             beat_settings = (
                 getattr(orig, "voice_settings", None) or delivery.voice_settings
             )
@@ -434,7 +437,7 @@ def render_production(
             else raw
         )
         # a dialogue beat is several speakers in one file: it never interrupts
-        speakers.append((beat_voice or "") if pb.kind == "narration" else None)
+        speakers.append(speaker_key(beat_voice) if pb.kind == "narration" else None)
         # dialogue + narration are spoken → treated as "narration" on the timeline
         kinds.append("clip" if pb.kind == "clip" else "narration")
         # a "under" clip becomes a ducked underlay; "before"/"after" play clean

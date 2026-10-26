@@ -353,3 +353,83 @@ def test_the_graph_path_interrupts_like_the_fast_path(monkeypatch, tmp_path):
         return duration_s(braidio.transforms._common.url_to_path(episode.body["url"]))
 
     assert out_len(base_ep) - out_len(ep) == pytest.approx(0.6 - 2 * 0.12, abs=0.1)
+
+
+def _parity_script(**voices):
+    return braidio.Script(
+        "t",
+        "par",
+        [
+            braidio.Narration("One."),
+            braidio.Narration("Two.", **voices.get("two", {})),
+            braidio.Narration("Three."),
+            braidio.Narration("Four.", **voices.get("four", {})),
+        ],
+    )
+
+
+def _starts_both_ways(monkeypatch, tmp_path, script, config):
+    """Offsets of one script rendered on the fast path and through the graph."""
+    import braidio.render as render_mod
+
+    def fake(text, out, *, return_cache_status=False, **kw):
+        path = tone(Path(out), 440, 1.0)
+        return (path, False) if return_cache_status else path
+
+    monkeypatch.setattr(render_mod, "narrate", fake)
+    monkeypatch.setattr(braidio, "narrate", fake)
+    _, fast = braidio.render_production(
+        script,
+        source=None,
+        config=config,
+        out_path=tmp_path / "fast.mp3",
+        normalize=False,
+        end_fade_s=0.0,
+        end_silence_s=0.0,
+        return_timeline=True,
+        tts_dir=tmp_path / "tts",
+        clips_dir=tmp_path / "clips",
+    )
+    project = braidio.Project.init(tmp_path / "graph", title="graph")
+    ep = braidio.weave_project(project, script, config=config)
+    graph = braidio.transforms._episode.episode_timeline(project, ep)
+    return [b.start for b in fast.beats], [b.start for b in graph.beats]
+
+
+@needs_ffmpeg
+def test_both_paths_interrupt_at_the_same_offsets_with_a_pool(monkeypatch, tmp_path):
+    cfg = WeaveConfig(
+        voices=("va", "vb"), voice_seed=0, overlap_turn_s=0.3, overlap_jitter=0.0
+    )
+    fast, graph = _starts_both_ways(monkeypatch, tmp_path, _parity_script(), cfg)
+    assert graph == pytest.approx(fast, abs=1e-3)
+    assert fast[1] - fast[0] < 1.0 - 0.12  # the pool alternates: it interrupts
+
+
+@needs_ffmpeg
+def test_both_paths_honour_a_per_beat_voice(monkeypatch, tmp_path):
+    """A ``Narration.voice`` override casts the same on both paths.
+
+    One default voice and no pool, so only the overrides tell the speakers
+    apart: beat 2 changes speaker, beat 3 changes back.
+    """
+    cfg = WeaveConfig(overlap_turn_s=0.3, overlap_jitter=0.0)
+    script = _parity_script(two={"voice": "vx"})
+    fast, graph = _starts_both_ways(monkeypatch, tmp_path, script, cfg)
+    assert graph == pytest.approx(fast, abs=1e-3)
+    assert fast[2] - fast[1] < 1.0 - 0.12  # vx → default: interrupts
+
+
+def test_an_unset_beat_voice_leaves_the_ingested_body_unchanged(tmp_path):
+    """The new ``voice`` field is absent while unset: old projects re-ingest as a no-op."""
+    project = braidio.Project.init(tmp_path / "p", title="p")
+    script = _parity_script()
+    import nw
+
+    braidio.transforms.ingest_script(project, script)
+    bodies = [
+        a.body
+        for a in nw.iter_all_annotations(project.root)
+        if a.body_schema_uri == braidio.bodies.NARRATIVE_BEAT_V1
+    ]
+    assert bodies and all("voice" not in b for b in bodies)

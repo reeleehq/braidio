@@ -28,6 +28,7 @@ X that does Z”) isn’t reliably regex-detectable and is intentionally omitted
 | [`audit_expressiveness`](#braidio.style.audit_expressiveness)(text)        | Human-readable complaints about a script's written-in performance.                                  |
 | [`audit_platitudes`](#braidio.style.audit_platitudes)(text)            | Return every [`Finding`](#braidio.style.Finding) in `text`, in document order. |
 | [`platitude_rate`](#braidio.style.platitude_rate)(text, \*[, per])   | Flagged hits per `per` words (default 1000).                                                        |
+| [`strip_audio_tags`](#braidio.style.strip_audio_tags)(text)            | `text` with every inline `[audio tag]` removed (tags only; spacing kept).                           |
 
 ### Classes
 
@@ -92,3 +93,10 @@ Flagged hits per `per` words (default 1000). 0.0 for empty text.
 
 * **Return type:**
   [`float`](https://docs.python.org/3/builtins/functions.html#float)
+
+### braidio.style.strip_audio_tags(text)
+
+`text` with every inline `[audio tag]` removed (tags only; spacing kept).
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)

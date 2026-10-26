@@ -328,6 +328,7 @@
 <li class="toctree-l2"><a class="reference internal" href="braidio.delivery.html">braidio.delivery</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.formats.html">braidio.formats</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.kinds.html">braidio.kinds</a></li>
+<li class="toctree-l2"><a class="reference internal" href="braidio.markdown_script.html">braidio.markdown_script</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.multivoice.html">braidio.multivoice</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.music.html">braidio.music</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.pacing.html">braidio.pacing</a></li>
@@ -454,6 +455,9 @@ X that does Z”) isn’t reliably regex-detectable and is intentionally omitted
 <tr class="row-odd"><td><p><a class="reference internal" href="#braidio.style.platitude_rate" title="braidio.style.platitude_rate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">platitude_rate</span></code></a>(text, *[, per])</p></td>
 <td><p>Flagged hits per <code class="docutils literal notranslate"><span class="pre">per</span></code> words (default 1000).</p></td>
 </tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.style.strip_audio_tags" title="braidio.style.strip_audio_tags"><code class="xref py py-obj docutils literal notranslate"><span class="pre">strip_audio_tags</span></code></a>(text)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">text</span></code> with every inline <code class="docutils literal notranslate"><span class="pre">[audio</span> <span class="pre">tag]</span></code> removed (tags only; spacing kept).</p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -550,6 +554,17 @@ this catches a script that will be read flatly however good the words are.</p>
 </dl>
 </dd></dl>
 
+<dl class="py function">
+<dt class="sig sig-object py" id="braidio.style.strip_audio_tags">
+<span class="sig-prename descclassname"><span class="pre">braidio.style.</span></span><span class="sig-name descname"><span class="pre">strip_audio_tags</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/style.html#strip_audio_tags"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.style.strip_audio_tags" title="Link to this definition">#</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">text</span></code> with every inline <code class="docutils literal notranslate"><span class="pre">[audio</span> <span class="pre">tag]</span></code> removed (tags only; spacing kept).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 
 
@@ -607,6 +622,7 @@ this catches a script that will be read flatly however good the words are.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.style.audit_expressiveness"><code class="docutils literal notranslate"><span class="pre">audit_expressiveness()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.style.audit_platitudes"><code class="docutils literal notranslate"><span class="pre">audit_platitudes()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.style.platitude_rate"><code class="docutils literal notranslate"><span class="pre">platitude_rate()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.style.strip_audio_tags"><code class="docutils literal notranslate"><span class="pre">strip_audio_tags()</span></code></a></li>
 </ul>
   </nav></div>
 

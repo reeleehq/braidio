@@ -14,6 +14,7 @@
 - [braidio.delivery](braidio.delivery.html.md): Narration &#42;delivery&#42; presets — model + voice settings (issue #10, expressiveness).
 - [braidio.formats](braidio.formats.html.md): Ready-made &#42;&#42;format templates&#42;&#42; — high-quality presets under standard names.
 - [braidio.kinds](braidio.kinds.html.md): Production kinds braidio defines. Pure (no optional deps).
+- [braidio.markdown_script](braidio.markdown_script.html.md): Markdown → narration beats, for reading a written document aloud.
 - [braidio.multivoice](braidio.multivoice.html.md): Multi-voice narration: cycle a pool of voices across segments (issue #10).
 - [braidio.music](braidio.music.html.md): Music bed — an instrumental underscore laid under the whole production, ducked.
 - [braidio.pacing](braidio.pacing.html.md): Intra-beat narration pacing — how one narration beat becomes spoken &#42;turns&#42;.

@@ -328,6 +328,7 @@
 <li class="toctree-l2"><a class="reference internal" href="braidio.delivery.html">braidio.delivery</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.formats.html">braidio.formats</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.kinds.html">braidio.kinds</a></li>
+<li class="toctree-l2"><a class="reference internal" href="braidio.markdown_script.html">braidio.markdown_script</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.multivoice.html">braidio.multivoice</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.music.html">braidio.music</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.pacing.html">braidio.pacing</a></li>
@@ -427,6 +428,12 @@ in the <em>Hamilton</em> repo — braidio has its own #18 about something else.<
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#braidio.skills_dir" title="braidio.skills_dir"><code class="xref py py-obj docutils literal notranslate"><span class="pre">skills_dir</span></code></a>()</p></td>
 <td><p>Path to the agent skills that ship with braidio.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.script_from_markdown" title="braidio.script_from_markdown"><code class="xref py py-obj docutils literal notranslate"><span class="pre">script_from_markdown</span></code></a>(md, *[, voice, title, ...])</p></td>
+<td><p>Turn a markdown document into a <a class="reference internal" href="#braidio.Script" title="braidio.Script"><code class="xref py py-class docutils literal notranslate"><span class="pre">Script</span></code></a> of narration beats.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.untagged_differences" title="braidio.untagged_differences"><code class="xref py py-obj docutils literal notranslate"><span class="pre">untagged_differences</span></code></a>(before, after)</p></td>
+<td><p>Where <code class="docutils literal notranslate"><span class="pre">after</span></code> differs from <code class="docutils literal notranslate"><span class="pre">before</span></code> by more than <code class="docutils literal notranslate"><span class="pre">[audio</span> <span class="pre">tags]</span></code>.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#braidio.captions_for" title="braidio.captions_for"><code class="xref py py-obj docutils literal notranslate"><span class="pre">captions_for</span></code></a>(script, timeline, *[, max_chars])</p></td>
 <td><p>The SRT document for <code class="docutils literal notranslate"><span class="pre">script</span></code> as laid out by <code class="docutils literal notranslate"><span class="pre">timeline</span></code>.</p></td>
@@ -581,91 +588,94 @@ in the <em>Hamilton</em> repo — braidio has its own #18 about something else.<
 <tr class="row-odd"><td><p><a class="reference internal" href="#braidio.WeaveKind" title="braidio.WeaveKind"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WeaveKind</span></code></a>(*values)</p></td>
 <td><p>A braidio production kind.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.Cue" title="braidio.Cue"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Cue</span></code></a>(start_s, end_s, text)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.TagMismatch" title="braidio.TagMismatch"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TagMismatch</span></code></a>(index, before, after)</p></td>
+<td><p>A beat whose text changed by more than audio tags.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.Cue" title="braidio.Cue"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Cue</span></code></a>(start_s, end_s, text)</p></td>
 <td><p>One subtitle: <code class="docutils literal notranslate"><span class="pre">[start_s,</span> <span class="pre">end_s)</span></code> and the text shown.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.Script" title="braidio.Script"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Script</span></code></a>(title, id_slug[, beats])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.Script" title="braidio.Script"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Script</span></code></a>(title, id_slug[, beats])</p></td>
 <td><p>An ordered production script.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.Narration" title="braidio.Narration"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Narration</span></code></a>(text[, style, published_text, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.Narration" title="braidio.Narration"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Narration</span></code></a>(text[, style, published_text, ...])</p></td>
 <td><p>A spoken narration beat (authored, synthesized by TTS).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.SegmentBeat" title="braidio.SegmentBeat"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SegmentBeat</span></code></a>(reference[, label, rights, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.SegmentBeat" title="braidio.SegmentBeat"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SegmentBeat</span></code></a>(reference[, label, rights, ...])</p></td>
 <td><p>A span of source media to weave in, addressed by an opaque <code class="docutils literal notranslate"><span class="pre">reference</span></code>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.Dialogue" title="braidio.Dialogue"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Dialogue</span></code></a>(turns[, label])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.Dialogue" title="braidio.Dialogue"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Dialogue</span></code></a>(turns[, label])</p></td>
 <td><p>A multi-speaker commentary exchange (the conversational register).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.SceneBreak" title="braidio.SceneBreak"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SceneBreak</span></code></a>([label, marker])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.SceneBreak" title="braidio.SceneBreak"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SceneBreak</span></code></a>([label, marker])</p></td>
 <td><p>A structural boundary between sections — the &quot;new scene&quot; beat.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.Sting" title="braidio.Sting"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sting</span></code></a>(asset_path[, gain_db, max_len_s, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.Sting" title="braidio.Sting"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Sting</span></code></a>(asset_path[, gain_db, max_len_s, ...])</p></td>
 <td><p>A short musical marker played at a scene break.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.MusicStructure" title="braidio.MusicStructure"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MusicStructure</span></code></a>([sting, scene_marker, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.MusicStructure" title="braidio.MusicStructure"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MusicStructure</span></code></a>([sting, scene_marker, ...])</p></td>
 <td><p>How a production marks its structure with music — the render seam.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.Profile" title="braidio.Profile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Profile</span></code></a>(*values)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.Profile" title="braidio.Profile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Profile</span></code></a>(*values)</p></td>
 <td><p>Which projection of the production we render.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.RightsPolicy" title="braidio.RightsPolicy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RightsPolicy</span></code></a>([forbidden_texts, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.RightsPolicy" title="braidio.RightsPolicy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RightsPolicy</span></code></a>([forbidden_texts, ...])</p></td>
 <td><p>Injected rights configuration for the published profile.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.RenderPlan" title="braidio.RenderPlan"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RenderPlan</span></code></a>(profile[, beats, dropped, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.RenderPlan" title="braidio.RenderPlan"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RenderPlan</span></code></a>(profile[, beats, dropped, ...])</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.PlannedBeat" title="braidio.PlannedBeat"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PlannedBeat</span></code></a>(kind, content, from_index[, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.PlannedBeat" title="braidio.PlannedBeat"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PlannedBeat</span></code></a>(kind, content, from_index[, ...])</p></td>
 <td><p>A beat resolved for a profile — what the renderer actually plays.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.SegmentSource" title="braidio.SegmentSource"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SegmentSource</span></code></a>(*args, **kwargs)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.SegmentSource" title="braidio.SegmentSource"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SegmentSource</span></code></a>(*args, **kwargs)</p></td>
 <td><p>Resolve an opaque <code class="docutils literal notranslate"><span class="pre">reference</span></code> to a <a class="reference internal" href="#braidio.ResolvedSegment" title="braidio.ResolvedSegment"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResolvedSegment</span></code></a> (or None).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.ResolvedSegment" title="braidio.ResolvedSegment"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ResolvedSegment</span></code></a>(asset_path, start_s, end_s)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.ResolvedSegment" title="braidio.ResolvedSegment"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ResolvedSegment</span></code></a>(asset_path, start_s, end_s)</p></td>
 <td><p>A cuttable span of a source asset — what a <a class="reference internal" href="#braidio.SegmentSource" title="braidio.SegmentSource"><code class="xref py py-class docutils literal notranslate"><span class="pre">SegmentSource</span></code></a> returns.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.Segment" title="braidio.Segment"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Segment</span></code></a>(start_s, end_s, score, line_start, ...)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.Segment" title="braidio.Segment"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Segment</span></code></a>(start_s, end_s, score, line_start, ...)</p></td>
 <td><p>A resolved window for a reference, with the matched line span.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.TimedLine" title="braidio.TimedLine"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TimedLine</span></code></a>(index, start_s, end_s, text)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.TimedLine" title="braidio.TimedLine"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TimedLine</span></code></a>(index, start_s, end_s, text)</p></td>
 <td><p>A source line with a <code class="docutils literal notranslate"><span class="pre">[start_s,</span> <span class="pre">end_s)</span></code> window (end may be None = tail).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.NamespacedSegmentSource" title="braidio.NamespacedSegmentSource"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NamespacedSegmentSource</span></code></a>(sources, *[, sep, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.NamespacedSegmentSource" title="braidio.NamespacedSegmentSource"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NamespacedSegmentSource</span></code></a>(sources, *[, sep, ...])</p></td>
 <td><p>A <a class="reference internal" href="#braidio.SegmentSource" title="braidio.SegmentSource"><code class="xref py py-class docutils literal notranslate"><span class="pre">SegmentSource</span></code></a> that routes prefixed references to sub-sources.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.TimedLineSegmentSource" title="braidio.TimedLineSegmentSource"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TimedLineSegmentSource</span></code></a>(*, lines, asset_path)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.TimedLineSegmentSource" title="braidio.TimedLineSegmentSource"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TimedLineSegmentSource</span></code></a>(*, lines, asset_path)</p></td>
 <td><p>A <a class="reference internal" href="#braidio.SegmentSource" title="braidio.SegmentSource"><code class="xref py py-class docutils literal notranslate"><span class="pre">SegmentSource</span></code></a> over time-aligned lines + one source asset.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.CostRollup" title="braidio.CostRollup"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CostRollup</span></code></a>(characters, usd, unpriced[, lines])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.CostRollup" title="braidio.CostRollup"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CostRollup</span></code></a>(characters, usd, unpriced[, lines])</p></td>
 <td><p>A production's estimated TTS spend, exact on characters, honest on dollars.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.CostLine" title="braidio.CostLine"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CostLine</span></code></a>(label, kind, characters, usd, model_id)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.CostLine" title="braidio.CostLine"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CostLine</span></code></a>(label, kind, characters, usd, model_id)</p></td>
 <td><p>One billable line of an estimate (a narration beat or a dialogue beat).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.Delivery" title="braidio.Delivery"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Delivery</span></code></a>(name, model_id[, voice_settings, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.Delivery" title="braidio.Delivery"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Delivery</span></code></a>(name, model_id[, voice_settings, ...])</p></td>
 <td><p>A named narration delivery: which model + voice settings to synthesize with.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.Voice" title="braidio.Voice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Voice</span></code></a>(id, name, gender[, accent, note])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.Voice" title="braidio.Voice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Voice</span></code></a>(id, name, gender[, accent, note])</p></td>
 <td><p>A pooled narration voice.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.WeaveConfig" title="braidio.WeaveConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WeaveConfig</span></code></a>([voices, pool_label, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.WeaveConfig" title="braidio.WeaveConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WeaveConfig</span></code></a>([voices, pool_label, ...])</p></td>
 <td><p>All editing choices for a narration+segment weave.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.MusicBed" title="braidio.MusicBed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MusicBed</span></code></a>(asset_path[, gain_db, fade_in_s, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.MusicBed" title="braidio.MusicBed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MusicBed</span></code></a>(asset_path[, gain_db, fade_in_s, ...])</p></td>
 <td><p>An instrumental underscore spanning the production, mixed under the talk.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.Format" title="braidio.Format"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Format</span></code></a>(id, name, summary[, aka, cast, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.Format" title="braidio.Format"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Format</span></code></a>(id, name, summary[, aka, cast, ...])</p></td>
 <td><p>A named commentary-format preset: a bundle of high-quality defaults.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.TimelineItem" title="braidio.TimelineItem"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TimelineItem</span></code></a>(kind, path[, placement, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.TimelineItem" title="braidio.TimelineItem"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TimelineItem</span></code></a>(kind, path[, placement, ...])</p></td>
 <td><p>One part on the weave timeline.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.BeatSpan" title="braidio.BeatSpan"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BeatSpan</span></code></a>(index, kind[, label, source_start, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.BeatSpan" title="braidio.BeatSpan"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BeatSpan</span></code></a>(index, kind[, label, source_start, ...])</p></td>
 <td><p>One beat's place on the timeline.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.TimelineBreakdown" title="braidio.TimelineBreakdown"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TimelineBreakdown</span></code></a>([beats, title, settings])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.TimelineBreakdown" title="braidio.TimelineBreakdown"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TimelineBreakdown</span></code></a>([beats, title, settings])</p></td>
 <td><p>The ordered beats of a production, with per-kind totals and an HTML view.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.Finding" title="braidio.Finding"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Finding</span></code></a>(pattern, match, start)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.Finding" title="braidio.Finding"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Finding</span></code></a>(pattern, match, start)</p></td>
 <td><p>One flagged platitude.</p></td>
 </tr>
 </tbody>
@@ -1116,6 +1126,18 @@ bed the flag is inert.</p>
 theme). It is trimmed to <code class="docutils literal notranslate"><span class="pre">max_len_s</span></code> with a <code class="docutils literal notranslate"><span class="pre">fade_out_s</span></code> tail, levelled
 to the production’s loudness target, sat <code class="docutils literal notranslate"><span class="pre">gain_db</span></code> under the voice, and
 followed by <code class="docutils literal notranslate"><span class="pre">gap_after_s</span></code> of breathing room before the talk resumes.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="braidio.TagMismatch">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">braidio.</span></span><span class="sig-name descname"><span class="pre">TagMismatch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">before</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">after</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/markdown_script.html#TagMismatch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.TagMismatch" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>A beat whose text changed by more than audio tags.</p>
+<p><code class="docutils literal notranslate"><span class="pre">index</span></code> is the narration beat’s position; <code class="docutils literal notranslate"><span class="pre">-1</span></code> means the non-narration
+beats (segments, dialogue, scene breaks) differ, with their counts as
+<code class="docutils literal notranslate"><span class="pre">before</span></code>/<code class="docutils literal notranslate"><span class="pre">after</span></code>.</p>
 <dl class="field-list simple">
 </dl>
 </dd></dl>
@@ -1963,6 +1985,35 @@ unwrapped, never a parallel rule.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="braidio.script_from_markdown">
+<span class="sig-prename descclassname"><span class="pre">braidio.</span></span><span class="sig-name descname"><span class="pre">script_from_markdown</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">md</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_slug</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gaps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">mappingproxy({'title':</span> <span class="pre">0.0,</span> <span class="pre">'heading':</span> <span class="pre">1.3,</span> <span class="pre">'para':</span> <span class="pre">0.35,</span> <span class="pre">'list_item':</span> <span class="pre">0.2,</span> <span class="pre">'quote':</span> <span class="pre">0.5,</span> <span class="pre">'footnote':</span> <span class="pre">1.0})</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">respell</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">footnotes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'end'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">footnote_lead_in</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'A</span> <span class="pre">footnote.'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">images</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'drop'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/markdown_script.html#script_from_markdown"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.script_from_markdown" title="Link to this definition">#</a></dt>
+<dd><p>Turn a markdown document into a <a class="reference internal" href="#braidio.Script" title="braidio.Script"><code class="xref py py-class docutils literal notranslate"><span class="pre">Script</span></code></a> of narration beats.</p>
+<p>One beat per paragraph, heading, list item or quote paragraph.
+<code class="docutils literal notranslate"><span class="pre">Narration.style</span></code> carries the kind (<code class="docutils literal notranslate"><span class="pre">title</span></code>/<code class="docutils literal notranslate"><span class="pre">heading</span></code>/<code class="docutils literal notranslate"><span class="pre">para</span></code>/
+<code class="docutils literal notranslate"><span class="pre">list_item</span></code>/<code class="docutils literal notranslate"><span class="pre">quote</span></code>/<code class="docutils literal notranslate"><span class="pre">footnote</span></code>), so the timeline reports headings and
+footnotes separately, and <code class="docutils literal notranslate"><span class="pre">lead_gap_s</span></code> comes from <code class="docutils literal notranslate"><span class="pre">gaps[kind]</span></code> (a partial
+<code class="docutils literal notranslate"><span class="pre">gaps</span></code> is merged over <code class="xref py py-data docutils literal notranslate"><span class="pre">DEFAULT_GAPS</span></code>).</p>
+<ul class="simple">
+<li><p>Front matter <code class="docutils literal notranslate"><span class="pre">title</span></code>/<code class="docutils literal notranslate"><span class="pre">subtitle</span></code> become a title beat (<code class="docutils literal notranslate"><span class="pre">title=</span></code> and the
+first heading, as plain text, are the fallbacks for the script’s name).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">images</span></code>: <code class="docutils literal notranslate"><span class="pre">&quot;drop&quot;</span></code> (default) or <code class="docutils literal notranslate"><span class="pre">&quot;caption&quot;</span></code> (read the alt text inline).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">footnotes</span></code>: <code class="docutils literal notranslate"><span class="pre">&quot;end&quot;</span></code> (default; each read after the body, in reference
+order, behind <code class="docutils literal notranslate"><span class="pre">footnote_lead_in</span></code>) or <code class="docutils literal notranslate"><span class="pre">&quot;drop&quot;</span></code>. Markers are always removed.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">respell</span></code> maps text as written to text as spoken (<code class="docutils literal notranslate"><span class="pre">{&quot;BDUF&quot;:</span> <span class="pre">&quot;B-DUF&quot;}</span></code>),
+applied to the beats only; the source markdown is untouched.</p></li>
+<li><p>Links keep their text; URLs are never read (autolinks and bare URLs are
+dropped); emphasis and code markers are stripped; HTML, code blocks, tables
+and rules are not read; entities are decoded.</p></li>
+</ul>
+<p>Needs <code class="docutils literal notranslate"><span class="pre">markdown-it-py</span></code> + <code class="docutils literal notranslate"><span class="pre">mdit-py-plugins</span></code> (<code class="docutils literal notranslate"><span class="pre">braidio[markdown]</span></code>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="braidio.script.html#braidio.script.Script" title="braidio.script.Script"><code class="xref py py-class docutils literal notranslate"><span class="pre">Script</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="braidio.segment_is_publishable">
 <span class="sig-prename descclassname"><span class="pre">braidio.</span></span><span class="sig-name descname"><span class="pre">segment_is_publishable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">beat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">publishable</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">frozenset({'public-domain'})</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/rights.html#segment_is_publishable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.segment_is_publishable" title="Link to this definition">#</a></dt>
 <dd><p>Whether <code class="docutils literal notranslate"><span class="pre">beat</span></code>’s audio may play in the published cut.</p>
@@ -2024,6 +2075,28 @@ is <code class="docutils literal notranslate"><span class="pre">None</span></cod
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="braidio.untagged_differences">
+<span class="sig-prename descclassname"><span class="pre">braidio.</span></span><span class="sig-name descname"><span class="pre">untagged_differences</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">before</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">after</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/markdown_script.html#untagged_differences"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.untagged_differences" title="Link to this definition">#</a></dt>
+<dd><p>Where <code class="docutils literal notranslate"><span class="pre">after</span></code> differs from <code class="docutils literal notranslate"><span class="pre">before</span></code> by more than <code class="docutils literal notranslate"><span class="pre">[audio</span> <span class="pre">tags]</span></code>.</p>
+<p>Compares narration beat by beat (whitespace-insensitive, added tags ignored;
+a bracket token already in <code class="docutils literal notranslate"><span class="pre">before</span></code> must survive). A different narration
+count is reported as one mismatch at the first unmatched index; a different
+count of non-narration beats as one mismatch at index <code class="docutils literal notranslate"><span class="pre">-1</span></code>. Empty list ⇒
+tagging changed nothing but tags.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">Script</span><span class="p">(</span><span class="s2">"t"</span><span class="p">,</span> <span class="s2">"t"</span><span class="p">,</span> <span class="p">[</span><span class="n">Narration</span><span class="p">(</span><span class="s2">"Hello there."</span><span class="p">)])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">Script</span><span class="p">(</span><span class="s2">"t"</span><span class="p">,</span> <span class="s2">"t"</span><span class="p">,</span> <span class="p">[</span><span class="n">Narration</span><span class="p">(</span><span class="s2">"[warmly] Hello there."</span><span class="p">)])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">untagged_differences</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+<span class="go">[]</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference internal" href="braidio.markdown_script.html#braidio.markdown_script.TagMismatch" title="braidio.markdown_script.TagMismatch"><code class="xref py py-class docutils literal notranslate"><span class="pre">TagMismatch</span></code></a>]</span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -2104,55 +2177,58 @@ whole-span file. Falls back to a plain concat feel when
 <tr class="row-even"><td><p><a class="reference internal" href="braidio.kinds.html#module-braidio.kinds" title="braidio.kinds"><code class="xref py py-obj docutils literal notranslate"><span class="pre">kinds</span></code></a></p></td>
 <td><p>Production kinds braidio defines.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="braidio.multivoice.html#module-braidio.multivoice" title="braidio.multivoice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">multivoice</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="braidio.markdown_script.html#module-braidio.markdown_script" title="braidio.markdown_script"><code class="xref py py-obj docutils literal notranslate"><span class="pre">markdown_script</span></code></a></p></td>
+<td><p>Markdown → narration beats, for reading a written document aloud.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="braidio.multivoice.html#module-braidio.multivoice" title="braidio.multivoice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">multivoice</span></code></a></p></td>
 <td><p>Multi-voice narration: cycle a pool of voices across segments (issue #10).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="braidio.music.html#module-braidio.music" title="braidio.music"><code class="xref py py-obj docutils literal notranslate"><span class="pre">music</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="braidio.music.html#module-braidio.music" title="braidio.music"><code class="xref py py-obj docutils literal notranslate"><span class="pre">music</span></code></a></p></td>
 <td><p>Music bed — an instrumental underscore laid under the whole production, ducked.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="braidio.pacing.html#module-braidio.pacing" title="braidio.pacing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pacing</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="braidio.pacing.html#module-braidio.pacing" title="braidio.pacing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pacing</span></code></a></p></td>
 <td><p>Intra-beat narration pacing — how one narration beat becomes spoken <em>turns</em>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="braidio.relevance.html#module-braidio.relevance" title="braidio.relevance"><code class="xref py py-obj docutils literal notranslate"><span class="pre">relevance</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="braidio.relevance.html#module-braidio.relevance" title="braidio.relevance"><code class="xref py py-obj docutils literal notranslate"><span class="pre">relevance</span></code></a></p></td>
 <td><p>How well a still relates to the words spoken over it — the scorer seam.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="braidio.render.html#module-braidio.render" title="braidio.render"><code class="xref py py-obj docutils literal notranslate"><span class="pre">render</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="braidio.render.html#module-braidio.render" title="braidio.render"><code class="xref py py-obj docutils literal notranslate"><span class="pre">render</span></code></a></p></td>
 <td><p>Render a <a class="reference internal" href="braidio.script.html#braidio.script.Script" title="braidio.script.Script"><code class="xref py py-class docutils literal notranslate"><span class="pre">Script</span></code></a> into an audio file.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="braidio.rights.html#module-braidio.rights" title="braidio.rights"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rights</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="braidio.rights.html#module-braidio.rights" title="braidio.rights"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rights</span></code></a></p></td>
 <td><p>Render profiles: enforce personal-vs-published rights as data.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="braidio.script.html#module-braidio.script" title="braidio.script"><code class="xref py py-obj docutils literal notranslate"><span class="pre">script</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="braidio.script.html#module-braidio.script" title="braidio.script"><code class="xref py py-obj docutils literal notranslate"><span class="pre">script</span></code></a></p></td>
 <td><p>Composition model — the ordered beats a render walks.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="braidio.sources.html#module-braidio.sources" title="braidio.sources"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sources</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="braidio.sources.html#module-braidio.sources" title="braidio.sources"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sources</span></code></a></p></td>
 <td><p>Segment sources: resolve a <em>reference</em> to a cuttable <code class="docutils literal notranslate"><span class="pre">[start,</span> <span class="pre">end]</span></code> window.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="braidio.structure.html#module-braidio.structure" title="braidio.structure"><code class="xref py py-obj docutils literal notranslate"><span class="pre">structure</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="braidio.structure.html#module-braidio.structure" title="braidio.structure"><code class="xref py py-obj docutils literal notranslate"><span class="pre">structure</span></code></a></p></td>
 <td><p>Structural music — stings at scene breaks, fade-to-spotlight on exhibits.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="braidio.style.html#module-braidio.style" title="braidio.style"><code class="xref py py-obj docutils literal notranslate"><span class="pre">style</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="braidio.style.html#module-braidio.style" title="braidio.style"><code class="xref py py-obj docutils literal notranslate"><span class="pre">style</span></code></a></p></td>
 <td><p>Style audit — flag the recycled rhetorical tics in commentary text.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="braidio.textprep.html#module-braidio.textprep" title="braidio.textprep"><code class="xref py py-obj docutils literal notranslate"><span class="pre">textprep</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="braidio.textprep.html#module-braidio.textprep" title="braidio.textprep"><code class="xref py py-obj docutils literal notranslate"><span class="pre">textprep</span></code></a></p></td>
 <td><p>Text preparation for scripts — clean OCR'd source, tidy authored lines.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="braidio.timeline.html#module-braidio.timeline" title="braidio.timeline"><code class="xref py py-obj docutils literal notranslate"><span class="pre">timeline</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="braidio.timeline.html#module-braidio.timeline" title="braidio.timeline"><code class="xref py py-obj docutils literal notranslate"><span class="pre">timeline</span></code></a></p></td>
 <td><p>Timeline breakdown — what a production spends its time on, and in what order.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="braidio.tts.html#module-braidio.tts" title="braidio.tts"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tts</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="braidio.tts.html#module-braidio.tts" title="braidio.tts"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tts</span></code></a></p></td>
 <td><p>ElevenLabs narration synthesis.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="braidio.video.html#module-braidio.video" title="braidio.video"><code class="xref py py-obj docutils literal notranslate"><span class="pre">video</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="braidio.video.html#module-braidio.video" title="braidio.video"><code class="xref py py-obj docutils literal notranslate"><span class="pre">video</span></code></a></p></td>
 <td><p>Turn a rendered production into a Ken Burns film over still images.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="braidio.voice_library.html#module-braidio.voice_library" title="braidio.voice_library"><code class="xref py py-obj docutils literal notranslate"><span class="pre">voice_library</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="braidio.voice_library.html#module-braidio.voice_library" title="braidio.voice_library"><code class="xref py py-obj docutils literal notranslate"><span class="pre">voice_library</span></code></a></p></td>
 <td><p>Voice-pool sourcing and curation from the ElevenLabs shared Voice Library.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="braidio.weave.html#module-braidio.weave" title="braidio.weave"><code class="xref py py-obj docutils literal notranslate"><span class="pre">weave</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="braidio.weave.html#module-braidio.weave" title="braidio.weave"><code class="xref py py-obj docutils literal notranslate"><span class="pre">weave</span></code></a></p></td>
 <td><p>Weave narration + audio clips on a timeline (#21) — the reusable mix engine.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="braidio.weave_config.html#module-braidio.weave_config" title="braidio.weave_config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">weave_config</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="braidio.weave_config.html#module-braidio.weave_config" title="braidio.weave_config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">weave_config</span></code></a></p></td>
 <td><p>WeaveConfig — every editing choice for weaving narration + segments (#20).</p></td>
 </tr>
 </tbody>
@@ -2252,6 +2328,7 @@ whole-span file. Falls back to a plain concat feel when
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.SegmentBeat"><code class="docutils literal notranslate"><span class="pre">SegmentBeat</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.SegmentSource"><code class="docutils literal notranslate"><span class="pre">SegmentSource</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.Sting"><code class="docutils literal notranslate"><span class="pre">Sting</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.TagMismatch"><code class="docutils literal notranslate"><span class="pre">TagMismatch</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.TimedLine"><code class="docutils literal notranslate"><span class="pre">TimedLine</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.TimedLineSegmentSource"><code class="docutils literal notranslate"><span class="pre">TimedLineSegmentSource</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.TimelineBreakdown"><code class="docutils literal notranslate"><span class="pre">TimelineBreakdown</span></code></a><ul class="nav section-nav flex-column">
@@ -2310,11 +2387,13 @@ whole-span file. Falls back to a plain concat feel when
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.render_settings"><code class="docutils literal notranslate"><span class="pre">render_settings()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.resolve_voice_id"><code class="docutils literal notranslate"><span class="pre">resolve_voice_id()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.rights_are_publishable"><code class="docutils literal notranslate"><span class="pre">rights_are_publishable()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.script_from_markdown"><code class="docutils literal notranslate"><span class="pre">script_from_markdown()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.segment_is_publishable"><code class="docutils literal notranslate"><span class="pre">segment_is_publishable()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.skills_dir"><code class="docutils literal notranslate"><span class="pre">skills_dir()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.split_segments"><code class="docutils literal notranslate"><span class="pre">split_segments()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.strip_speaker_labels"><code class="docutils literal notranslate"><span class="pre">strip_speaker_labels()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts_cost_usd"><code class="docutils literal notranslate"><span class="pre">tts_cost_usd()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.untagged_differences"><code class="docutils literal notranslate"><span class="pre">untagged_differences()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.usd_per_1k_chars"><code class="docutils literal notranslate"><span class="pre">usd_per_1k_chars()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.user_config"><code class="docutils literal notranslate"><span class="pre">user_config()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.weave_timeline"><code class="docutils literal notranslate"><span class="pre">weave_timeline()</span></code></a></li>

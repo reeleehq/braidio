@@ -9,6 +9,8 @@
    .. autosummary::
    
       skills_dir
+      script_from_markdown
+      untagged_differences
       captions_for
       cues_for
       format_srt
@@ -63,6 +65,7 @@
    .. autosummary::
    
       WeaveKind
+      TagMismatch
       Cue
       Script
       Narration
@@ -117,6 +120,7 @@
    genre
    importing
    kinds
+   markdown_script
    mcp
    multivoice
    music

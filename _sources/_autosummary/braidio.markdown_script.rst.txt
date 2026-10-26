@@ -1,0 +1,27 @@
+braidio.markdown\_script
+========================
+
+.. automodule:: braidio.markdown_script
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      DEFAULT_GAPS
+      DEFAULT_FOOTNOTE_LEAD_IN
+      MARKDOWN_EXTRA
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      script_from_markdown
+      untagged_differences
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      TagMismatch
+   

@@ -21,6 +21,8 @@ in the *Hamilton* repo — braidio has its own #18 about something else.
 
 | [`skills_dir`](#braidio.skills_dir)()                                       | Path to the agent skills that ship with braidio.                                                                        |
 |-----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| [`script_from_markdown`](#braidio.script_from_markdown)(md, \*[, voice, title, ...])  | Turn a markdown document into a [`Script`](#braidio.Script) of narration beats.             |
+| [`untagged_differences`](#braidio.untagged_differences)(before, after)                | Where `after` differs from `before` by more than `[audio tags]`.                                                        |
 | [`captions_for`](#braidio.captions_for)(script, timeline, \*[, max_chars])    | The SRT document for `script` as laid out by `timeline`.                                                                |
 | [`cues_for`](#braidio.cues_for)(script, timeline, \*[, max_chars])        | Subtitle cues for `script` as laid out by `timeline`.                                                                   |
 | [`format_srt`](#braidio.format_srt)(cues)                                   | Render `cues` as an SRT document.                                                                                       |
@@ -74,6 +76,7 @@ in the *Hamilton* repo — braidio has its own #18 about something else.
 
 | [`WeaveKind`](#braidio.WeaveKind)(\*values)                               | A braidio production kind.                                                                                         |
 |----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| [`TagMismatch`](#braidio.TagMismatch)(index, before, after)                 | A beat whose text changed by more than audio tags.                                                                 |
 | [`Cue`](#braidio.Cue)(start_s, end_s, text)                         | One subtitle: `[start_s, end_s)` and the text shown.                                                               |
 | [`Script`](#braidio.Script)(title, id_slug[, beats])                   | An ordered production script.                                                                                      |
 | [`Narration`](#braidio.Narration)(text[, style, published_text, ...])     | A spoken narration beat (authored, synthesized by TTS).                                                            |
@@ -462,6 +465,16 @@ A short musical marker played at a scene break.
 theme). It is trimmed to `max_len_s` with a `fade_out_s` tail, levelled
 to the production’s loudness target, sat `gain_db` under the voice, and
 followed by `gap_after_s` of breathing room before the talk resumes.
+
+### *class* braidio.TagMismatch(index, before, after)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+A beat whose text changed by more than audio tags.
+
+`index` is the narration beat’s position; `-1` means the non-narration
+beats (segments, dialogue, scene breaks) differ, with their counts as
+`before`/`after`.
 
 ### *class* braidio.TimedLine(index, start_s, end_s, text)
 
@@ -1153,6 +1166,32 @@ unwrapped, never a parallel rule.
 * **Return type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
+### braidio.script_from_markdown(md, , voice=None, title=None, id_slug=None, gaps=mappingproxy({'title': 0.0, 'heading': 1.3, 'para': 0.35, 'list_item': 0.2, 'quote': 0.5, 'footnote': 1.0}), respell=None, footnotes='end', footnote_lead_in='A footnote.', images='drop')
+
+Turn a markdown document into a [`Script`](#braidio.Script) of narration beats.
+
+One beat per paragraph, heading, list item or quote paragraph.
+`Narration.style` carries the kind (`title`/`heading`/`para`/
+`list_item`/`quote`/`footnote`), so the timeline reports headings and
+footnotes separately, and `lead_gap_s` comes from `gaps[kind]` (a partial
+`gaps` is merged over `DEFAULT_GAPS`).
+
+- Front matter `title`/`subtitle` become a title beat (`title=` and the
+  first heading, as plain text, are the fallbacks for the script’s name).
+- `images`: `"drop"` (default) or `"caption"` (read the alt text inline).
+- `footnotes`: `"end"` (default; each read after the body, in reference
+  order, behind `footnote_lead_in`) or `"drop"`. Markers are always removed.
+- `respell` maps text as written to text as spoken (`{"BDUF": "B-DUF"}`),
+  applied to the beats only; the source markdown is untouched.
+- Links keep their text; URLs are never read (autolinks and bare URLs are
+  dropped); emphasis and code markers are stripped; HTML, code blocks, tables
+  and rules are not read; entities are decoded.
+
+Needs `markdown-it-py` + `mdit-py-plugins` (`braidio[markdown]`).
+
+* **Return type:**
+  [`Script`](braidio.script.html.md#braidio.script.Script)
+
 ### braidio.segment_is_publishable(beat, publishable=frozenset({'public-domain'}))
 
 Whether `beat`’s audio may play in the published cut.
@@ -1207,6 +1246,26 @@ is `None` only when [`usd_per_1k_chars()`](#braidio.usd_per_1k_chars) is unprice
 * **Return type:**
   [`Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]
 
+### braidio.untagged_differences(before, after)
+
+Where `after` differs from `before` by more than `[audio tags]`.
+
+Compares narration beat by beat (whitespace-insensitive, added tags ignored;
+a bracket token already in `before` must survive). A different narration
+count is reported as one mismatch at the first unmatched index; a different
+count of non-narration beats as one mismatch at index `-1`. Empty list ⇒
+tagging changed nothing but tags.
+
+```pycon
+>>> a = Script("t", "t", [Narration("Hello there.")])
+>>> b = Script("t", "t", [Narration("[warmly] Hello there.")])
+>>> untagged_differences(a, b)
+[]
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`TagMismatch`](braidio.markdown_script.html.md#braidio.markdown_script.TagMismatch)]
+
 ### braidio.usd_per_1k_chars(model_id=None)
 
 Resolved USD-per-1000-characters rate (most specific source first).
@@ -1249,29 +1308,30 @@ whole-span file. Falls back to a plain concat feel when
 
 ### Modules
 
-| [`captions`](braidio.captions.html.md#module-braidio.captions)           | Subtitles for a rendered production, built from the script it was rendered from.                           |
-|---------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------|
-| [`compose`](braidio.compose.html.md#module-braidio.compose)             | Config-driven narration composition (#20) — the reusable entrypoint.                                       |
-| [`conversation`](braidio.conversation.html.md#module-braidio.conversation)   | Conversational register: render an exchange as people *talking to each other*.                             |
-| [`cost`](braidio.cost.html.md#module-braidio.cost)                   | Cost model for braidio's paid operations (ElevenLabs TTS).                                                 |
-| [`defaults`](braidio.defaults.html.md#module-braidio.defaults)           | User-overridable, persisted defaults for how braidio renders a voice.                                      |
-| [`delivery`](braidio.delivery.html.md#module-braidio.delivery)           | Narration *delivery* presets — model + voice settings (issue #10, expressiveness).                         |
-| [`formats`](braidio.formats.html.md#module-braidio.formats)             | Ready-made **format templates** — high-quality presets under standard names.                               |
-| [`kinds`](braidio.kinds.html.md#module-braidio.kinds)                 | Production kinds braidio defines.                                                                          |
-| [`multivoice`](braidio.multivoice.html.md#module-braidio.multivoice)       | Multi-voice narration: cycle a pool of voices across segments (issue #10).                                 |
-| [`music`](braidio.music.html.md#module-braidio.music)                 | Music bed — an instrumental underscore laid under the whole production, ducked.                            |
-| [`pacing`](braidio.pacing.html.md#module-braidio.pacing)               | Intra-beat narration pacing — how one narration beat becomes spoken *turns*.                               |
-| [`relevance`](braidio.relevance.html.md#module-braidio.relevance)         | How well a still relates to the words spoken over it — the scorer seam.                                    |
-| [`render`](braidio.render.html.md#module-braidio.render)               | Render a [`Script`](braidio.script.html.md#braidio.script.Script) into an audio file. |
-| [`rights`](braidio.rights.html.md#module-braidio.rights)               | Render profiles: enforce personal-vs-published rights as data.                                             |
-| [`script`](braidio.script.html.md#module-braidio.script)               | Composition model — the ordered beats a render walks.                                                      |
-| [`sources`](braidio.sources.html.md#module-braidio.sources)             | Segment sources: resolve a *reference* to a cuttable `[start, end]` window.                                |
-| [`structure`](braidio.structure.html.md#module-braidio.structure)         | Structural music — stings at scene breaks, fade-to-spotlight on exhibits.                                  |
-| [`style`](braidio.style.html.md#module-braidio.style)                 | Style audit — flag the recycled rhetorical tics in commentary text.                                        |
-| [`textprep`](braidio.textprep.html.md#module-braidio.textprep)           | Text preparation for scripts — clean OCR'd source, tidy authored lines.                                    |
-| [`timeline`](braidio.timeline.html.md#module-braidio.timeline)           | Timeline breakdown — what a production spends its time on, and in what order.                              |
-| [`tts`](braidio.tts.html.md#module-braidio.tts)                     | ElevenLabs narration synthesis.                                                                            |
-| [`video`](braidio.video.html.md#module-braidio.video)                 | Turn a rendered production into a Ken Burns film over still images.                                        |
-| [`voice_library`](braidio.voice_library.html.md#module-braidio.voice_library) | Voice-pool sourcing and curation from the ElevenLabs shared Voice Library.                                 |
-| [`weave`](braidio.weave.html.md#module-braidio.weave)                 | Weave narration + audio clips on a timeline (#21) — the reusable mix engine.                               |
-| [`weave_config`](braidio.weave_config.html.md#module-braidio.weave_config)   | WeaveConfig — every editing choice for weaving narration + segments (#20).                                 |
+| [`captions`](braidio.captions.html.md#module-braidio.captions)               | Subtitles for a rendered production, built from the script it was rendered from.                           |
+|-------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------|
+| [`compose`](braidio.compose.html.md#module-braidio.compose)                 | Config-driven narration composition (#20) — the reusable entrypoint.                                       |
+| [`conversation`](braidio.conversation.html.md#module-braidio.conversation)       | Conversational register: render an exchange as people *talking to each other*.                             |
+| [`cost`](braidio.cost.html.md#module-braidio.cost)                       | Cost model for braidio's paid operations (ElevenLabs TTS).                                                 |
+| [`defaults`](braidio.defaults.html.md#module-braidio.defaults)               | User-overridable, persisted defaults for how braidio renders a voice.                                      |
+| [`delivery`](braidio.delivery.html.md#module-braidio.delivery)               | Narration *delivery* presets — model + voice settings (issue #10, expressiveness).                         |
+| [`formats`](braidio.formats.html.md#module-braidio.formats)                 | Ready-made **format templates** — high-quality presets under standard names.                               |
+| [`kinds`](braidio.kinds.html.md#module-braidio.kinds)                     | Production kinds braidio defines.                                                                          |
+| [`markdown_script`](braidio.markdown_script.html.md#module-braidio.markdown_script) | Markdown → narration beats, for reading a written document aloud.                                          |
+| [`multivoice`](braidio.multivoice.html.md#module-braidio.multivoice)           | Multi-voice narration: cycle a pool of voices across segments (issue #10).                                 |
+| [`music`](braidio.music.html.md#module-braidio.music)                     | Music bed — an instrumental underscore laid under the whole production, ducked.                            |
+| [`pacing`](braidio.pacing.html.md#module-braidio.pacing)                   | Intra-beat narration pacing — how one narration beat becomes spoken *turns*.                               |
+| [`relevance`](braidio.relevance.html.md#module-braidio.relevance)             | How well a still relates to the words spoken over it — the scorer seam.                                    |
+| [`render`](braidio.render.html.md#module-braidio.render)                   | Render a [`Script`](braidio.script.html.md#braidio.script.Script) into an audio file. |
+| [`rights`](braidio.rights.html.md#module-braidio.rights)                   | Render profiles: enforce personal-vs-published rights as data.                                             |
+| [`script`](braidio.script.html.md#module-braidio.script)                   | Composition model — the ordered beats a render walks.                                                      |
+| [`sources`](braidio.sources.html.md#module-braidio.sources)                 | Segment sources: resolve a *reference* to a cuttable `[start, end]` window.                                |
+| [`structure`](braidio.structure.html.md#module-braidio.structure)             | Structural music — stings at scene breaks, fade-to-spotlight on exhibits.                                  |
+| [`style`](braidio.style.html.md#module-braidio.style)                     | Style audit — flag the recycled rhetorical tics in commentary text.                                        |
+| [`textprep`](braidio.textprep.html.md#module-braidio.textprep)               | Text preparation for scripts — clean OCR'd source, tidy authored lines.                                    |
+| [`timeline`](braidio.timeline.html.md#module-braidio.timeline)               | Timeline breakdown — what a production spends its time on, and in what order.                              |
+| [`tts`](braidio.tts.html.md#module-braidio.tts)                         | ElevenLabs narration synthesis.                                                                            |
+| [`video`](braidio.video.html.md#module-braidio.video)                     | Turn a rendered production into a Ken Burns film over still images.                                        |
+| [`voice_library`](braidio.voice_library.html.md#module-braidio.voice_library)     | Voice-pool sourcing and curation from the ElevenLabs shared Voice Library.                                 |
+| [`weave`](braidio.weave.html.md#module-braidio.weave)                     | Weave narration + audio clips on a timeline (#21) — the reusable mix engine.                               |
+| [`weave_config`](braidio.weave_config.html.md#module-braidio.weave_config)       | WeaveConfig — every editing choice for weaving narration + segments (#20).                                 |

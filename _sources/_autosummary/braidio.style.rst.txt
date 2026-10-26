@@ -20,6 +20,7 @@ braidio.style
       audit_expressiveness
       audit_platitudes
       platitude_rate
+      strip_audio_tags
    
    .. rubric:: Classes
 

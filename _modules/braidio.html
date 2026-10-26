@@ -903,6 +903,13 @@ window.runMermaid = runMermaid;</script>
     <span class="n">format_srt</span><span class="p">,</span>
 <span class="p">)</span>
 
+<span class="c1"># --- markdown document -&gt; narration beats (read-aloud) ---</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">braidio.markdown_script</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>  <span class="c1"># noqa: F401</span>
+    <span class="n">TagMismatch</span><span class="p">,</span>
+    <span class="n">script_from_markdown</span><span class="p">,</span>
+    <span class="n">untagged_differences</span><span class="p">,</span>
+<span class="p">)</span>
+
 <span class="c1"># --- text prep + style audit (reusable script helpers) ---</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.textprep</span><span class="w"> </span><span class="kn">import</span> <span class="n">clean_ocr</span><span class="p">,</span> <span class="n">strip_speaker_labels</span>  <span class="c1"># noqa: F401</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.style</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>  <span class="c1"># noqa: F401</span>
@@ -999,6 +1006,10 @@ window.runMermaid = runMermaid;</script>
     <span class="s2">"HAS_NW"</span><span class="p">,</span>
     <span class="s2">"HAS_VIDEO"</span><span class="p">,</span>
     <span class="s2">"skills_dir"</span><span class="p">,</span>
+    <span class="c1"># markdown read-aloud</span>
+    <span class="s2">"TagMismatch"</span><span class="p">,</span>
+    <span class="s2">"script_from_markdown"</span><span class="p">,</span>
+    <span class="s2">"untagged_differences"</span><span class="p">,</span>
     <span class="c1"># captions</span>
     <span class="s2">"Cue"</span><span class="p">,</span>
     <span class="s2">"captions_for"</span><span class="p">,</span>

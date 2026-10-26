@@ -17,7 +17,7 @@ recorded choices.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field, fields, replace
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 from braidio.multivoice import POOL_4, POOL_MANY
 from braidio.pacing import SEGMENTATION_UNITS
@@ -133,7 +133,48 @@ class WeaveConfig:
 
         Its ``seed`` is ``voice_seed``: one seed fixes casting and interruptions.
         """
-        return turn_overlap_of(self.to_dict())
+        return TurnOverlap(
+            max_s=self.overlap_turn_s,
+            jitter=self.overlap_jitter,
+            duck_db=self.overlap_duck_db,
+            seed=self.voice_seed,
+        )
+
+    @property
+    def casts_voices(self) -> bool:
+        """Whether ``voices`` is a real casting choice, not the inert default.
+
+        The default single voice means "whatever the renderer's default is" (the
+        env override included), so it must not pin a voice onto a beat.
+        """
+        return tuple(self.voices) != (DEFAULT_VOICE_ID,)
+
+    def cast_voice(self, ordinal: int, *, override: str | None = None) -> str | None:
+        """The voice beat ``ordinal`` speaks with: ``override``, else the pool pick.
+
+        ``None`` means "the renderer's default voice". One definition for both
+        render paths, so a script is cast (and so interrupts) the same on each.
+        """
+        if override:
+            return override
+        if not self.casts_voices:
+            return None
+        return pick_voice(self.voices, seed=self.voice_seed, ordinal=ordinal)
+
+    @classmethod
+    def from_snapshot(cls, snapshot: Mapping[str, Any]) -> "WeaveConfig":
+        """Rebuild a config from a serialized one (:meth:`to_dict`).
+
+        A knob the snapshot omits takes the default (one written before the
+        knob existed); a key that is not a field is ignored.
+        """
+        known = {f.name for f in fields(cls)}
+        kw = {k: v for k, v in snapshot.items() if k in known}
+        if kw.get("voices"):
+            kw["voices"] = tuple(kw["voices"])
+        else:  # absent, empty or null: the default pool, as the graph always read it
+            kw.pop("voices", None)
+        return cls(**kw)
 
     def with_(self, **changes: Any) -> "WeaveConfig":
         """Return a copy with fields overridden (e.g. ``cfg.with_(min_turn=1)``)."""
@@ -147,11 +188,26 @@ class WeaveConfig:
         return d
 
 
-_OVERLAP_DEFAULTS = {
-    f.name: f.default
-    for f in fields(WeaveConfig)
-    if f.name in ("overlap_turn_s", "overlap_jitter", "overlap_duck_db", "voice_seed")
-}
+def pick_voice(voices: Sequence[str], *, seed: int, ordinal: int) -> str:
+    """Deterministic pool pick for beat ``ordinal`` (``seed`` rotates the pool).
+
+    >>> pick_voice(["a", "b", "c"], seed=1, ordinal=0)
+    'b'
+    >>> pick_voice([], seed=1, ordinal=0) == DEFAULT_VOICE_ID
+    True
+    """
+    if not voices:
+        return DEFAULT_VOICE_ID
+    return voices[(seed + ordinal) % len(voices)]
+
+
+def speaker_key(voice: str | None) -> str:
+    """The identity two parts are compared on for interruption: unset → default.
+
+    >>> speaker_key(None) == speaker_key("") == DEFAULT_VOICE_ID
+    True
+    """
+    return voice or DEFAULT_VOICE_ID
 
 
 def turn_overlap_of(config: Mapping[str, Any]) -> TurnOverlap:
@@ -165,13 +221,7 @@ def turn_overlap_of(config: Mapping[str, Any]) -> TurnOverlap:
     >>> turn_overlap_of({"overlap_turn_s": 0.2, "voice_seed": 3}).seed
     3
     """
-    get = lambda name: config.get(name, _OVERLAP_DEFAULTS[name])  # noqa: E731
-    return TurnOverlap(
-        max_s=get("overlap_turn_s"),
-        jitter=get("overlap_jitter"),
-        duck_db=get("overlap_duck_db"),
-        seed=get("voice_seed"),
-    )
+    return WeaveConfig.from_snapshot(config).turn_overlap()
 
 
 # --- Presets -----------------------------------------------------------------

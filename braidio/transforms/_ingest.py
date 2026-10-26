@@ -329,6 +329,7 @@ def _plan_nodes(
                             # substitute.
                             text=planned.content,
                             style=getattr(orig, "style", None),
+                            voice=getattr(orig, "voice", None),
                         )
                     ),
                     body_schema_uri=NARRATIVE_BEAT_V1,

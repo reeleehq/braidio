@@ -67,8 +67,7 @@ from nw.transforms._provenance import derive_provenance
 
 from braidio.weave import TimelineItem
 from braidio.timeline import TimelineBreakdown, build_timeline
-from braidio.tts import DEFAULT_VOICE_ID
-from braidio.weave_config import turn_overlap_of
+from braidio.weave_config import WeaveConfig, speaker_key, turn_overlap_of
 from braidio.bodies._domain import SCENE_BREAK_V1
 from braidio.rights import (
     DEFAULT_PROFILE,
@@ -120,14 +119,6 @@ NAME = "weave_to_episode.default"
 #: convention in ``braidio.render``), so a span planner can see what is said.
 _LABEL_SNIPPET_CHARS = 48
 
-# Weave defaults, applied when the weave-config snapshot omits a knob. They
-# mirror braidio.weave.weave_timeline's own signature defaults.
-_DEFAULT_CLIP_EDGE_OVERLAP_S = 0.5
-_DEFAULT_CROSSFADE_S = 0.12
-_DEFAULT_TARGET_LUFS = -16.0
-_DEFAULT_TRUE_PEAK = -1.0
-_DEFAULT_SAMPLE_RATE = 44100
-
 
 def _structure_and_bed(node: Annotation | None):
     """``(MusicStructure, MusicBed | None)`` from a ``production-structure`` node.
@@ -153,10 +144,8 @@ def _structure_and_bed(node: Annotation | None):
 
 def _layout_knobs(config: dict) -> tuple[float, float]:
     """``(clip_edge_overlap_s, narration_crossfade_s)`` from a weave-config snapshot."""
-    return (
-        float(config.get("clip_edge_overlap_s", _DEFAULT_CLIP_EDGE_OVERLAP_S)),
-        float(config.get("crossfade_s", _DEFAULT_CROSSFADE_S)),
-    )
+    cfg = WeaveConfig.from_snapshot(config)
+    return cfg.clip_edge_overlap_s, cfg.crossfade_s
 
 
 def _member_role(member: Annotation, index: dict, *, structure):
@@ -199,7 +188,7 @@ def _member_speaker(member: Annotation, index: dict) -> str | None:
         (p for p in resolve_parents(member, index) if p.tier == TIER_VOICE_ASSIGNMENT),
         None,
     )
-    return (va.body.get("voice_id") or DEFAULT_VOICE_ID) if va is not None else None
+    return speaker_key(va.body.get("voice_id")) if va is not None else None
 
 
 def member_timeline(
@@ -670,7 +659,8 @@ class WeaveToEpisode(BaseTransform):
         structure, bed = _structure_and_bed(
             next((a for a in parents if a.tier == TIER_PRODUCTION_STRUCTURE), None)
         )
-        target_lufs = float(config.get("target_lufs", _DEFAULT_TARGET_LUFS))
+        weave = WeaveConfig.from_snapshot(config)  # omitted knobs → the defaults
+        target_lufs = weave.target_lufs
 
         breaks_dir = project.root / "data" / "breaks"
         items = [
@@ -711,8 +701,8 @@ class WeaveToEpisode(BaseTransform):
             clip_edge_overlap_s=edge_overlap_s,
             narration_crossfade_s=crossfade_s,
             target_lufs=target_lufs,
-            true_peak=float(config.get("true_peak_dbtp", _DEFAULT_TRUE_PEAK)),
-            sample_rate=int(config.get("sample_rate", _DEFAULT_SAMPLE_RATE)),
+            true_peak=weave.true_peak_dbtp,
+            sample_rate=weave.sample_rate,
             bed=bed,
             **overlap_kw,
         )

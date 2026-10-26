@@ -2,7 +2,7 @@
 
 A deterministic, no-synthesis Transform: given a narrative beat and the
 weave-config (the voice pool + seed), it records which voice the beat's
-narration will use. It derives from ``[beat, weave-config]`` so a pool/seed
+narration will use — the beat's own ``voice`` when it names one. It derives from ``[beat, weave-config]`` so a pool/seed
 change re-stales every voice-assignment (and, transitively, the narration
 renders that read them) — the freshness edge braidio's ``record_render``
 models, now on the nw project graph.
@@ -29,6 +29,7 @@ from braidio.bodies._render_nodes import (
     VoiceAssignmentBodyV1,
 )
 from braidio.tts import DEFAULT_VOICE_ID
+from braidio.weave_config import WeaveConfig
 from braidio.transforms._common import (
     TIER_VOICE_ASSIGNMENT,
     fresh_equivalent,
@@ -36,15 +37,6 @@ from braidio.transforms._common import (
 )
 
 NAME = "beat_to_voice_assignment.default"
-
-
-def _pick_voice(voices: list[str], *, seed: int, ordinal: int) -> str:
-    """Deterministic voice for beat ``ordinal`` from ``voices`` (+ ``seed``)."""
-    if not voices:
-        return DEFAULT_VOICE_ID
-    if len(voices) == 1:
-        return voices[0]
-    return voices[(seed + ordinal) % len(voices)]
 
 
 @register_transform(NAME)
@@ -60,12 +52,14 @@ class BeatToVoiceAssignment(BaseTransform):
     ) -> tuple[Plan, tuple[Annotation, ...]]:
         beat = inputs.primary[0]
         cfg = singleton(project, "weave-configs")
-        config = cfg.body.get("config", {})
-        voices = list(config.get("voices") or [DEFAULT_VOICE_ID])
-        seed = int(config.get("voice_seed", 0))
-        pool_label = config.get("pool_label", "single")
+        config = WeaveConfig.from_snapshot(cfg.body.get("config", {}))
         ordinal = int(beat.body.get("beat_id", "0") or 0)
-        voice_id = _pick_voice(voices, seed=seed, ordinal=ordinal)
+        # the beat's own override, else the pool — the fast path's rule exactly
+        voice_id = (
+            config.cast_voice(ordinal, override=beat.body.get("voice"))
+            or DEFAULT_VOICE_ID
+        )
+        pool_label, seed = config.pool_label, config.voice_seed
 
         full = TransformInputs(primary=(beat,), context={WEAVE_CONFIG_V1: (cfg,)})
         skeleton = Annotation(

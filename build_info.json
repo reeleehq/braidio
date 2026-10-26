@@ -1,34 +1,34 @@
 {
   "schema_version": 1,
-  "built_at": "2026-10-26T18:57:23Z",
+  "built_at": "2026-10-26T22:23:52Z",
   "package": {
     "name": "braidio",
-    "version": "0.0.76",
+    "version": "0.0.77",
     "display_name": "braidio",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "8e46899d905ee70b61ddb07a33082046950dcb33",
-    "short_commit": "8e46899",
+    "commit": "416948a4ca82957c124b9cdb686cd535ddd0ace6",
+    "short_commit": "416948a",
     "branch": "main",
     "tags": [
-      "0.0.76"
+      "0.0.77"
     ],
     "dirty": false,
     "remote_url": "https://github.com/reeleehq/braidio",
-    "commit_url": "https://github.com/reeleehq/braidio/commit/8e46899d905ee70b61ddb07a33082046950dcb33",
+    "commit_url": "https://github.com/reeleehq/braidio/commit/416948a4ca82957c124b9cdb686cd535ddd0ace6",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "reeleehq/braidio",
-    "sha": "806515d7be530fa78798238fb0cdc2ef04e0f262",
+    "sha": "170222d7b5bc29794aefd5bf7e3a389e3975e498",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "40381551867",
-    "run_url": "https://github.com/reeleehq/braidio/actions/runs/40381551867",
+    "run_id": "40405180896",
+    "run_url": "https://github.com/reeleehq/braidio/actions/runs/40405180896",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -58,20 +58,18 @@
   },
   "site": {
     "modules_documented": 27,
-    "objects_documented": 277
+    "objects_documented": 281
   },
   "pypi": {
     "checked": true,
-    "latest": "0.0.75",
-    "relation": "ahead",
+    "latest": "0.0.77",
+    "relation": "same",
     "error": null
   },
-  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout 8e46899d905ee70b61ddb07a33082046950dcb33\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout 416948a4ca82957c124b9cdb686cd535ddd0ace6\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
-    "aligned": false,
-    "notes": [
-      "The documented version (0.0.76) is ahead of the latest release on PyPI (0.0.75): these docs describe unreleased code."
-    ]
+    "aligned": true,
+    "notes": []
   }
 }

@@ -1,4 +1,4 @@
-> built 2026-10-26 18:57 UTC from 8e46899 (main) · braidio 0.0.76. Details: build_info.json
+> built 2026-10-26 22:23 UTC from 416948a (main) · braidio 0.0.77. Details: build_info.json
 
 # index.html.md
 
@@ -770,6 +770,16 @@ narration.md`; refine as we learn what sounds best. The key monotony levers:
 lower `stability` and raise `style` add variation (at some cost in
 consistency); `eleven_v3` adds inline audio tags for real expressive control.
 
+### Module Attributes
+
+| [`SPEEDLESS_MODELS`](_autosummary/braidio.delivery.html.md#braidio.delivery.SPEEDLESS_MODELS)   | Models that ignore `voice_settings["speed"]` (eleven v3 has no speed control).   |
+|---------------------------------------------------------------------|----------------------------------------------------------------------------------|
+
+### Functions
+
+| [`model_supports_speed`](_autosummary/braidio.delivery.html.md#braidio.delivery.model_supports_speed)(model_id)   | Whether `model_id` honors `voice_settings["speed"]`.   |
+|-----------------------------------------------------------------------------------|--------------------------------------------------------|
+
 ### Classes
 
 | [`Delivery`](_autosummary/braidio.delivery.html.md#braidio.delivery.Delivery)(name, model_id[, voice_settings, ...])   | A named narration delivery: which model + voice settings to synthesize with.   |
@@ -789,6 +799,22 @@ Eleven v3 model”), so sending one there is undefined. The paced narration
 path ([`braidio.pacing`](_autosummary/braidio.pacing.html.md#module-braidio.pacing)) reads this: on a speedless model it plans no
 speed and varies tempo through real inter-turn silence, punctuation and
 audio tags instead.
+
+### braidio.delivery.SPEEDLESS_MODELS *= frozenset({'eleven_v3'})*
+
+Models that ignore `voice_settings["speed"]` (eleven v3 has no speed control).
+
+### braidio.delivery.model_supports_speed(model_id)
+
+Whether `model_id` honors `voice_settings["speed"]`.
+
+```pycon
+>>> model_supports_speed("eleven_v3"), model_supports_speed("eleven_multilingual_v2")
+(False, True)
+```
+
+* **Return type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
 
 # _autosummary/braidio.formats.html.md
@@ -2961,8 +2987,41 @@ transforms (which add provenance + partial re-render).
 
 ### Functions
 
-| [`render_production`](_autosummary/braidio.render.html.md#braidio.render.render_production)(script, \*, source[, ...])   | Render `script` under `profile` → a single audio file.   |
-|-------------------------------------------------------------------------------------------------|----------------------------------------------------------|
+| [`narrate_turns`](_autosummary/braidio.render.html.md#braidio.render.narrate_turns)(turns, \*, stem, api_key, ...)   | Synthesize a paced narration beat: one TTS call per turn, real silence between.   |
+|-------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| [`plan_beat_turns`](_autosummary/braidio.render.html.md#braidio.render.plan_beat_turns)(text, \*, config, ...)         | Plan one narration beat's turns, or `[]` for the unpaced single call.             |
+| [`render_production`](_autosummary/braidio.render.html.md#braidio.render.render_production)(script, \*, source[, ...])   | Render `script` under `profile` → a single audio file.                            |
+
+### braidio.render.narrate_turns(turns, , stem, api_key, voice_id, model_id, voice_settings, narrate_fn=None)
+
+Synthesize a paced narration beat: one TTS call per turn, real silence between.
+
+This is the point of [`braidio.pacing`](_autosummary/braidio.pacing.html.md#module-braidio.pacing) — within one beat the tempo now
+varies (a fresh prosodic arc per turn, a per-turn speed where the model has
+one) and the silence between turns is proportional to how strongly the
+boundary closes, instead of one flat arc with nothing inside it.
+
+`narrate_fn` is the synthesis call (default: this module’s `narrate`);
+a caller that wants the cache status, or a stub, passes its own.
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
+### braidio.render.plan_beat_turns(text, , config, supports_speed, settings, seed_offset)
+
+Plan one narration beat’s turns, or `[]` for the unpaced single call.
+
+The speed each turn is jittered around is the beat’s own `speed` setting
+when it sets one (so a grave `v2-narrator`’s 0.94 survives being paced),
+falling back to `WeaveConfig.speed_base`. A model with no speed control
+(eleven v3 — [`braidio.delivery.Delivery.supports_speed`](_autosummary/braidio.delivery.html.md#braidio.delivery.Delivery.supports_speed),
+[`braidio.delivery.model_supports_speed()`](_autosummary/braidio.delivery.html.md#braidio.delivery.model_supports_speed)) plans none.
+
+Shared by the fast path and the graph’s `narration_render.tts`, which is
+what keeps their per-beat durations (and so their timelines) equal.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`NarrationTurn`](_autosummary/braidio.pacing.html.md#braidio.pacing.NarrationTurn)]
 
 ### braidio.render.render_production(script, , source, api_key=None, config=None, profile=Profile.PERSONAL, rights=None, delivery=None, cast=ConversationCast(roles={'A': 'cgSgspJ2msm6clMCkdW9', 'B': 'iP95p4xoKVk53GoZ742B'}, model_id='eleven_v3', settings={'stability': 0.45}), out_path=None, voice_id=None, crossfade_s=0.12, normalize=True, music_bed=None, structure=None, end_fade_s=0.35, end_silence_s=0.7, return_timeline=False, tts_dir='data/tts', clips_dir='data/clips', episodes_dir='data/episodes')
 
@@ -4787,20 +4846,18 @@ False
 
 # About this build
 
-This documentation was built on **2026-10-26 18:57 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/8e46899d905ee70b61ddb07a33082046950dcb33"><code>8e46899</code></a> on branch <code>main</code>, for **braidio 0.0.76** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-26 22:23 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/416948a4ca82957c124b9cdb686cd535ddd0ace6"><code>416948a</code></a> on branch <code>main</code>, for **braidio 0.0.77** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.0.76) is ahead of the latest release on PyPI (0.0.75): these docs describe unreleased code.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/8e46899d905ee70b61ddb07a33082046950dcb33"><code>8e46899d905ee70b61ddb07a33082046950dcb33</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/416948a4ca82957c124b9cdb686cd535ddd0ace6"><code>416948a4ca82957c124b9cdb686cd535ddd0ace6</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | <code>0.0.76</code>                                                                                                                                     |
+| Tags at this commit | <code>0.0.77</code>                                                                                                                                     |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -4809,9 +4866,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/40381551867">40381551867</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/40405180896">40405180896</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>806515d7be530fa78798238fb0cdc2ef04e0f262</code> (in the history of the built commit) |
+| Event commit | <code>170222d7b5bc29794aefd5bf7e3a389e3975e498</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -4836,13 +4893,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.75/">0.0.75</a>, older than the documented version (0.0.76).
+Latest release: <a href="https://pypi.org/project/braidio/0.0.77/">0.0.77</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 8e46899d905ee70b61ddb07a33082046950dcb33
+git checkout 416948a4ca82957c124b9cdb686cd535ddd0ace6
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

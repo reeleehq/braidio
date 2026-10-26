@@ -4,6 +4,18 @@ braidio.delivery
 .. automodule:: braidio.delivery
 
    
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      SPEEDLESS_MODELS
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      model_supports_speed
+   
    .. rubric:: Classes
 
    .. autosummary::

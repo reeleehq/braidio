@@ -8,5 +8,7 @@ braidio.render
 
    .. autosummary::
    
+      narrate_turns
+      plan_beat_turns
       render_production
    

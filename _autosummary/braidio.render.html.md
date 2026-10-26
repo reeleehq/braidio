@@ -17,8 +17,41 @@ transforms (which add provenance + partial re-render).
 
 ### Functions
 
-| [`render_production`](#braidio.render.render_production)(script, \*, source[, ...])   | Render `script` under `profile` → a single audio file.   |
-|-------------------------------------------------------------------------------------------------|----------------------------------------------------------|
+| [`narrate_turns`](#braidio.render.narrate_turns)(turns, \*, stem, api_key, ...)   | Synthesize a paced narration beat: one TTS call per turn, real silence between.   |
+|-------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| [`plan_beat_turns`](#braidio.render.plan_beat_turns)(text, \*, config, ...)         | Plan one narration beat's turns, or `[]` for the unpaced single call.             |
+| [`render_production`](#braidio.render.render_production)(script, \*, source[, ...])   | Render `script` under `profile` → a single audio file.                            |
+
+### braidio.render.narrate_turns(turns, , stem, api_key, voice_id, model_id, voice_settings, narrate_fn=None)
+
+Synthesize a paced narration beat: one TTS call per turn, real silence between.
+
+This is the point of [`braidio.pacing`](braidio.pacing.html.md#module-braidio.pacing) — within one beat the tempo now
+varies (a fresh prosodic arc per turn, a per-turn speed where the model has
+one) and the silence between turns is proportional to how strongly the
+boundary closes, instead of one flat arc with nothing inside it.
+
+`narrate_fn` is the synthesis call (default: this module’s `narrate`);
+a caller that wants the cache status, or a stub, passes its own.
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
+### braidio.render.plan_beat_turns(text, , config, supports_speed, settings, seed_offset)
+
+Plan one narration beat’s turns, or `[]` for the unpaced single call.
+
+The speed each turn is jittered around is the beat’s own `speed` setting
+when it sets one (so a grave `v2-narrator`’s 0.94 survives being paced),
+falling back to `WeaveConfig.speed_base`. A model with no speed control
+(eleven v3 — [`braidio.delivery.Delivery.supports_speed`](braidio.delivery.html.md#braidio.delivery.Delivery.supports_speed),
+[`braidio.delivery.model_supports_speed()`](braidio.delivery.html.md#braidio.delivery.model_supports_speed)) plans none.
+
+Shared by the fast path and the graph’s `narration_render.tts`, which is
+what keeps their per-beat durations (and so their timelines) equal.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`NarrationTurn`](braidio.pacing.html.md#braidio.pacing.NarrationTurn)]
 
 ### braidio.render.render_production(script, , source, api_key=None, config=None, profile=Profile.PERSONAL, rights=None, delivery=None, cast=ConversationCast(roles={'A': 'cgSgspJ2msm6clMCkdW9', 'B': 'iP95p4xoKVk53GoZ742B'}, model_id='eleven_v3', settings={'stability': 0.45}), out_path=None, voice_id=None, crossfade_s=0.12, normalize=True, music_bed=None, structure=None, end_fade_s=0.35, end_silence_s=0.7, return_timeline=False, tts_dir='data/tts', clips_dir='data/clips', episodes_dir='data/episodes')
 

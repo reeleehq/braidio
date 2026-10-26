@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=461c1127"></script>
+    <script src="../../_static/documentation_options.js?v=e264953e"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.76" />
+  <meta name="docsearch:version" content="0.0.77" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -817,26 +817,30 @@ window.runMermaid = runMermaid;</script>
     <span class="k">return</span> <span class="n">dst</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_plan_beat_turns</span><span class="p">(</span>
+<div class="viewcode-block" id="plan_beat_turns">
+<a class="viewcode-back" href="../../_autosummary/braidio.render.html#braidio.plan_beat_turns">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plan_beat_turns</span><span class="p">(</span>
     <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">config</span><span class="p">:</span> <span class="n">WeaveConfig</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">delivery</span><span class="p">:</span> <span class="n">Delivery</span><span class="p">,</span>
+    <span class="n">supports_speed</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
     <span class="n">settings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
     <span class="n">seed_offset</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">NarrationTurn</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Plan one narration beat's turns, or ``[]`` for the unpaced single call.</span>
 
-<span class="sd">    The speed each turn is jittered around is the *delivery's* own ``speed``</span>
+<span class="sd">    The speed each turn is jittered around is the beat's own ``speed`` setting</span>
 <span class="sd">    when it sets one (so a grave ``v2-narrator``'s 0.94 survives being paced),</span>
 <span class="sd">    falling back to ``WeaveConfig.speed_base``. A model with no speed control</span>
-<span class="sd">    (eleven v3 — :attr:`braidio.delivery.Delivery.supports_speed`) plans none.</span>
+<span class="sd">    (eleven v3 — :attr:`braidio.delivery.Delivery.supports_speed`,</span>
+<span class="sd">    :func:`braidio.delivery.model_supports_speed`) plans none.</span>
+
+<span class="sd">    Shared by the fast path and the graph's ``narration_render.tts``, which is</span>
+<span class="sd">    what keeps their per-beat durations (and so their timelines) equal.</span>
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">config</span><span class="o">.</span><span class="n">paces_narration</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">[]</span>
-    <span class="n">speed_base</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"speed"</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">speed_base</span><span class="p">)</span> <span class="k">if</span> <span class="n">delivery</span><span class="o">.</span><span class="n">supports_speed</span> <span class="k">else</span> <span class="kc">None</span>
-    <span class="p">)</span>
+    <span class="n">speed_base</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"speed"</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">speed_base</span><span class="p">)</span> <span class="k">if</span> <span class="n">supports_speed</span> <span class="k">else</span> <span class="kc">None</span>
     <span class="k">return</span> <span class="n">plan_turns</span><span class="p">(</span>
         <span class="n">text</span><span class="p">,</span>
         <span class="n">unit</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">segmentation_unit</span><span class="p">,</span>
@@ -846,10 +850,13 @@ window.runMermaid = runMermaid;</script>
         <span class="n">gap_s</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">gap_turn_s</span><span class="p">,</span>
         <span class="n">speed_base</span><span class="o">=</span><span class="n">speed_base</span><span class="p">,</span>
         <span class="n">speed_jitter</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">speed_jitter</span><span class="p">,</span>
-    <span class="p">)</span>
+    <span class="p">)</span></div>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_narrate_turns</span><span class="p">(</span>
+
+<div class="viewcode-block" id="narrate_turns">
+<a class="viewcode-back" href="../../_autosummary/braidio.render.html#braidio.narrate_turns">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">narrate_turns</span><span class="p">(</span>
     <span class="n">turns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">NarrationTurn</span><span class="p">],</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">stem</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
@@ -857,6 +864,7 @@ window.runMermaid = runMermaid;</script>
     <span class="n">voice_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">model_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">voice_settings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">narrate_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Synthesize a paced narration beat: one TTS call per turn, real silence between.</span>
 
@@ -864,13 +872,17 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">    varies (a fresh prosodic arc per turn, a per-turn speed where the model has</span>
 <span class="sd">    one) and the silence between turns is proportional to how strongly the</span>
 <span class="sd">    boundary closes, instead of one flat arc with nothing inside it.</span>
+
+<span class="sd">    ``narrate_fn`` is the synthesis call (default: this module's ``narrate``);</span>
+<span class="sd">    a caller that wants the cache status, or a stub, passes its own.</span>
 <span class="sd">    """</span>
+    <span class="n">synthesize</span> <span class="o">=</span> <span class="n">narrate_fn</span> <span class="ow">or</span> <span class="n">narrate</span>
     <span class="n">parts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">turn</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">turns</span><span class="p">):</span>
         <span class="n">settings</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">voice_settings</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">turn</span><span class="o">.</span><span class="n">speed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">settings</span><span class="p">[</span><span class="s2">"speed"</span><span class="p">]</span> <span class="o">=</span> <span class="n">turn</span><span class="o">.</span><span class="n">speed</span>
-        <span class="n">part</span> <span class="o">=</span> <span class="n">narrate</span><span class="p">(</span>
+        <span class="n">part</span> <span class="o">=</span> <span class="n">synthesize</span><span class="p">(</span>
             <span class="n">turn</span><span class="o">.</span><span class="n">text</span><span class="p">,</span>
             <span class="n">stem</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">stem</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">-turn</span><span class="si">{</span><span class="n">j</span><span class="si">:</span><span class="s2">02d</span><span class="si">}</span><span class="s2">.mp3"</span><span class="p">),</span>
             <span class="n">api_key</span><span class="o">=</span><span class="n">api_key</span><span class="p">,</span>
@@ -890,7 +902,8 @@ window.runMermaid = runMermaid;</script>
     <span class="n">out</span> <span class="o">=</span> <span class="n">stem</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">stem</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">-paced.mp3"</span><span class="p">)</span>
     <span class="c1"># crossfade=0: the planned gaps ARE the spacing; a crossfade would eat them.</span>
     <span class="n">concatenate_audio</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">],</span> <span class="n">output</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">out</span><span class="p">),</span> <span class="n">crossfade</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">out</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_end_tail</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">fade_s</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">silence_s</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -1094,15 +1107,15 @@ window.runMermaid = runMermaid;</script>
             <span class="p">)</span>
             <span class="c1"># Intra-beat pacing — empty plan (the default `segmentation_unit=</span>
             <span class="c1"># "beat"`) keeps the historical one-call-per-beat path untouched.</span>
-            <span class="n">turns</span> <span class="o">=</span> <span class="n">_plan_beat_turns</span><span class="p">(</span>
+            <span class="n">turns</span> <span class="o">=</span> <span class="n">plan_beat_turns</span><span class="p">(</span>
                 <span class="n">pb</span><span class="o">.</span><span class="n">content</span><span class="p">,</span>
                 <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
-                <span class="n">delivery</span><span class="o">=</span><span class="n">delivery</span><span class="p">,</span>
+                <span class="n">supports_speed</span><span class="o">=</span><span class="n">delivery</span><span class="o">.</span><span class="n">supports_speed</span><span class="p">,</span>
                 <span class="n">settings</span><span class="o">=</span><span class="n">beat_settings</span><span class="p">,</span>
-                <span class="n">seed_offset</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
+                <span class="n">seed_offset</span><span class="o">=</span><span class="n">pb</span><span class="o">.</span><span class="n">from_index</span><span class="p">,</span>  <span class="c1"># the script position, as the graph's beat_id</span>
             <span class="p">)</span>
             <span class="k">if</span> <span class="n">turns</span><span class="p">:</span>
-                <span class="n">raw</span> <span class="o">=</span> <span class="n">_narrate_turns</span><span class="p">(</span>
+                <span class="n">raw</span> <span class="o">=</span> <span class="n">narrate_turns</span><span class="p">(</span>
                     <span class="n">turns</span><span class="p">,</span>
                     <span class="n">stem</span><span class="o">=</span><span class="n">beat_stem</span><span class="p">,</span>
                     <span class="n">api_key</span><span class="o">=</span><span class="n">api_key</span><span class="p">,</span>

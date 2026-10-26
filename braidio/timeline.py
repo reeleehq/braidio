@@ -30,7 +30,7 @@ from braidio.weave import layout_placed
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from braidio.delivery import Delivery
-    from braidio.weave_config import WeaveConfig
+    from braidio.weave_config import TurnOverlap, WeaveConfig
 
 # Neutral kind → accent colour for the HTML view (falls back to a grey).
 KIND_COLORS: dict[str, str] = {
@@ -200,6 +200,8 @@ def build_timeline(
     narration_crossfade_s: float = 0.12,
     title: str = "",
     settings: Mapping[str, Any] | None = None,
+    speakers: list[str | None] | None = None,
+    overlap: "TurnOverlap | None" = None,
 ) -> TimelineBreakdown:
     """Assemble a :class:`TimelineBreakdown` from per-beat render data (pure).
 
@@ -207,6 +209,9 @@ def build_timeline(
     the layout treats specially — as an overlapping segment). ``placements`` is
     the per-beat ``"sequential"``/``"under"`` used by the weave; offsets are
     computed with the same :func:`~braidio.weave.layout_placed` the renderer uses.
+
+    ``speakers`` (one voice id per beat, ``None`` for a clip/sting) and ``overlap``
+    place a change of speaker as an interruption — pass what the render passed.
 
     ``settings`` is the optional render record (:func:`render_settings`) — what
     produced these durations. It stays optional so building a timeline by hand
@@ -224,6 +229,8 @@ def build_timeline(
         placements,
         clip_edge_overlap_s=clip_edge_overlap_s,
         narration_crossfade_s=narration_crossfade_s,
+        speakers=speakers,
+        overlap=overlap,
     )
     spans = tuple(
         BeatSpan(

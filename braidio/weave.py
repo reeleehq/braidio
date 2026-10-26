@@ -21,10 +21,13 @@ refinement (see #21 / the research).
 from __future__ import annotations
 
 import json
+import random
 import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+
+from braidio.weave_config import TurnOverlap
 
 _LOUDNESS_RANGE = 11  # loudnorm LRA target for the mastered mix
 
@@ -122,6 +125,9 @@ class TimelineItem:
     placement: str = "sequential"  # "sequential" | "under"
     duck_db: float = 0.0  # attenuation applied when placement == "under" (e.g. -15)
     spotlight: bool = False  # the bed drops out over this part (see braidio.structure)
+    speaker: str | None = (
+        None  # who talks (voice id); None = no speaker (clips, stings)
+    )
 
 
 def layout_placed(
@@ -131,6 +137,8 @@ def layout_placed(
     *,
     clip_edge_overlap_s: float,
     narration_crossfade_s: float,
+    speakers: list[str | None] | None = None,
+    overlap: TurnOverlap | None = None,
 ) -> list[float]:
     """Start offset (s) of each part, placement-aware. Pure function.
 
@@ -140,10 +148,19 @@ def layout_placed(
     An ``"under"`` part starts *at* the cursor (concurrent with the next
     sequential part) and does **not** advance it — so it overlays what follows.
     Clamped ≥ 0.
+
+    With ``speakers`` (one id per part, ``None`` = no speaker) and
+    ``overlap.max_s > 0``, narration-after-narration *by a different speaker*
+    starts up to ``max_s`` early instead (an interruption), jittered by a seeded
+    draw per such boundary. Never more than two voices at once: the overlap is
+    capped by both turns' lengths, and a part never starts before the end of the
+    part two back.
     """
     starts: list[float] = [0.0] * len(kinds)
     cursor = 0.0
     prev_seq_kind: str | None = None
+    seq: list[int] = []  # indices of the sequential parts laid so far
+    rng = random.Random(overlap.seed if overlap else 0)
     for i, kind in enumerate(kinds):
         if placements[i] == "under":
             starts[i] = (
@@ -155,11 +172,65 @@ def layout_placed(
         elif kind == "clip" or prev_seq_kind == "clip":
             start = max(0.0, cursor - clip_edge_overlap_s)
         else:
-            start = max(0.0, cursor - narration_crossfade_s)
+            lead = narration_crossfade_s
+            floor = 0.0
+            if _interrupts(speakers, seq[-1], i, overlap):
+                lead = max(
+                    lead, _jittered_overlap(overlap, rng, durs[seq[-1]], durs[i])
+                )
+                if len(seq) >= 2:  # keep at most two voices sounding at once
+                    floor = starts[seq[-2]] + durs[seq[-2]]
+            start = max(0.0, floor, cursor - lead)
         starts[i] = start
         cursor = start + durs[i]
         prev_seq_kind = kind
+        seq.append(i)
     return starts
+
+
+def _interrupts(
+    speakers: list[str | None] | None,
+    prev: int,
+    cur: int,
+    overlap: TurnOverlap | None,
+) -> bool:
+    """True when part ``cur`` interrupts ``prev``: overlap is on and the speakers differ."""
+    if not (overlap and overlap.max_s > 0 and speakers):
+        return False
+    a, b = speakers[prev], speakers[cur]
+    return a is not None and b is not None and a != b
+
+
+def _jittered_overlap(
+    overlap: TurnOverlap, rng: random.Random, prev_dur: float, cur_dur: float
+) -> float:
+    """One boundary's overlap: ``max_s`` shortened by a seeded fraction, capped
+    by both turns' lengths."""
+    amount = overlap.max_s * (1.0 - overlap.jitter * rng.random())
+    return min(amount, prev_dur, cur_dur)
+
+
+def duck_regions(
+    starts: list[float],
+    durs: list[float],
+    placements: list[str],
+    speakers: list[str | None] | None,
+    overlap: TurnOverlap | None,
+) -> dict[int, tuple[float, float]]:
+    """Per part, the ``(from_s, to_s)`` span *within its own audio* to duck.
+
+    The tail of an outgoing voice that the next speaker talks over; empty when
+    ``overlap.duck_db`` is 0. Pure, from the laid-out starts.
+    """
+    if not (overlap and overlap.max_s > 0 and overlap.duck_db and speakers):
+        return {}
+    seq = [i for i, p in enumerate(placements) if p != "under"]
+    regions = {}
+    for prev, cur in zip(seq, seq[1:]):
+        end = starts[prev] + durs[prev]
+        if _interrupts(speakers, prev, cur, overlap) and starts[cur] < end:
+            regions[prev] = (starts[cur] - starts[prev], durs[prev])
+    return regions
 
 
 def layout_starts(
@@ -190,6 +261,8 @@ def weave_timeline(
     true_peak: float = -1.0,
     sample_rate: int = 44100,
     bed=None,  # optional braidio.music.MusicBed — instrumental underscore under all
+    overlap: TurnOverlap
+    | None = None,  # speaker interruption (WeaveConfig.turn_overlap())
 ) -> Path:
     """Place items on a timeline and mix. Clips overlap neighbours by
     ``clip_edge_overlap_s`` (their faded edges tuck under narration); narration
@@ -208,12 +281,18 @@ def weave_timeline(
         raise ValueError("weave_timeline needs at least one item")
 
     durs = [duration_s(it.path) for it in items]
+    speakers = [it.speaker for it in items]
     starts = layout_placed(
         [it.kind for it in items],
         durs,
         [it.placement for it in items],
         clip_edge_overlap_s=clip_edge_overlap_s,
         narration_crossfade_s=narration_crossfade_s,
+        speakers=speakers,
+        overlap=overlap,
+    )
+    ducks = duck_regions(
+        starts, durs, [it.placement for it in items], speakers, overlap
     )
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -233,6 +312,11 @@ def weave_timeline(
         # ducked underlay: attenuate before delaying so it sits beneath the talk.
         if it.placement == "under" and it.duck_db:
             chain += f",volume={it.duck_db}dB"
+        if i in ducks:  # lower the outgoing voice while the next speaker cuts in
+            lo, hi = ducks[i]
+            chain += (
+                f",volume={overlap.duck_db}dB:enable='between(t,{lo:.3f},{hi:.3f})'"
+            )
         chain += f",adelay={delay_ms}:all=1[{lbl}]"
         filters.append(chain)
         labels.append(f"[{lbl}]")

@@ -72,6 +72,9 @@ docs = [
 # nw.Project). `import braidio` never needs these — the layer loads only when
 # present (braidio.HAS_GRAPH / HAS_NW).
 graph = ["lacing"]
+# The markdown reader (`braidio.script_from_markdown`): a markdown document ->
+# narration beats. Imported only when a document is converted.
+markdown = ["markdown-it-py", "mdit-py-plugins"]
 # The video layer (`braidio.video`): a Ken Burns film over caller-supplied stills,
 # muxed under a rendered episode. `burns` owns the pan/zoom motion; braidio owns
 # only where the cuts fall, which needs the beat timeline it already produces.
@@ -136,7 +139,7 @@ nw-app = ["lacing", "nw>=0.0.65", "falaw[fal]"]
 #   older dol without it.
 # nw>=0.0.58: see the nw-app note above (the `secrets=` seam, braidio#58; the
 #   asset-ref declarations `braidio.transforms` makes on import, nw#55).
-mcp = ["fastmcp", "py2mcp>=0.1.9", "pypdf", "dol>=0.3.57", "lacing", "nw>=0.0.65", "falaw[fal]", "yb[download]>=0.1.7", "graze>=0.1.45"]
+mcp = ["fastmcp", "py2mcp>=0.1.9", "pypdf", "dol>=0.3.57", "lacing", "nw>=0.0.65", "falaw[fal]", "yb[download]>=0.1.7", "graze>=0.1.45", "markdown-it-py", "mdit-py-plugins"]
 # The importer (`braidio.importing`): a finished commentary production ->
 # a real project graph. Needs the nw-app layer (it writes annotations) plus
 # `illustration` for licence normalization.

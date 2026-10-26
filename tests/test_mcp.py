@@ -1696,3 +1696,38 @@ def test_ingest_document_as_beats_returns_a_loadable_script():
         ("heading", "Hi"),
         ("para", "There you are."),
     ]
+
+
+def test_ingest_document_as_beats_honours_max_chars():
+    from braidio.mcp._helpers import script_from_json
+
+    server = _local_server(ledger={})
+    _call(server, "create_project", {"project_id": "md", "title": "MD"})
+    text = "# Head\n\n" + "\n\n".join(f"Paragraph number {i}." for i in range(10))
+    args = {"project_id": "md", "text": text, "as_beats": True}
+    out = _call(server, "ingest_document", {**args, "max_chars": 50})
+    out = out.structured_content
+    beats = script_from_json(out["script"]).beats
+    assert out["truncated"] is True
+    assert [b.text for b in beats] == [
+        "Head",
+        "Paragraph number 0.",
+        "Paragraph number 1.",
+    ]
+    full = _call(server, "ingest_document", args).structured_content
+    assert full["truncated"] is False and len(full["script"]["beats"]) == 11
+
+
+def test_ingest_document_as_beats_refuses_html(monkeypatch):
+    from fastmcp.exceptions import ToolError
+
+    from braidio.mcp import _docs
+
+    monkeypatch.setattr(
+        _docs, "fetch_uri", lambda uri: (b"<p>Hi</p>", "text/html; charset=utf-8")
+    )
+    server = _local_server(ledger={})
+    _call(server, "create_project", {"project_id": "md", "title": "MD"})
+    args = {"project_id": "md", "uri": "https://example.com/a", "as_beats": True}
+    with pytest.raises(ToolError, match="as_beats"):
+        _call(server, "ingest_document", args)

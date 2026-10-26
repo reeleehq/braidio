@@ -90,6 +90,20 @@ def script_from_json(payload: Mapping[str, Any]):
     return Script(title=payload["title"], id_slug=payload["id_slug"], beats=beats)
 
 
+def script_to_json(script) -> dict:
+    """The inverse of :func:`script_from_json`: a Script as its JSON envelope."""
+    from braidio import Dialogue, Narration, SceneBreak, SegmentBeat
+
+    types = {
+        Narration: "narration",
+        SegmentBeat: "segment",
+        Dialogue: "dialogue",
+        SceneBreak: "scene_break",
+    }
+    beats = [{"type": types[type(b)], **to_json(b)} for b in script.beats]
+    return {"title": script.title, "id_slug": script.id_slug, "beats": beats}
+
+
 def source_from_json(payload: Optional[Mapping[str, Any]]):
     """Build a :class:`braidio.TimedLineSegmentSource` from JSON, or ``None``.
 

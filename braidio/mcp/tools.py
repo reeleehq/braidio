@@ -22,7 +22,12 @@ import os
 import braidio  # attr access (braidio.narrate, ...) so tests can monkeypatch
 from fastmcp.exceptions import ToolError
 
-from braidio.mcp._helpers import script_from_json, source_from_json, to_json
+from braidio.mcp._helpers import (
+    script_from_json,
+    script_to_json,
+    source_from_json,
+    to_json,
+)
 from braidio.rights import DEFAULT_PROFILE
 from braidio.mcp.credentials import caller_elevenlabs_key
 from braidio.mcp.metering import current_email
@@ -343,14 +348,14 @@ def ingest_document(
     text: str | None = None,
     name: str | None = None,
     max_chars: int = 40000,
+    as_beats: bool = False,
 ) -> dict:
     """Ingest source material into a project so you can analyze it into a Script.
 
-    Provide EITHER ``uri`` (a public http/https URL — PDF, HTML, or plain text) OR
-    ``text`` (pasted content). The document is fetched (SSRF-guarded: public hosts
-    only, size/time bounded), its plaintext extracted and stored in the project, and
-    the text returned (up to ``max_chars``) for you to read and turn into narration /
-    segment beats. Free — no synthesis.
+    Give ``uri`` (public http/https: PDF, HTML, text) OR ``text``. The plaintext is
+    stored and returned (up to ``max_chars``) to turn into beats. For a markdown
+    document to read aloud, ``as_beats=true`` returns a ready ``script`` of
+    narration beats instead (headings, footnotes) to tag. Free.
     """
     from braidio.mcp import _docs
 
@@ -369,6 +374,11 @@ def ingest_document(
         full = _docs.extract_text(data, ctype)
     except ValueError as exc:
         raise ToolError(str(exc)) from exc
+    script = None
+    if as_beats:
+        from braidio import script_from_markdown
+
+        script = script_to_json(script_from_markdown(full))
 
     from hashlib import sha256
 
@@ -382,8 +392,8 @@ def ingest_document(
         "source": src,
         "content_type": ctype,
         "characters": len(full),
-        "truncated": len(full) > max_chars,
-        "text": full[:max_chars],
+        "truncated": script is None and len(full) > max_chars,
+        **({"script": script} if script else {"text": full[:max_chars]}),
     }
 
 

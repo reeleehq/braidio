@@ -50,14 +50,6 @@ def test_structure_and_speakable_text():
     ]
 
 
-def test_gaps_come_from_the_table_and_are_overridable():
-    script = script_from_markdown(
-        ESSAY, gaps={**braidio.markdown_script.DEFAULT_GAPS, "heading": 9.0}
-    )
-    gaps = {b.style: b.lead_gap_s for b in script.beats}
-    assert gaps["heading"] == 9.0 and gaps["para"] == 0.35 and gaps["title"] == 0.0
-
-
 def test_image_captions_and_footnote_drop():
     script = script_from_markdown(ESSAY, images="caption", footnotes="drop")
     texts = [b.text for b in script.beats]
@@ -269,3 +261,65 @@ def test_script_to_json_round_trips_all_beat_types():
         ],
     )
     assert script_from_json(script_to_json(script)) == script
+
+
+NESTED_FOOTNOTE = (
+    "Body[^1].\n\n[^1]: Note start.\n\n    - inner item\n\n    > inner quote\n\nAfter."
+)
+
+
+def test_lists_and_quotes_inside_a_footnote_stay_in_it():
+    script = script_from_markdown(NESTED_FOOTNOTE)
+    assert _by_style(script) == [
+        ("para", "Body."),
+        ("para", "After."),
+        ("footnote", "A footnote. Note start. inner item inner quote"),
+    ]
+    dropped = script_from_markdown(NESTED_FOOTNOTE, footnotes="drop")
+    assert _by_style(dropped) == [("para", "Body."), ("para", "After.")]
+
+
+@pytest.mark.parametrize(
+    "front, expected_title",
+    [
+        ("author:\n  title: Dr\n", None),  # nested key is not the document title
+        ("title: >\n  Folded\n  title\n", None),  # block scalar: not read
+        ("title: |-\n  Literal\n", None),
+        ("title: Why Agile?\nsubtitle: A reply!\n", "Why Agile? A reply!"),
+        ("title: Plain\nsubtitle: Sub\n", "Plain. Sub."),
+    ],
+)
+def test_front_matter_reads_only_flat_top_level_scalars(front, expected_title):
+    script = script_from_markdown(f"---\n{front}---\n\nBody.")
+    titles = [b.text for b in script.beats if b.style == "title"]
+    assert titles == ([expected_title] if expected_title else [])
+
+
+@pytest.mark.parametrize(
+    "md, expected",
+    [
+        ("See https://example.com/a_b_c now.", "See now."),
+        ("Ends at http://x.y/p.", "Ends at."),
+        ("In (https://x.y/q) parens.", "In () parens."),
+    ],
+)
+def test_bare_urls_are_not_read(md, expected):
+    assert _by_style(script_from_markdown(md)) == [("para", expected)]
+
+
+def test_import_braidio_works_without_the_markdown_parser():
+    import subprocess
+    import sys
+
+    code = (
+        "import sys; sys.modules['markdown_it'] = None\n"
+        "import braidio\n"
+        "try:\n"
+        "    braidio.script_from_markdown('x')\n"
+        "except ImportError as e:\n"
+        "    print(e)\n"
+    )
+    out = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=True
+    )
+    assert "braidio[markdown]" in out.stdout

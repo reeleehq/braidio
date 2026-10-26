@@ -66,6 +66,14 @@ _CONTAINER_CLOSE = {
 _ACCUMULATING = frozenset({"list_item", "footnote"})
 _AUTOLINK_MARKUPS = frozenset({"autolink", "linkify"})
 _TASK_MARKER = re.compile(r"^\[[ xX]\]\s+")
+#: A bare URL in running text (not a link, so markdown-it keeps it as text); the
+#: last character excludes sentence punctuation so "see https://x.y." keeps its dot.
+_BARE_URL = re.compile(r"\s*\bhttps?://\S*[^\s.,;:!?)\]'\"]")
+#: An unindented ``key: value`` front-matter line (nested/indented lines are not ours).
+_FRONT_MATTER_LINE = re.compile(r"^([A-Za-z_][\w-]*):[ \t]*(.*)$")
+#: YAML block-scalar indicators: the value is on the following lines, not this one.
+_BLOCK_SCALAR = re.compile(r"^[>|][-+0-9]*$")
+_SENTENCE_END = (".", "?", "!")
 _WS = re.compile(r"\s+")
 _NON_SLUG = re.compile(r"[^a-z0-9]+")
 
@@ -96,10 +104,15 @@ def _markdown_parser():
 
 
 def _front_matter(tokens) -> dict[str, str]:
-    """Flat ``key: value`` pairs from a leading front-matter token, if any."""
+    """Flat top-level ``key: value`` pairs from a leading front-matter token.
+
+    Indented lines (nested mappings) and block scalars (``title: >``) are skipped:
+    this is not a YAML parser, so it reads only what it can read correctly.
+    """
     fm = next((t.content for t in tokens if t.type == "front_matter"), "")
-    pairs = (line.split(":", 1) for line in fm.splitlines() if ":" in line)
-    return {k.strip().lower(): v.strip().strip("\"'") for k, v in pairs}
+    matches = filter(None, map(_FRONT_MATTER_LINE.match, fm.splitlines()))
+    pairs = ((m.group(1).lower(), m.group(2).strip()) for m in matches)
+    return {k: v.strip("\"'") for k, v in pairs if v and not _BLOCK_SCALAR.match(v)}
 
 
 def _inline_text(children: Iterable, *, keep_image_alt: bool) -> str:
@@ -117,20 +130,28 @@ def _inline_text(children: Iterable, *, keep_image_alt: bool) -> str:
             parts.append(" ")
         elif t.type == "image" and keep_image_alt:
             parts.append(" " + _inline_text(t.children, keep_image_alt=True) + " ")
-    return _WS.sub(" ", "".join(parts)).strip()
+    return _WS.sub(" ", _BARE_URL.sub("", "".join(parts))).strip()
 
 
 def _blocks(tokens, *, keep_image_alt: bool) -> Iterator[_Block]:
     """Map the block token stream to beats-to-be, in document order.
 
     A paragraph is a ``para``, or takes the kind of its innermost container: every
-    paragraph of a list item (or footnote) joins into one block; each paragraph of
-    a quote is its own. Tables, code, rules and HTML blocks are not read.
+    paragraph of a list item joins into one block; each paragraph of a quote is
+    its own. Anything inside a footnote (lists and quotes included) joins that
+    footnote, so it never leaks into the body. Tables, code, rules and HTML
+    blocks are not read.
     """
     stack: list[tuple[str, list[str]]] = []  # (kind, accumulated texts)
     in_heading = in_table = False
 
-    def flush_top() -> Iterator[_Block]:
+    def footnote_frame():
+        return next((f for f in stack if f[0] == "footnote"), None)
+
+    def flush_top(*, closing: bool = False) -> Iterator[_Block]:
+        # A footnote is one block: only its own close flushes it.
+        if stack and stack[-1][0] == "footnote" and not closing:
+            return
         if stack and stack[-1][1]:
             kind, parts = stack[-1]
             text = " ".join(parts)
@@ -144,7 +165,7 @@ def _blocks(tokens, *, keep_image_alt: bool) -> Iterator[_Block]:
             yield from flush_top()
             stack.append((_CONTAINER_KIND[t.type], []))
         elif t.type in _CONTAINER_CLOSE:
-            yield from flush_top()
+            yield from flush_top(closing=True)
             stack.pop()
         elif t.type in ("table_open", "table_close"):
             in_table = t.type == "table_open"
@@ -153,6 +174,9 @@ def _blocks(tokens, *, keep_image_alt: bool) -> Iterator[_Block]:
         elif t.type == "inline" and not in_table:
             text = _inline_text(t.children, keep_image_alt=keep_image_alt)
             if not text:
+                continue
+            if (note := footnote_frame()) is not None:
+                note[1].append(text)
                 continue
             kind = "heading" if in_heading else (stack[-1][0] if stack else "para")
             if kind in _ACCUMULATING:
@@ -200,8 +224,12 @@ def _title_entry(meta: Mapping[str, str]) -> list[tuple[str, str]]:
     """The spoken title beat (``title. subtitle.``), if front matter has a title."""
     if not meta.get("title"):
         return []
+
+    def terminated(text: str) -> str:
+        return text if text.endswith(_SENTENCE_END) else text + "."
+
     parts = (meta["title"], meta.get("subtitle"))
-    return [("title", ". ".join(p.rstrip(".") for p in parts if p) + ".")]
+    return [("title", " ".join(terminated(p) for p in parts if p))]
 
 
 def script_from_markdown(
@@ -231,9 +259,9 @@ def script_from_markdown(
       order, behind ``footnote_lead_in``) or ``"drop"``. Markers are always removed.
     - ``respell`` maps text as written to text as spoken (``{"BDUF": "B-DUF"}``),
       applied to the beats only; the source markdown is untouched.
-    - Links keep their text (autolinks, being only a URL, are dropped); emphasis
-      and code markers are stripped; HTML, code blocks, tables and rules are not
-      read; entities are decoded.
+    - Links keep their text; URLs are never read (autolinks and bare URLs are
+      dropped); emphasis and code markers are stripped; HTML, code blocks, tables
+      and rules are not read; entities are decoded.
 
     Needs ``markdown-it-py`` + ``mdit-py-plugins`` (``braidio[markdown]``).
     """

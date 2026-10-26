@@ -2,20 +2,13 @@
 extract plaintext so an agent can analyze source material into a Script.
 
 Fetching is **SSRF-hardened** because the connector fetches user-supplied URLs
-server-side on a shared production box:
-
-- http/https only, on ports {80, 443};
-- the host must resolve to a *public* address (``ipaddress.is_global``), with
-  IPv4-mapped IPv6 canonicalized — loopback / private / link-local / cloud-metadata
-  (``169.254.169.254``) targets are refused;
-- **redirects are NOT auto-followed** — every hop's ``Location`` is re-validated, so
-  a public URL can't ``302`` to an internal host;
-- the whole fetch is bounded by a wall-clock deadline, a redirect cap, and a
-  total-bytes cap (chunked read), so a slow-loris or redirect loop can't pin a worker.
-
-Residual: a determined attacker who controls a domain's DNS could race the
-validate-vs-connect resolution (the two lookups aren't pinned to one IP). Accepted
-here because the connector is restricted to trusted, allowlisted users.
+server-side on a shared production box. The guard is ``graze.guarded_fetch``'s (one
+implementation for the fleet): http/https only on ports {80, 443}; every hop's
+address is resolved once, checked as globally routable, and *pinned* — the socket
+goes to exactly that address, so DNS rebinding cannot swap in an internal one; each
+redirect hop is re-validated; the whole fetch is bounded by one wall-clock budget
+and a byte cap. This module keeps only the braidio-facing contract: ``ValueError``
+for every refusal (what the tools turn into a ``ToolError``) and a content type.
 
 Extraction is content-type aware: HTML is stripped to text, PDF uses ``pypdf``
 (page-capped), everything else is decoded as UTF-8.
@@ -25,29 +18,18 @@ from __future__ import annotations
 
 import io
 import ipaddress
-import socket
-import time
-import urllib.error
 import urllib.parse
-import urllib.request
 from html.parser import HTMLParser
 
-#: Fetch bounds (all hops).
+import graze
+
+#: Fetch bounds (whole fetch, all hops).
 MAX_BYTES = 10 * 1024 * 1024
 MAX_REDIRECTS = 5
 TOTAL_TIMEOUT_S = 25.0  # wall-clock budget for the whole fetch
-OP_TIMEOUT_S = 10.0  # per-socket-op timeout
 ALLOWED_SCHEMES = ("http", "https")
 ALLOWED_PORTS = frozenset({80, 443})
 PDF_MAX_PAGES = 300
-
-#: Socket read granularity. Bounds how far past ``MAX_BYTES`` a hostile response can
-#: push us before the cap is enforced, and how often the deadline is re-checked.
-READ_CHUNK_BYTES = 64 * 1024
-
-#: HTTP statuses treated as a redirect worth following. Each hop is re-validated
-#: against the SSRF rules above, so a public URL can never redirect us inward.
-REDIRECT_STATUS_CODES = frozenset({301, 302, 303, 307, 308})
 
 #: Identifies braidio to the origin server. Kept honest (no browser spoofing) so
 #: operators can see, and rate-limit, what is fetching their documents.
@@ -78,86 +60,60 @@ class _TextHTMLParser(HTMLParser):
         return " ".join(" ".join(self._chunks).split())
 
 
-class _NoRedirect(urllib.request.HTTPRedirectHandler):
-    """Disable urllib's auto-follow — a 3xx raises so we validate the hop ourselves."""
-
-    def redirect_request(self, *args, **kwargs):  # noqa: D401, ARG002
-        return None
-
-
-def _host_is_public(host: str) -> bool:
-    """True only if every resolved address for ``host`` is globally routable."""
+def _host_is_public(host: str, *, port: int = 443, **policy) -> bool:
+    """True only if every address ``host`` resolves to passes graze's public-only policy."""
+    is_allowed = policy.get("is_allowed_address", graze.default_public_only)
+    resolver = policy.get("resolver", graze.system_resolver)
     try:
-        infos = socket.getaddrinfo(host, None)
-    except socket.gaierror:
+        addresses = resolver(host, port)
+    except OSError:
         return False
-    for info in infos:
-        ip = ipaddress.ip_address(info[4][0])
-        if ip.version == 6 and ip.ipv4_mapped is not None:
-            ip = ip.ipv4_mapped  # canonicalize ::ffff:127.0.0.1 etc.
-        if not ip.is_global:  # rejects private/loopback/link-local/reserved/…
-            return False
-    return True
+    return bool(addresses) and all(
+        is_allowed(ipaddress.ip_address(a)) for a in addresses
+    )
 
 
 def _validate_target(uri: str) -> None:
-    """Reject a URI whose scheme/host/port isn't a public http(s) endpoint."""
+    """Reject a URI whose scheme/host/port isn't a public http(s) endpoint.
+
+    A pre-flight for callers that hand the URL to something else to fetch
+    (``download_audio`` -> yt-dlp); it cannot pin the address, ``fetch_uri`` can.
+    """
     parts = urllib.parse.urlparse(uri)
     if parts.scheme not in ALLOWED_SCHEMES:
         raise ValueError(f"only http/https URIs are supported, got {parts.scheme!r}")
-    if not parts.hostname or not _host_is_public(parts.hostname):
-        raise ValueError(f"refusing to fetch a non-public host: {parts.hostname!r}")
     port = parts.port or (443 if parts.scheme == "https" else 80)
     if port not in ALLOWED_PORTS:
         raise ValueError(f"port {port} is not allowed (only 80/443)")
+    if not parts.hostname or not _host_is_public(parts.hostname, port=port):
+        raise ValueError(f"refusing to fetch a non-public host: {parts.hostname!r}")
 
 
-def _read_bounded(resp, deadline: float) -> bytes:
-    """Read the body in chunks, enforcing the byte cap and the wall-clock deadline."""
-    chunks: list[bytes] = []
-    total = 0
-    while total <= MAX_BYTES:
-        if time.monotonic() > deadline:
-            raise ValueError("document fetch exceeded its time budget")
-        chunk = resp.read(READ_CHUNK_BYTES)
-        if not chunk:
-            break
-        total += len(chunk)
-        chunks.append(chunk)
-    data = b"".join(chunks)
-    if len(data) > MAX_BYTES:
-        raise ValueError(f"document exceeds the {MAX_BYTES}-byte limit")
-    return data
+def fetch_uri(uri: str, **fetch_options) -> tuple[bytes, str]:
+    """Fetch a public http(s) URI (SSRF-hardened). Returns ``(bytes, content_type)``.
 
-
-def fetch_uri(uri: str) -> tuple[bytes, str]:
-    """Fetch a public http(s) URI (SSRF-hardened). Returns ``(bytes, content_type)``."""
-    deadline = time.monotonic() + TOTAL_TIMEOUT_S
-    opener = urllib.request.build_opener(_NoRedirect)
-    current = uri
-    for _ in range(MAX_REDIRECTS + 1):
-        _validate_target(current)  # re-validate scheme/host/port at EVERY hop
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            raise ValueError("document fetch exceeded its time budget")
-        req = urllib.request.Request(current, headers={"User-Agent": USER_AGENT})
-        try:
-            resp = opener.open(req, timeout=min(OP_TIMEOUT_S, remaining))  # noqa: S310
-        except urllib.error.HTTPError as err:
-            loc = err.headers.get("Location") if err.headers else None
-            if err.code in REDIRECT_STATUS_CODES and loc:
-                current = urllib.parse.urljoin(current, loc)
-                continue  # the loop re-validates the redirect target
-            raise ValueError(f"fetch failed: HTTP {err.code}") from err
-        except urllib.error.URLError as err:
-            raise ValueError(f"fetch failed: {err.reason}") from err
-        with resp:
-            ctype = (
-                (resp.headers.get("Content-Type") or "").split(";")[0].strip().lower()
-            )
-            data = _read_bounded(resp, deadline)
-        return data, ctype or "application/octet-stream"
-    raise ValueError(f"too many redirects (>{MAX_REDIRECTS})")
+    ``fetch_options`` go to ``graze.guarded_open`` (``resolver``, ``connector``,
+    ``is_allowed_address``, ...), overriding braidio's bounds; they are the test seam.
+    """
+    options = dict(
+        allow_schemes=ALLOWED_SCHEMES,
+        allow_ports=ALLOWED_PORTS,
+        max_redirects=MAX_REDIRECTS,
+        timeout=TOTAL_TIMEOUT_S,
+        max_bytes=MAX_BYTES,
+        headers={"User-Agent": USER_AGENT},
+    )
+    try:
+        with graze.guarded_open(uri, **{**options, **fetch_options}) as resp:
+            ctype = (resp.headers.get("Content-Type") or "").split(";")[0].strip()
+            data = resp.read()
+    except graze.UnsafeTarget as err:
+        raise ValueError(f"refusing to fetch {uri!r}: {err}") from err
+    except graze.HTTPStatusError as err:
+        raise ValueError(f"fetch failed: HTTP {err.status}") from err
+    except graze.GuardedFetchError as err:
+        raise ValueError(f"fetch failed: {err}") from err
+    return data, ctype.lower() or "application/octet-stream"
 
 
 def _pdf_text(data: bytes) -> str:

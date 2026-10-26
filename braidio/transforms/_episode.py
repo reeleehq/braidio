@@ -67,6 +67,8 @@ from nw.transforms._provenance import derive_provenance
 
 from braidio.weave import TimelineItem
 from braidio.timeline import TimelineBreakdown, build_timeline
+from braidio.tts import DEFAULT_VOICE_ID
+from braidio.weave_config import turn_overlap_of
 from braidio.bodies._domain import SCENE_BREAK_V1
 from braidio.rights import (
     DEFAULT_PROFILE,
@@ -93,6 +95,7 @@ from braidio.transforms._common import (
     TIER_PRODUCTION_STRUCTURE,
     TIER_RENDER_PROFILE,
     TIER_NARRATION_RENDER,
+    TIER_VOICE_ASSIGNMENT,
     TIER_DIALOGUE_RENDER,
     TIER_SEGMENT_EXTRACTION,
     TIER_SCENE_BREAK,
@@ -183,6 +186,22 @@ def _member_role(member: Annotation, index: dict, *, structure):
     return style, text[:_LABEL_SNIPPET_CHARS], None
 
 
+def _member_speaker(member: Annotation, index: dict) -> str | None:
+    """The voice a member talks with, for speaker interruption (``None``: nobody).
+
+    Only a narration render has one — the voice its ``voice-assignment`` parent
+    carries. A dialogue render is several speakers in one file, a clip or a
+    break has none: the same rule as ``braidio.render``'s ``speakers``.
+    """
+    if member.tier != TIER_NARRATION_RENDER:
+        return None
+    va = next(
+        (p for p in resolve_parents(member, index) if p.tier == TIER_VOICE_ASSIGNMENT),
+        None,
+    )
+    return (va.body.get("voice_id") or DEFAULT_VOICE_ID) if va is not None else None
+
+
 def member_timeline(
     members,
     durations,
@@ -208,6 +227,7 @@ def member_timeline(
         labels.append(label)
         spans.append(span)
     edge_overlap_s, crossfade_s = _layout_knobs(config)
+    speakers = [_member_speaker(m, index) for m in members]
     return build_timeline(
         kinds=roles,
         durations=[float(d) for d in durations],
@@ -215,6 +235,8 @@ def member_timeline(
         source_spans=spans,
         clip_edge_overlap_s=edge_overlap_s,
         narration_crossfade_s=crossfade_s,
+        speakers=speakers,
+        overlap=turn_overlap_of(config),
         title=title,
         settings={
             "weave": dict(config),
@@ -679,6 +701,10 @@ class WeaveToEpisode(BaseTransform):
 
         out_path = project.root / "data" / "episodes" / f"{skel.id}.mp3"
         out_path.parent.mkdir(parents=True, exist_ok=True)
+        # Interruption is off unless the config asks: leave the call exactly as
+        # it was for a project that never set it (the absence rule, as above).
+        overlap = turn_overlap_of(config)  # also what member_timeline laid out
+        overlap_kw = {"overlap": overlap} if overlap.is_on else {}
         braidio.weave_timeline(
             items,
             out_path,
@@ -688,6 +714,7 @@ class WeaveToEpisode(BaseTransform):
             true_peak=float(config.get("true_peak_dbtp", _DEFAULT_TRUE_PEAK)),
             sample_rate=int(config.get("sample_rate", _DEFAULT_SAMPLE_RATE)),
             bed=bed,
+            **overlap_kw,
         )
         duration = safe_duration(out_path)
         artifact = audio_artifact(
@@ -751,6 +778,7 @@ class WeaveToEpisode(BaseTransform):
             kind="clip" if is_clip else "narration",
             path=str(url_to_path(member.body["url"])),
             placement="sequential",
+            speaker=_member_speaker(member, index),
             spotlight=(
                 is_clip
                 and bed is not None

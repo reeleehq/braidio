@@ -16,7 +16,7 @@ recorded choices.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field, replace
+from dataclasses import asdict, dataclass, field, fields, replace
 from typing import Any, Mapping
 
 from braidio.multivoice import POOL_4, POOL_MANY
@@ -133,12 +133,7 @@ class WeaveConfig:
 
         Its ``seed`` is ``voice_seed``: one seed fixes casting and interruptions.
         """
-        return TurnOverlap(
-            max_s=self.overlap_turn_s,
-            jitter=self.overlap_jitter,
-            duck_db=self.overlap_duck_db,
-            seed=self.voice_seed,
-        )
+        return turn_overlap_of(self.to_dict())
 
     def with_(self, **changes: Any) -> "WeaveConfig":
         """Return a copy with fields overridden (e.g. ``cfg.with_(min_turn=1)``)."""
@@ -150,6 +145,33 @@ class WeaveConfig:
         d["voices"] = list(self.voices)
         d["voice_settings"] = dict(self.voice_settings)
         return d
+
+
+_OVERLAP_DEFAULTS = {
+    f.name: f.default
+    for f in fields(WeaveConfig)
+    if f.name in ("overlap_turn_s", "overlap_jitter", "overlap_duck_db", "voice_seed")
+}
+
+
+def turn_overlap_of(config: Mapping[str, Any]) -> TurnOverlap:
+    """:meth:`WeaveConfig.turn_overlap` for a serialized config (``to_dict()``).
+
+    A knob the mapping omits takes the :class:`WeaveConfig` default, so a
+    snapshot written before the knob existed means "no interruption".
+
+    >>> turn_overlap_of({}).is_on
+    False
+    >>> turn_overlap_of({"overlap_turn_s": 0.2, "voice_seed": 3}).seed
+    3
+    """
+    get = lambda name: config.get(name, _OVERLAP_DEFAULTS[name])  # noqa: E731
+    return TurnOverlap(
+        max_s=get("overlap_turn_s"),
+        jitter=get("overlap_jitter"),
+        duck_db=get("overlap_duck_db"),
+        seed=get("voice_seed"),
+    )
 
 
 # --- Presets -----------------------------------------------------------------

@@ -312,3 +312,44 @@ def test_the_duck_lowers_the_outgoing_tail_in_the_rendered_audio(tmp_path):
 
     assert tail_over_body(0.0) > 0.7  # undocked: the tail is as loud as the body
     assert tail_over_body(-20.0) < 0.3  # -20 dB ≈ 0.1 in amplitude
+
+
+@needs_ffmpeg
+@pytest.mark.skipif(not braidio.HAS_NW, reason="nw (and lacing) not available")
+def test_the_graph_path_interrupts_like_the_fast_path(monkeypatch, tmp_path):
+    """``overlap_turn_s`` reaches the nw episode: a voice change starts early."""
+    from braidio.weave import duration_s
+
+    monkeypatch.setattr(
+        braidio,
+        "narrate",
+        lambda text, out, *, return_cache_status=False, **kw: (
+            (tone(Path(out), 440, 1.0), False)
+            if return_cache_status
+            else tone(Path(out), 440, 1.0)
+        ),
+    )
+    script = braidio.Script(
+        "t", "ovl", [braidio.Narration(t) for t in ("One.", "Two.", "Three.")]
+    )
+
+    def weave(config, name):
+        project = braidio.Project.init(tmp_path / name, title=name)
+        ep = braidio.weave_project(project, script, config=config)
+        return ep, braidio.transforms._episode.episode_timeline(project, ep)
+
+    pool = dict(voices=("va", "vb"), voice_seed=0)
+    base_ep, base = weave(WeaveConfig(**pool), "base")
+    ep, tl = weave(WeaveConfig(**pool, overlap_turn_s=0.3, overlap_jitter=0.0), "ovl")
+    starts, d = [s.start for s in tl.beats], [s.duration for s in tl.beats]
+    # voices alternate va, vb, va: every boundary is a change of speaker
+    assert starts[1] == pytest.approx(starts[0] + d[0] - 0.3, abs=1e-3)
+    assert starts[2] == pytest.approx(starts[1] + d[1] - 0.3, abs=1e-3)
+    assert starts[1] < base.beats[1].start
+
+    # the mixer was handed the same overlap: two 0.3s interruptions shorter
+    # than the same script woven without (the encoder's padding cancels out)
+    def out_len(episode):
+        return duration_s(braidio.transforms._common.url_to_path(episode.body["url"]))
+
+    assert out_len(base_ep) - out_len(ep) == pytest.approx(0.6 - 2 * 0.12, abs=0.1)

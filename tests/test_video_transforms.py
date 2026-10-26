@@ -946,15 +946,9 @@ def _quote_then_run(project, panels, patched_render):
 
     t = nw.get_transform(VIDEO_CUT_RENDER_TRANSFORM)
     plan, skel = _plan(VIDEO_CUT_RENDER_TRANSFORM, project, *panels)
-    before = {
-        a.id: a.provenance.generated_at_time
-        for a in nw.iter_all_annotations(project.root)
-    }
+    before = {a.id: a.provenance.generated_at_time for a in nw.iter_all_annotations(project.root)}
     quoted = video_cut_reuses_existing(project, skel)
-    after = {
-        a.id: a.provenance.generated_at_time
-        for a in nw.iter_all_annotations(project.root)
-    }
+    after = {a.id: a.provenance.generated_at_time for a in nw.iter_all_annotations(project.root)}
     assert after == before, "the quote wrote to the graph"
     renders = len(patched_render)
     t.execute(project, plan, skel)
@@ -969,22 +963,13 @@ def test_the_reuse_quote_agrees_with_the_run_on_every_door(
     quote says so each time, without touching the graph."""
     from braidio.transforms._common import graph_index, url_to_path
 
-    assert _quote_then_run(project, panels, patched_render) == (
-        False,
-        True,
-    )  # first cut
-    assert _quote_then_run(project, panels, patched_render) == (
-        True,
-        False,
-    )  # unchanged
+    assert _quote_then_run(project, panels, patched_render) == (False, True)  # first cut
+    assert _quote_then_run(project, panels, patched_render) == (True, False)  # unchanged
 
     still = graph_index(project)[uuid.UUID(panels[0].body["still_id"])]
     _rewrite_in_place(project, still, body={**still.body, "subject": "Renamed"})
     panels = [graph_index(project)[p.id] for p in panels]
-    assert _quote_then_run(project, panels, patched_render) == (
-        True,
-        False,
-    )  # editorial
+    assert _quote_then_run(project, panels, patched_render) == (True, False)  # editorial
 
     edited = _rewrite_in_place(project, panels[0], body={**panels[0].body, "zoom": 1.4})
     panels = [edited, *panels[1:]]
@@ -995,10 +980,7 @@ def test_the_reuse_quote_agrees_with_the_run_on_every_door(
         key=lambda a: a.provenance.generated_at_time,
     )
     url_to_path(newest.body["url"]).unlink()
-    assert _quote_then_run(project, panels, patched_render) == (
-        False,
-        True,
-    )  # file gone
+    assert _quote_then_run(project, panels, patched_render) == (False, True)  # file gone
 
 
 def test_the_reuse_quote_follows_execute_flags_and_refuses_other_tiers(
@@ -1760,11 +1742,7 @@ def _label_overlay(subject, key="a"):
     from tituli import Label, TimedOverlay
 
     return TimedOverlay(
-        None,
-        0.0,
-        4.0,
-        slot="top-left",
-        payload=Label(subject, "Jane Doe, CC BY-SA 4.0", key=key),
+        None, 0.0, 4.0, slot="top-left", payload=Label(subject, "Jane Doe, CC BY-SA 4.0", key=key)
     )
 
 
@@ -1781,12 +1759,7 @@ def test_a_tall_frame_wraps_a_caption_a_wide_frame_would_refuse():
     overlay = _label_overlay(_LONG_SUBJECT)
     vertical = Frame.blank((1080, 1920)).with_delivery("youtube")
     with pytest.raises(TextDoesNotFit):  # the premise: the default budget fails
-        caption(
-            overlay.payload.text,
-            overlay.payload.attribution,
-            frame=vertical,
-            anchor="top-left",
-        )
+        caption(overlay.payload.text, overlay.payload.attribution, frame=vertical, anchor="top-left")
     (wrapped,) = _wrap_labels_for_frame(
         [overlay], size=(1080, 1920), delivery="youtube"
     )
@@ -1838,7 +1811,9 @@ def test_a_vertical_finish_hands_tituli_the_wrapped_caption(
     )
 
     still_a = stills[0]
-    _rewrite_in_place(project, still_a, body={**still_a.body, "subject": _LONG_SUBJECT})
+    _rewrite_in_place(
+        project, still_a, body={**still_a.body, "subject": _LONG_SUBJECT}
+    )
     motion = _run(
         VIDEO_CUT_RENDER_TRANSFORM,
         project,
@@ -1854,7 +1829,9 @@ def test_a_vertical_finish_hands_tituli_the_wrapped_caption(
     monkeypatch.setattr(tituli.video, "overlay", _record)
     with pytest.raises(RuntimeError, match="hand-off"):
         _run(VIDEO_CUT_FINISH_TRANSFORM, project, motion)
-    long_label = [o for o in seen if getattr(o.payload, "text", None) == _LONG_SUBJECT]
+    long_label = [
+        o for o in seen if getattr(o.payload, "text", None) == _LONG_SUBJECT
+    ]
     assert long_label and all(o.layout is not None for o in long_label)
     short_label = [o for o in seen if getattr(o.payload, "text", None) == "Carol"]
     assert short_label and all(o.layout is None for o in short_label)

@@ -4,6 +4,14 @@ braidio.weave\_config
 .. automodule:: braidio.weave_config
 
    
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      pick_voice
+      speaker_key
+      turn_overlap_of
+   
    .. rubric:: Classes
 
    .. autosummary::

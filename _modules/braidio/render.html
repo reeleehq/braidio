@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=1e158f99"></script>
+    <script src="../../_static/documentation_options.js?v=461c1127"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.73" />
+  <meta name="docsearch:version" content="0.0.76" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -755,7 +755,7 @@ window.runMermaid = runMermaid;</script>
 <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.structure</span><span class="w"> </span><span class="kn">import</span> <span class="n">DEFAULT_STRUCTURE</span><span class="p">,</span> <span class="n">prepare_pause</span><span class="p">,</span> <span class="n">prepare_sting</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.tts</span><span class="w"> </span><span class="kn">import</span> <span class="n">narrate</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.weave</span><span class="w"> </span><span class="kn">import</span> <span class="n">TimelineItem</span><span class="p">,</span> <span class="n">extract_padded</span><span class="p">,</span> <span class="n">weave_timeline</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">braidio.weave_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">WeaveConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">braidio.weave_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">WeaveConfig</span><span class="p">,</span> <span class="n">speaker_key</span>
 
 <span class="n">_DEFAULT_LUFS</span> <span class="o">=</span> <span class="o">-</span><span class="mf">16.0</span>
 <span class="n">_TRUE_PEAK</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.5</span>
@@ -1056,6 +1056,7 @@ window.runMermaid = runMermaid;</script>
     <span class="n">spans</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># source [start,end) for clips</span>
     <span class="n">labels</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">spotlights</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># per part: the bed drops out over it</span>
+    <span class="n">speakers</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># per part: voice id talking (None: clip/sting)</span>
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">pb</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">plan</span><span class="o">.</span><span class="n">beats</span><span class="p">):</span>
         <span class="n">orig</span> <span class="o">=</span> <span class="n">script</span><span class="o">.</span><span class="n">beats</span><span class="p">[</span><span class="n">pb</span><span class="o">.</span><span class="n">from_index</span><span class="p">]</span>
         <span class="n">clip_span</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
@@ -1077,9 +1078,13 @@ window.runMermaid = runMermaid;</script>
             <span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">orig</span><span class="o">.</span><span class="n">label</span><span class="p">)</span>
             <span class="n">spans</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
             <span class="n">spotlights</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">speakers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
             <span class="k">continue</span>
         <span class="k">if</span> <span class="n">pb</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"narration"</span><span class="p">:</span>
-            <span class="n">beat_voice</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">orig</span><span class="p">,</span> <span class="s2">"voice"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="n">voice_id</span>  <span class="c1"># per-beat override</span>
+            <span class="c1"># per-beat override &gt; the render's voice &gt; the config's pool pick</span>
+            <span class="n">beat_voice</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">orig</span><span class="p">,</span> <span class="s2">"voice"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="n">voice_id</span>
+            <span class="k">if</span> <span class="n">beat_voice</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">config</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">beat_voice</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">cast_voice</span><span class="p">(</span><span class="n">pb</span><span class="o">.</span><span class="n">from_index</span><span class="p">)</span>
             <span class="n">beat_settings</span> <span class="o">=</span> <span class="p">(</span>
                 <span class="nb">getattr</span><span class="p">(</span><span class="n">orig</span><span class="p">,</span> <span class="s2">"voice_settings"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="n">delivery</span><span class="o">.</span><span class="n">voice_settings</span>
             <span class="p">)</span>
@@ -1150,6 +1155,8 @@ window.runMermaid = runMermaid;</script>
             <span class="k">if</span> <span class="n">normalize</span>
             <span class="k">else</span> <span class="n">raw</span>
         <span class="p">)</span>
+        <span class="c1"># a dialogue beat is several speakers in one file: it never interrupts</span>
+        <span class="n">speakers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">speaker_key</span><span class="p">(</span><span class="n">beat_voice</span><span class="p">)</span> <span class="k">if</span> <span class="n">pb</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"narration"</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
         <span class="c1"># dialogue + narration are spoken → treated as "narration" on the timeline</span>
         <span class="n">kinds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"clip"</span> <span class="k">if</span> <span class="n">pb</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"clip"</span> <span class="k">else</span> <span class="s2">"narration"</span><span class="p">)</span>
         <span class="c1"># a "under" clip becomes a ducked underlay; "before"/"after" play clean</span>
@@ -1176,9 +1183,13 @@ window.runMermaid = runMermaid;</script>
     <span class="n">has_under</span> <span class="o">=</span> <span class="s2">"under"</span> <span class="ow">in</span> <span class="n">placements</span>
     <span class="n">edge_overlap</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">clip_edge_overlap_s</span> <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="mf">0.0</span>
     <span class="n">crossfade</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">crossfade_s</span> <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">crossfade_s</span>
-    <span class="c1"># a music bed also needs the mix path (even for narration-only productions)</span>
-    <span class="n">woven</span> <span class="o">=</span> <span class="n">music_bed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span>
-        <span class="s2">"clip"</span> <span class="ow">in</span> <span class="n">kinds</span> <span class="ow">and</span> <span class="p">(</span><span class="n">edge_overlap</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">has_under</span><span class="p">)</span>
+    <span class="n">turn_overlap</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">turn_overlap</span><span class="p">()</span> <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="c1"># a music bed also needs the mix path (even for narration-only productions);</span>
+    <span class="c1"># so does a speaker interruption, which a plain concat cannot place</span>
+    <span class="n">woven</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">music_bed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="ow">or</span> <span class="p">(</span><span class="s2">"clip"</span> <span class="ow">in</span> <span class="n">kinds</span> <span class="ow">and</span> <span class="p">(</span><span class="n">edge_overlap</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">has_under</span><span class="p">))</span>
+        <span class="ow">or</span> <span class="p">(</span><span class="n">turn_overlap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">turn_overlap</span><span class="o">.</span><span class="n">max_s</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="p">)</span>
 
     <span class="k">if</span> <span class="n">woven</span><span class="p">:</span>
@@ -1189,8 +1200,9 @@ window.runMermaid = runMermaid;</script>
                 <span class="n">placement</span><span class="o">=</span><span class="n">pl</span><span class="p">,</span>
                 <span class="n">duck_db</span><span class="o">=</span><span class="p">(</span><span class="n">duck_db</span> <span class="k">if</span> <span class="n">pl</span> <span class="o">==</span> <span class="s2">"under"</span> <span class="k">else</span> <span class="mf">0.0</span><span class="p">),</span>
                 <span class="n">spotlight</span><span class="o">=</span><span class="n">sp</span><span class="p">,</span>
+                <span class="n">speaker</span><span class="o">=</span><span class="n">spk</span><span class="p">,</span>
             <span class="p">)</span>
-            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">pl</span><span class="p">,</span> <span class="n">sp</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">kinds</span><span class="p">,</span> <span class="n">parts</span><span class="p">,</span> <span class="n">placements</span><span class="p">,</span> <span class="n">spotlights</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">pl</span><span class="p">,</span> <span class="n">sp</span><span class="p">,</span> <span class="n">spk</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">kinds</span><span class="p">,</span> <span class="n">parts</span><span class="p">,</span> <span class="n">placements</span><span class="p">,</span> <span class="n">spotlights</span><span class="p">,</span> <span class="n">speakers</span><span class="p">)</span>
         <span class="p">]</span>
         <span class="n">weave_timeline</span><span class="p">(</span>
             <span class="n">items</span><span class="p">,</span>
@@ -1199,6 +1211,7 @@ window.runMermaid = runMermaid;</script>
             <span class="n">narration_crossfade_s</span><span class="o">=</span><span class="n">crossfade</span><span class="p">,</span>
             <span class="n">target_lufs</span><span class="o">=</span><span class="n">target_lufs</span><span class="p">,</span>
             <span class="n">bed</span><span class="o">=</span><span class="n">music_bed</span><span class="p">,</span>
+            <span class="n">overlap</span><span class="o">=</span><span class="n">turn_overlap</span><span class="p">,</span>
         <span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="c1"># `crossfade`, not `crossfade_s`: the config's crossfade was read by the</span>
@@ -1226,6 +1239,8 @@ window.runMermaid = runMermaid;</script>
             <span class="n">source_spans</span><span class="o">=</span><span class="n">spans</span><span class="p">,</span>
             <span class="n">clip_edge_overlap_s</span><span class="o">=</span><span class="n">edge_overlap</span><span class="p">,</span>
             <span class="n">narration_crossfade_s</span><span class="o">=</span><span class="n">crossfade</span><span class="p">,</span>
+            <span class="n">speakers</span><span class="o">=</span><span class="n">speakers</span><span class="p">,</span>
+            <span class="n">overlap</span><span class="o">=</span><span class="n">turn_overlap</span><span class="p">,</span>
             <span class="n">title</span><span class="o">=</span><span class="n">script</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
             <span class="c1"># The settings that produced these timings, not the ones asked for:</span>
             <span class="c1"># `crossfade`/`edge_overlap`/`target_lufs`/`duck_db` are the values</span>

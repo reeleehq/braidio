@@ -103,7 +103,7 @@ Seconds spent per `kind` (insertion-ordered by first appearance).
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`float`](https://docs.python.org/3/builtins/functions.html#float)]
 
-### braidio.timeline.build_timeline(, kinds, durations, placements=None, labels=None, source_spans=None, clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, title='', settings=None)
+### braidio.timeline.build_timeline(, kinds, durations, placements=None, labels=None, source_spans=None, clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, title='', settings=None, speakers=None, overlap=None)
 
 Assemble a [`TimelineBreakdown`](#braidio.timeline.TimelineBreakdown) from per-beat render data (pure).
 
@@ -111,6 +111,9 @@ Assemble a [`TimelineBreakdown`](#braidio.timeline.TimelineBreakdown) from per-b
 the layout treats specially — as an overlapping segment). `placements` is
 the per-beat `"sequential"`/`"under"` used by the weave; offsets are
 computed with the same [`layout_placed()`](braidio.weave.html.md#braidio.weave.layout_placed) the renderer uses.
+
+`speakers` (one voice id per beat, `None` for a clip/sting) and `overlap`
+place a change of speaker as an interruption — pass what the render passed.
 
 `settings` is the optional render record ([`render_settings()`](#braidio.timeline.render_settings)) — what
 produced these durations. It stays optional so building a timeline by hand

@@ -1,4 +1,4 @@
-> built 2026-10-26 12:45 UTC from 8d4ec16 (main) · braidio 0.0.73. Details: build_info.json
+> built 2026-10-26 18:57 UTC from 8e46899 (main) · braidio 0.0.76. Details: build_info.json
 
 # index.html.md
 
@@ -1475,7 +1475,7 @@ Seconds spent per `kind` (insertion-ordered by first appearance).
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`float`](https://docs.python.org/3/builtins/functions.html#float)]
 
-### *class* braidio.TimelineItem(kind, path, placement='sequential', duck_db=0.0, spotlight=False)
+### *class* braidio.TimelineItem(kind, path, placement='sequential', duck_db=0.0, spotlight=False, speaker=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -1497,11 +1497,39 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 A pooled narration voice.
 
-### *class* braidio.WeaveConfig(voices=('JBFqnCBsd6RMkjVDRZzb', ), pool_label='single', voice_seed=7, avoid_immediate_repeat=True, model_id='eleven_multilingual_v2', voice_settings=<factory>, segmentation_unit='beat', min_turn=2, max_turn=4, speed_base=1.0, speed_jitter=0.04, crossfade_s=0.12, gap_turn_s=0.0, overlap_turn_s=0.0, clip_pre_roll_s=0.4, clip_post_roll_s=0.3, clip_fade_in_s=0.5, clip_fade_out_s=0.8, clip_min_len_s=2.2, clip_edge_overlap_s=0.5, duck_db=-15.0, target_lufs=-16.0, true_peak_dbtp=-1.0, sample_rate=44100)
+### *class* braidio.WeaveConfig(voices=('JBFqnCBsd6RMkjVDRZzb', ), pool_label='single', voice_seed=7, avoid_immediate_repeat=True, narration_voice=None, model_id='eleven_multilingual_v2', voice_settings=<factory>, segmentation_unit='beat', min_turn=2, max_turn=4, speed_base=1.0, speed_jitter=0.04, crossfade_s=0.12, gap_turn_s=0.0, overlap_turn_s=0.0, overlap_jitter=0.3, overlap_duck_db=0.0, clip_pre_roll_s=0.4, clip_post_roll_s=0.3, clip_fade_in_s=0.5, clip_fade_out_s=0.8, clip_min_len_s=2.2, clip_edge_overlap_s=0.5, duck_db=-15.0, target_lufs=-16.0, true_peak_dbtp=-1.0, sample_rate=44100)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 All editing choices for a narration+segment weave. Frozen + serializable.
+
+#### cast_voice(ordinal, , override=None)
+
+The voice beat `ordinal` speaks with: `override`, else the
+production’s `narration_voice`, else the pool pick.
+
+`None` means “the renderer’s default voice”. One definition for both
+render paths, so a script is cast (and so interrupts) the same on each.
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### *property* casts_voices *: [bool](https://docs.python.org/3/builtins/functions.html#bool)*
+
+Whether `voices` is a real casting choice, not the inert default.
+
+The default single voice means “whatever the renderer’s default is” (the
+env override included), so it must not pin a voice onto a beat.
+
+#### *classmethod* from_snapshot(snapshot)
+
+Rebuild a config from a serialized one ([`to_dict()`](_autosummary/braidio.html.md#braidio.WeaveConfig.to_dict)).
+
+A knob the snapshot omits takes the default (one written before the
+knob existed); a key that is not a field is ignored.
+
+* **Return type:**
+  [`WeaveConfig`](_autosummary/braidio.weave_config.html.md#braidio.weave_config.WeaveConfig)
 
 #### *property* paces_narration *: [bool](https://docs.python.org/3/builtins/functions.html#bool)*
 
@@ -1525,6 +1553,15 @@ Stable serialization for a `render-config` provenance node (#26).
 
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
+
+#### turn_overlap()
+
+The speaker-interruption knobs as the value the weave consumes.
+
+Its `seed` is `voice_seed`: one seed fixes casting and interruptions.
+
+* **Return type:**
+  [`TurnOverlap`](_autosummary/braidio.weave.html.md#braidio.weave.TurnOverlap)
 
 #### with_(\*\*changes)
 
@@ -1612,7 +1649,7 @@ billing definition in one place if it ever needs to change.
 * **Return type:**
   [`int`](https://docs.python.org/3/builtins/functions.html#int)
 
-### braidio.build_timeline(, kinds, durations, placements=None, labels=None, source_spans=None, clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, title='', settings=None)
+### braidio.build_timeline(, kinds, durations, placements=None, labels=None, source_spans=None, clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, title='', settings=None, speakers=None, overlap=None)
 
 Assemble a [`TimelineBreakdown`](_autosummary/braidio.html.md#braidio.TimelineBreakdown) from per-beat render data (pure).
 
@@ -1620,6 +1657,9 @@ Assemble a [`TimelineBreakdown`](_autosummary/braidio.html.md#braidio.TimelineBr
 the layout treats specially — as an overlapping segment). `placements` is
 the per-beat `"sequential"`/`"under"` used by the weave; offsets are
 computed with the same [`layout_placed()`](_autosummary/braidio.weave.html.md#braidio.weave.layout_placed) the renderer uses.
+
+`speakers` (one voice id per beat, `None` for a clip/sting) and `overlap`
+place a change of speaker as an interruption — pass what the render passed.
 
 `settings` is the optional render record ([`render_settings()`](_autosummary/braidio.html.md#braidio.render_settings)) — what
 produced these durations. It stays optional so building a timeline by hand
@@ -2211,7 +2251,7 @@ treated as absent.
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
 
-### braidio.weave_timeline(items, out_path, , clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, target_lufs=-16.0, true_peak=-1.0, sample_rate=44100, bed=None)
+### braidio.weave_timeline(items, out_path, , clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, target_lufs=-16.0, true_peak=-1.0, sample_rate=44100, bed=None, overlap=None)
 
 Place items on a timeline and mix. Clips overlap neighbours by
 `clip_edge_overlap_s` (their faded edges tuck under narration); narration
@@ -2224,6 +2264,10 @@ gap in it (the bed is rendered as the regions around them — see
 [`braidio.music.bed_regions()`](_autosummary/braidio.music.html.md#braidio.music.bed_regions)); with none marked the bed is the single
 whole-span file. Falls back to a plain concat feel when
 `clip_edge_overlap_s == 0` and there’s nothing to overlay.
+
+`overlap` (a `TurnOverlap`, e.g. `WeaveConfig.turn_overlap()`)
+lays a change of speaker as an interruption and, with `duck_db`, lowers
+the outgoing voice’s talked-over tail (see `layout_placed()`).
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
@@ -3813,7 +3857,7 @@ Seconds spent per `kind` (insertion-ordered by first appearance).
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`float`](https://docs.python.org/3/builtins/functions.html#float)]
 
-### braidio.timeline.build_timeline(, kinds, durations, placements=None, labels=None, source_spans=None, clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, title='', settings=None)
+### braidio.timeline.build_timeline(, kinds, durations, placements=None, labels=None, source_spans=None, clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, title='', settings=None, speakers=None, overlap=None)
 
 Assemble a [`TimelineBreakdown`](_autosummary/braidio.timeline.html.md#braidio.timeline.TimelineBreakdown) from per-beat render data (pure).
 
@@ -3821,6 +3865,9 @@ Assemble a [`TimelineBreakdown`](_autosummary/braidio.timeline.html.md#braidio.t
 the layout treats specially — as an overlapping segment). `placements` is
 the per-beat `"sequential"`/`"under"` used by the weave; offsets are
 computed with the same [`layout_placed()`](_autosummary/braidio.weave.html.md#braidio.weave.layout_placed) the renderer uses.
+
+`speakers` (one voice id per beat, `None` for a clip/sting) and `overlap`
+place a change of speaker as an interruption — pass what the render passed.
 
 `settings` is the optional render record ([`render_settings()`](_autosummary/braidio.timeline.html.md#braidio.timeline.render_settings)) — what
 produced these durations. It stays optional so building a timeline by hand
@@ -4395,21 +4442,37 @@ This is the audio counterpart of a video timeline; it consumes plain file paths
   fade-shaped overlap; a dynamic sidechain duck (`duck_db`) is a documented
   refinement (see #21 / the research).
 
+### Module Attributes
+
+| [`MAX_OVERLAP_TURN_S`](_autosummary/braidio.weave.html.md#braidio.weave.MAX_OVERLAP_TURN_S)   | past it two voices talking over each other stop being understood (Hamilton#22).   |
+|-----------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+
 ### Functions
 
-| `duration_s`(path)                                                                               |                                                                  |
-|--------------------------------------------------------------------------------------------------|------------------------------------------------------------------|
-| [`extract_padded`](_autosummary/braidio.weave.html.md#braidio.weave.extract_padded)(asset_path, start_s, end_s, ...) | Extract `[start_s-pre_roll, end_s+post_roll]` with in/out fades. |
-| [`layout_placed`](_autosummary/braidio.weave.html.md#braidio.weave.layout_placed)(kinds, durs, placements, \*, ...) | Start offset (s) of each part, placement-aware.                  |
-| [`layout_starts`](_autosummary/braidio.weave.html.md#braidio.weave.layout_starts)(kinds, durs, \*, ...)             | Start offset (s) of each part (all sequential).                  |
-| [`weave_timeline`](_autosummary/braidio.weave.html.md#braidio.weave.weave_timeline)(items, out_path, \*[, ...])      | Place items on a timeline and mix.                               |
+| [`duck_regions`](_autosummary/braidio.weave.html.md#braidio.weave.duck_regions)(starts, durs, kinds, ...)          | Per part, the `(from_s, to_s)` span *within its own audio* to duck.    |
+|--------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
+| `duration_s`(path)                                                                               |                                                                        |
+| [`extract_padded`](_autosummary/braidio.weave.html.md#braidio.weave.extract_padded)(asset_path, start_s, end_s, ...) | Extract `[start_s-pre_roll, end_s+post_roll]` with in/out fades.       |
+| [`interrupting_boundaries`](_autosummary/braidio.weave.html.md#braidio.weave.interrupting_boundaries)(kinds, placements, ...) | The `(prev, cur)` sequential-part pairs where `cur` interrupts `prev`. |
+| [`layout_placed`](_autosummary/braidio.weave.html.md#braidio.weave.layout_placed)(kinds, durs, placements, \*, ...) | Start offset (s) of each part, placement-aware.                        |
+| [`layout_starts`](_autosummary/braidio.weave.html.md#braidio.weave.layout_starts)(kinds, durs, \*, ...)             | Start offset (s) of each part (all sequential).                        |
+| [`weave_timeline`](_autosummary/braidio.weave.html.md#braidio.weave.weave_timeline)(items, out_path, \*[, ...])      | Place items on a timeline and mix.                                     |
 
 ### Classes
 
-| [`TimelineItem`](_autosummary/braidio.weave.html.md#braidio.weave.TimelineItem)(kind, path[, placement, ...])   | One part on the weave timeline.   |
-|-----------------------------------------------------------------------------------------------|-----------------------------------|
+| [`TimelineItem`](_autosummary/braidio.weave.html.md#braidio.weave.TimelineItem)(kind, path[, placement, ...])   | One part on the weave timeline.                                       |
+|-----------------------------------------------------------------------------------------------|-----------------------------------------------------------------------|
+| [`TurnOverlap`](_autosummary/braidio.weave.html.md#braidio.weave.TurnOverlap)([max_s, jitter, duck_db, seed])  | How much the next speaker may start before the previous one finishes. |
 
-### *class* braidio.weave.TimelineItem(kind, path, placement='sequential', duck_db=0.0, spotlight=False)
+### braidio.weave.MAX_OVERLAP_TURN_S *= 0.4*
+
+past it two
+voices talking over each other stop being understood (Hamilton#22).
+
+* **Type:**
+  Upper bound of the intelligible range for a speaker interruption
+
+### *class* braidio.weave.TimelineItem(kind, path, placement='sequential', duck_db=0.0, spotlight=False, speaker=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -4424,6 +4487,50 @@ music bed).
 `spotlight` marks the part the music bed drops out for (fade-to-spotlight):
 the bed is silent over this part’s span and resumes after it. Inert without
 a bed.
+
+### *class* braidio.weave.TurnOverlap(max_s=0.0, jitter=0.3, duck_db=0.0, seed=0)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+How much the next speaker may start before the previous one finishes.
+
+The pure, render-time view of [`WeaveConfig`](_autosummary/braidio.weave_config.html.md#braidio.weave_config.WeaveConfig)’s
+`overlap_*` knobs, so the layout and the mixer take one value instead of
+four loose floats. `max_s == 0` means no interruption (the historical
+butt-join with a crossfade). It lives here, not in `weave_config`, so the
+weave stays free of the TTS/mixing imports that module carries.
+
+`jitter` shortens each overlap by a seeded random fraction up to that
+amount (so it is not mechanical); `duck_db` (≤ 0) lowers the outgoing voice
+over the overlap; `seed` makes both reproducible — `WeaveConfig` passes
+its `voice_seed`, so one seed fixes the casting and the interruptions.
+
+The overlap is measured between *file* boundaries: the layout sees each
+part’s duration only, so a beat that opens with its own lead silence
+(`Narration.lead_gap_s`) spends the overlap on that silence first — an
+incoming beat with a lead gap ≥ the overlap is not heard to interrupt.
+
+```pycon
+>>> TurnOverlap(max_s=0.5)
+Traceback (most recent call last):
+    ...
+ValueError: TurnOverlap.max_s (WeaveConfig.overlap_turn_s) must be in [0, 0.4], got 0.5
+```
+
+#### *property* is_on *: [bool](https://docs.python.org/3/builtins/functions.html#bool)*
+
+Whether a change of speaker is laid out as an interruption.
+
+### braidio.weave.duck_regions(starts, durs, kinds, placements, speakers, overlap)
+
+Per part, the `(from_s, to_s)` span *within its own audio* to duck.
+
+The tail of an outgoing voice that the next speaker talks over, at each of
+[`interrupting_boundaries()`](_autosummary/braidio.weave.html.md#braidio.weave.interrupting_boundaries); empty when `overlap.duck_db` is 0. Pure,
+from the laid-out starts.
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`float`](https://docs.python.org/3/builtins/functions.html#float), [`float`](https://docs.python.org/3/builtins/functions.html#float)]]
 
 ### braidio.weave.extract_padded(asset_path, start_s, end_s, out_path, , pre_roll_s=0.4, post_roll_s=0.3, fade_in_s=0.5, fade_out_s=0.8, min_len_s=2.2)
 
@@ -4443,7 +4550,26 @@ out (no steady body):
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### braidio.weave.layout_placed(kinds, durs, placements, , clip_edge_overlap_s, narration_crossfade_s)
+### braidio.weave.interrupting_boundaries(kinds, placements, speakers, overlap)
+
+The `(prev, cur)` sequential-part pairs where `cur` interrupts `prev`.
+
+The one definition [`layout_placed()`](_autosummary/braidio.weave.html.md#braidio.weave.layout_placed) (where to start) and
+[`duck_regions()`](_autosummary/braidio.weave.html.md#braidio.weave.duck_regions) (what to duck) share: overlap is on, both parts are
+narration (a clip or sting never interrupts nor is interrupted), both have a
+speaker, and the speakers differ.
+
+```pycon
+>>> interrupting_boundaries(
+...     ["narration", "narration", "clip", "narration", "narration"],
+...     ["sequential"] * 5, ["a", "b", None, "b", "c"], TurnOverlap(0.3))
+[(0, 1), (3, 4)]
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`int`](https://docs.python.org/3/builtins/functions.html#int)]]
+
+### braidio.weave.layout_placed(kinds, durs, placements, , clip_edge_overlap_s, narration_crossfade_s, speakers=None, overlap=None)
 
 Start offset (s) of each part, placement-aware. Pure function.
 
@@ -4453,6 +4579,26 @@ the neighbour; narration-after-narration overlaps by `narration_crossfade_s`.
 An `"under"` part starts *at* the cursor (concurrent with the next
 sequential part) and does **not** advance it — so it overlays what follows.
 Clamped ≥ 0.
+
+With `speakers` (one id per part, `None` = no speaker) and an `overlap`
+that is on, each boundary [`interrupting_boundaries()`](_autosummary/braidio.weave.html.md#braidio.weave.interrupting_boundaries) names starts up to
+`max_s` early instead (an interruption), capped by both turns’ lengths and
+shortened by a jitter drawn from `Random(f"{seed}:{i}")` — per part index,
+so editing one boundary does not reshuffle the others. Overlap is measured
+between file boundaries, lead silence included (see [`TurnOverlap`](_autosummary/braidio.weave.html.md#braidio.weave.TurnOverlap)).
+
+While overlap is on, two floors keep it to two voices at once: a part laid
+after a non-clip part never starts before the end of any earlier sequential
+part but the last, and a narration part never starts before the end of any
+earlier narration but the most recent. Neither applies with overlap off, so
+the default layout is unchanged.
+
+```pycon
+>>> layout_placed(["narration"] * 3, [2.0, 0.3, 2.0], ["sequential"] * 3,
+...     clip_edge_overlap_s=0.5, narration_crossfade_s=0.12,
+...     speakers=["a", "b", "b"], overlap=TurnOverlap(0.4, 0.0))
+[0.0, 1.7, 2.0]
+```
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]
@@ -4465,7 +4611,7 @@ Start offset (s) of each part (all sequential). Thin wrapper over
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]
 
-### braidio.weave.weave_timeline(items, out_path, , clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, target_lufs=-16.0, true_peak=-1.0, sample_rate=44100, bed=None)
+### braidio.weave.weave_timeline(items, out_path, , clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, target_lufs=-16.0, true_peak=-1.0, sample_rate=44100, bed=None, overlap=None)
 
 Place items on a timeline and mix. Clips overlap neighbours by
 `clip_edge_overlap_s` (their faded edges tuck under narration); narration
@@ -4478,6 +4624,10 @@ gap in it (the bed is rendered as the regions around them — see
 [`braidio.music.bed_regions()`](_autosummary/braidio.music.html.md#braidio.music.bed_regions)); with none marked the bed is the single
 whole-span file. Falls back to a plain concat feel when
 `clip_edge_overlap_s == 0` and there’s nothing to overlay.
+
+`overlap` (a [`TurnOverlap`](_autosummary/braidio.weave.html.md#braidio.weave.TurnOverlap), e.g. `WeaveConfig.turn_overlap()`)
+lays a change of speaker as an interruption and, with `duck_db`, lowers
+the outgoing voice’s talked-over tail (see [`layout_placed()`](_autosummary/braidio.weave.html.md#braidio.weave.layout_placed)).
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
@@ -4502,16 +4652,51 @@ The config is designed to serialize cleanly ([`WeaveConfig.to_dict()`](_autosumm
 `render-config` provenance node (#26), so a render is reproducible from its
 recorded choices.
 
+### Functions
+
+| [`pick_voice`](_autosummary/braidio.weave_config.html.md#braidio.weave_config.pick_voice)(voices, \*, seed, ordinal)   | Deterministic pool pick for beat `ordinal` (`seed` rotates the pool).                                              |
+|------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| [`speaker_key`](_autosummary/braidio.weave_config.html.md#braidio.weave_config.speaker_key)(voice)                      | The identity two parts are compared on for interruption: unset → default.                                          |
+| [`turn_overlap_of`](_autosummary/braidio.weave_config.html.md#braidio.weave_config.turn_overlap_of)(config)                 | [`WeaveConfig.turn_overlap()`](_autosummary/braidio.weave_config.html.md#braidio.weave_config.WeaveConfig.turn_overlap) for a serialized config (`to_dict()`). |
+
 ### Classes
 
 | [`WeaveConfig`](_autosummary/braidio.weave_config.html.md#braidio.weave_config.WeaveConfig)([voices, pool_label, ...])   | All editing choices for a narration+segment weave.   |
 |-------------------------------------------------------------------------------------------|------------------------------------------------------|
 
-### *class* braidio.weave_config.WeaveConfig(voices=('JBFqnCBsd6RMkjVDRZzb', ), pool_label='single', voice_seed=7, avoid_immediate_repeat=True, model_id='eleven_multilingual_v2', voice_settings=<factory>, segmentation_unit='beat', min_turn=2, max_turn=4, speed_base=1.0, speed_jitter=0.04, crossfade_s=0.12, gap_turn_s=0.0, overlap_turn_s=0.0, clip_pre_roll_s=0.4, clip_post_roll_s=0.3, clip_fade_in_s=0.5, clip_fade_out_s=0.8, clip_min_len_s=2.2, clip_edge_overlap_s=0.5, duck_db=-15.0, target_lufs=-16.0, true_peak_dbtp=-1.0, sample_rate=44100)
+### *class* braidio.weave_config.WeaveConfig(voices=('JBFqnCBsd6RMkjVDRZzb', ), pool_label='single', voice_seed=7, avoid_immediate_repeat=True, narration_voice=None, model_id='eleven_multilingual_v2', voice_settings=<factory>, segmentation_unit='beat', min_turn=2, max_turn=4, speed_base=1.0, speed_jitter=0.04, crossfade_s=0.12, gap_turn_s=0.0, overlap_turn_s=0.0, overlap_jitter=0.3, overlap_duck_db=0.0, clip_pre_roll_s=0.4, clip_post_roll_s=0.3, clip_fade_in_s=0.5, clip_fade_out_s=0.8, clip_min_len_s=2.2, clip_edge_overlap_s=0.5, duck_db=-15.0, target_lufs=-16.0, true_peak_dbtp=-1.0, sample_rate=44100)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 All editing choices for a narration+segment weave. Frozen + serializable.
+
+#### cast_voice(ordinal, , override=None)
+
+The voice beat `ordinal` speaks with: `override`, else the
+production’s `narration_voice`, else the pool pick.
+
+`None` means “the renderer’s default voice”. One definition for both
+render paths, so a script is cast (and so interrupts) the same on each.
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### *property* casts_voices *: [bool](https://docs.python.org/3/builtins/functions.html#bool)*
+
+Whether `voices` is a real casting choice, not the inert default.
+
+The default single voice means “whatever the renderer’s default is” (the
+env override included), so it must not pin a voice onto a beat.
+
+#### *classmethod* from_snapshot(snapshot)
+
+Rebuild a config from a serialized one ([`to_dict()`](_autosummary/braidio.weave_config.html.md#braidio.weave_config.WeaveConfig.to_dict)).
+
+A knob the snapshot omits takes the default (one written before the
+knob existed); a key that is not a field is ignored.
+
+* **Return type:**
+  [`WeaveConfig`](_autosummary/braidio.weave_config.html.md#braidio.weave_config.WeaveConfig)
 
 #### *property* paces_narration *: [bool](https://docs.python.org/3/builtins/functions.html#bool)*
 
@@ -4536,12 +4721,64 @@ Stable serialization for a `render-config` provenance node (#26).
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
 
+#### turn_overlap()
+
+The speaker-interruption knobs as the value the weave consumes.
+
+Its `seed` is `voice_seed`: one seed fixes casting and interruptions.
+
+* **Return type:**
+  [`TurnOverlap`](_autosummary/braidio.weave.html.md#braidio.weave.TurnOverlap)
+
 #### with_(\*\*changes)
 
 Return a copy with fields overridden (e.g. `cfg.with_(min_turn=1)`).
 
 * **Return type:**
   [`WeaveConfig`](_autosummary/braidio.weave_config.html.md#braidio.weave_config.WeaveConfig)
+
+### braidio.weave_config.pick_voice(voices, , seed, ordinal)
+
+Deterministic pool pick for beat `ordinal` (`seed` rotates the pool).
+
+```pycon
+>>> pick_voice(["a", "b", "c"], seed=1, ordinal=0)
+'b'
+>>> pick_voice([], seed=1, ordinal=0) == DEFAULT_VOICE_ID
+True
+```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### braidio.weave_config.speaker_key(voice)
+
+The identity two parts are compared on for interruption: unset → default.
+
+```pycon
+>>> speaker_key(None) == speaker_key("") == DEFAULT_VOICE_ID
+True
+```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### braidio.weave_config.turn_overlap_of(config)
+
+[`WeaveConfig.turn_overlap()`](_autosummary/braidio.weave_config.html.md#braidio.weave_config.WeaveConfig.turn_overlap) for a serialized config (`to_dict()`).
+
+A knob the mapping omits takes the [`WeaveConfig`](_autosummary/braidio.weave_config.html.md#braidio.weave_config.WeaveConfig) default, so a
+snapshot written before the knob existed means “no interruption”.
+
+```pycon
+>>> turn_overlap_of({}).is_on
+False
+>>> turn_overlap_of({"overlap_turn_s": 0.2, "voice_seed": 3}).seed
+3
+```
+
+* **Return type:**
+  [`TurnOverlap`](_autosummary/braidio.weave.html.md#braidio.weave.TurnOverlap)
 
 
 # about-this-build.html.md
@@ -4550,18 +4787,20 @@ Return a copy with fields overridden (e.g. `cfg.with_(min_turn=1)`).
 
 # About this build
 
-This documentation was built on **2026-10-26 12:45 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/8d4ec1675b1430c2cb291c22b57b97cc56ddee9a"><code>8d4ec16</code></a> on branch <code>main</code>, for **braidio 0.0.73** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-26 18:57 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/8e46899d905ee70b61ddb07a33082046950dcb33"><code>8e46899</code></a> on branch <code>main</code>, for **braidio 0.0.76** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.76) is ahead of the latest release on PyPI (0.0.75): these docs describe unreleased code.
 
 ## Source
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/8d4ec1675b1430c2cb291c22b57b97cc56ddee9a"><code>8d4ec1675b1430c2cb291c22b57b97cc56ddee9a</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/8e46899d905ee70b61ddb07a33082046950dcb33"><code>8e46899d905ee70b61ddb07a33082046950dcb33</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | none                                                                                                                                                    |
+| Tags at this commit | <code>0.0.76</code>                                                                                                                                     |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -4570,9 +4809,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/40324345553">40324345553</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/40381551867">40381551867</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>8d4ec1675b1430c2cb291c22b57b97cc56ddee9a</code> (in the history of the built commit) |
+| Event commit | <code>806515d7be530fa78798238fb0cdc2ef04e0f262</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -4597,13 +4836,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.73/">0.0.73</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/braidio/0.0.75/">0.0.75</a>, older than the documented version (0.0.76).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 8d4ec1675b1430c2cb291c22b57b97cc56ddee9a
+git checkout 8e46899d905ee70b61ddb07a33082046950dcb33
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

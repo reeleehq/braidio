@@ -4,12 +4,20 @@ braidio.weave
 .. automodule:: braidio.weave
 
    
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      MAX_OVERLAP_TURN_S
+   
    .. rubric:: Functions
 
    .. autosummary::
    
+      duck_regions
       duration_s
       extract_padded
+      interrupting_boundaries
       layout_placed
       layout_starts
       weave_timeline
@@ -19,4 +27,5 @@ braidio.weave
    .. autosummary::
    
       TimelineItem
+      TurnOverlap
    

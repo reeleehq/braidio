@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=1e158f99"></script>
+    <script src="../../_static/documentation_options.js?v=461c1127"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.73" />
+  <meta name="docsearch:version" content="0.0.76" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -733,12 +733,16 @@ window.runMermaid = runMermaid;</script>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">asdict</span><span class="p">,</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span><span class="p">,</span> <span class="n">replace</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Mapping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">asdict</span><span class="p">,</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span><span class="p">,</span> <span class="n">fields</span><span class="p">,</span> <span class="n">replace</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.multivoice</span><span class="w"> </span><span class="kn">import</span> <span class="n">POOL_4</span><span class="p">,</span> <span class="n">POOL_MANY</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.pacing</span><span class="w"> </span><span class="kn">import</span> <span class="n">SEGMENTATION_UNITS</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">braidio.tts</span><span class="w"> </span><span class="kn">import</span> <span class="n">DEFAULT_VOICE_ID</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">braidio.tts</span><span class="w"> </span><span class="kn">import</span> <span class="n">DEFAULT_VOICE_ID</span><span class="p">,</span> <span class="n">resolve_voice_id</span>
+
+<span class="c1"># The interruption value object lives with the layout that consumes it (so the</span>
+<span class="c1"># weave stays free of this module's TTS imports); re-exported here for callers.</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">braidio.weave</span><span class="w"> </span><span class="kn">import</span> <span class="n">MAX_OVERLAP_TURN_S</span><span class="p">,</span> <span class="n">TurnOverlap</span>  <span class="c1"># noqa: F401</span>
 
 <span class="c1"># Base narration settings. Shaped for eleven_v3, which is the default model:</span>
 <span class="c1"># it honours `stability` and silently ignores `style` / `similarity_boost` /</span>
@@ -761,6 +765,10 @@ window.runMermaid = runMermaid;</script>
     <span class="n">pool_label</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"single"</span>
     <span class="n">voice_seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">7</span>
     <span class="n">avoid_immediate_repeat</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="c1"># The voice narration speaks with when a beat names none — a production</span>
+    <span class="c1"># decision that outranks the pool (the fast path's ``voice_id``). ``None`` =</span>
+    <span class="c1"># unset: left out of ``to_dict`` so a config written before it is unchanged.</span>
+    <span class="n">narration_voice</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="c1"># --- Delivery (TTS) -----------------------------------------------------</span>
     <span class="n">model_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"eleven_multilingual_v2"</span>
@@ -786,7 +794,13 @@ window.runMermaid = runMermaid;</script>
     <span class="n">crossfade_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.12</span>
     <span class="n">gap_turn_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>  <span class="c1"># silence at a *sentence* boundary between turns;</span>
     <span class="c1"># other boundaries scale off it (braidio.pacing.BOUNDARIES)</span>
-    <span class="n">overlap_turn_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>  <span class="c1"># speaker interruption (#22 — not yet rendered)</span>
+    <span class="c1"># Speaker interruption (Hamilton#22): at a *change of speaker* between</span>
+    <span class="c1"># narration parts, the next voice starts up to this much before the previous</span>
+    <span class="c1"># one ends (0 = off; at most MAX_OVERLAP_TURN_S). Rendered by the weave</span>
+    <span class="c1"># (``braidio.weave.layout_placed``), so it engages the mixed path.</span>
+    <span class="n">overlap_turn_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">overlap_jitter</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.3</span>  <span class="c1"># each overlap is shortened by up to this fraction</span>
+    <span class="n">overlap_duck_db</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>  <span class="c1"># lower the outgoing voice over the overlap (≤ 0)</span>
 
     <span class="c1"># --- Clip weaving (#21) -------------------------------------------------</span>
     <span class="n">clip_pre_roll_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.4</span>  <span class="c1"># extend extraction before the words</span>
@@ -809,6 +823,7 @@ window.runMermaid = runMermaid;</script>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"WeaveConfig.voices must have at least one voice id"</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="mi">1</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_turn</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_turn</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"require 1 &lt;= min_turn &lt;= max_turn"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">turn_overlap</span><span class="p">()</span>  <span class="c1"># TurnOverlap owns the overlap_* rules</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">segmentation_unit</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">SEGMENTATION_UNITS</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">"WeaveConfig.segmentation_unit must be one of </span><span class="si">{</span><span class="n">SEGMENTATION_UNITS</span><span class="si">}</span><span class="s2">, "</span>
@@ -836,6 +851,65 @@ window.runMermaid = runMermaid;</script>
     <span class="k">def</span><span class="w"> </span><span class="nf">is_multivoice</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
         <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">voices</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span>
 
+<div class="viewcode-block" id="WeaveConfig.turn_overlap">
+<a class="viewcode-back" href="../../_autosummary/braidio.weave_config.html#braidio.WeaveConfig.turn_overlap">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">turn_overlap</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TurnOverlap</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The speaker-interruption knobs as the value the weave consumes.</span>
+
+<span class="sd">        Its ``seed`` is ``voice_seed``: one seed fixes casting and interruptions.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="n">TurnOverlap</span><span class="p">(</span>
+            <span class="n">max_s</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">overlap_turn_s</span><span class="p">,</span>
+            <span class="n">jitter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">overlap_jitter</span><span class="p">,</span>
+            <span class="n">duck_db</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">overlap_duck_db</span><span class="p">,</span>
+            <span class="n">seed</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">voice_seed</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">casts_voices</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Whether ``voices`` is a real casting choice, not the inert default.</span>
+
+<span class="sd">        The default single voice means "whatever the renderer's default is" (the</span>
+<span class="sd">        env override included), so it must not pin a voice onto a beat.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">voices</span><span class="p">)</span> <span class="o">!=</span> <span class="p">(</span><span class="n">DEFAULT_VOICE_ID</span><span class="p">,)</span>
+
+<div class="viewcode-block" id="WeaveConfig.cast_voice">
+<a class="viewcode-back" href="../../_autosummary/braidio.weave_config.html#braidio.WeaveConfig.cast_voice">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cast_voice</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ordinal</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">override</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The voice beat ``ordinal`` speaks with: ``override``, else the</span>
+<span class="sd">        production's ``narration_voice``, else the pool pick.</span>
+
+<span class="sd">        ``None`` means "the renderer's default voice". One definition for both</span>
+<span class="sd">        render paths, so a script is cast (and so interrupts) the same on each.</span>
+<span class="sd">        """</span>
+        <span class="n">voice</span> <span class="o">=</span> <span class="n">override</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">narration_voice</span>
+        <span class="k">if</span> <span class="n">voice</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">voice</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">casts_voices</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">pick_voice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">voices</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">voice_seed</span><span class="p">,</span> <span class="n">ordinal</span><span class="o">=</span><span class="n">ordinal</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="WeaveConfig.from_snapshot">
+<a class="viewcode-back" href="../../_autosummary/braidio.weave_config.html#braidio.WeaveConfig.from_snapshot">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_snapshot</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">snapshot</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">"WeaveConfig"</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Rebuild a config from a serialized one (:meth:`to_dict`).</span>
+
+<span class="sd">        A knob the snapshot omits takes the default (one written before the</span>
+<span class="sd">        knob existed); a key that is not a field is ignored.</span>
+<span class="sd">        """</span>
+        <span class="n">known</span> <span class="o">=</span> <span class="p">{</span><span class="n">f</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">(</span><span class="bp">cls</span><span class="p">)}</span>
+        <span class="n">kw</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">known</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">kw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"voices"</span><span class="p">):</span>
+            <span class="n">kw</span><span class="p">[</span><span class="s2">"voices"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">kw</span><span class="p">[</span><span class="s2">"voices"</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># absent, empty or null: the default pool, as the graph always read it</span>
+            <span class="n">kw</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"voices"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="o">**</span><span class="n">kw</span><span class="p">)</span></div>
+
+
 <div class="viewcode-block" id="WeaveConfig.with_">
 <a class="viewcode-back" href="../../_autosummary/braidio.weave_config.html#braidio.WeaveConfig.with_">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">with_</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">changes</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"WeaveConfig"</span><span class="p">:</span>
@@ -850,8 +924,55 @@ window.runMermaid = runMermaid;</script>
         <span class="n">d</span> <span class="o">=</span> <span class="n">asdict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="n">d</span><span class="p">[</span><span class="s2">"voices"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">voices</span><span class="p">)</span>
         <span class="n">d</span><span class="p">[</span><span class="s2">"voice_settings"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">voice_settings</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">d</span><span class="p">[</span><span class="s2">"narration_voice"</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># the absence rule: unset writes nothing</span>
+            <span class="k">del</span> <span class="n">d</span><span class="p">[</span><span class="s2">"narration_voice"</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">d</span></div>
 </div>
+
+
+
+<div class="viewcode-block" id="pick_voice">
+<a class="viewcode-back" href="../../_autosummary/braidio.weave_config.html#braidio.pick_voice">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">pick_voice</span><span class="p">(</span><span class="n">voices</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">ordinal</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Deterministic pool pick for beat ``ordinal`` (``seed`` rotates the pool).</span>
+
+<span class="sd">    &gt;&gt;&gt; pick_voice(["a", "b", "c"], seed=1, ordinal=0)</span>
+<span class="sd">    'b'</span>
+<span class="sd">    &gt;&gt;&gt; pick_voice([], seed=1, ordinal=0) == DEFAULT_VOICE_ID</span>
+<span class="sd">    True</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">voices</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">DEFAULT_VOICE_ID</span>
+    <span class="k">return</span> <span class="n">voices</span><span class="p">[(</span><span class="n">seed</span> <span class="o">+</span> <span class="n">ordinal</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">voices</span><span class="p">)]</span></div>
+
+
+
+<div class="viewcode-block" id="speaker_key">
+<a class="viewcode-back" href="../../_autosummary/braidio.weave_config.html#braidio.speaker_key">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">speaker_key</span><span class="p">(</span><span class="n">voice</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The identity two parts are compared on for interruption: unset → default.</span>
+
+<span class="sd">    &gt;&gt;&gt; speaker_key(None) == speaker_key("") == DEFAULT_VOICE_ID</span>
+<span class="sd">    True</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">resolve_voice_id</span><span class="p">(</span><span class="n">voice</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">)</span>  <span class="c1"># unset: the env voice, else the default</span></div>
+
+
+
+<div class="viewcode-block" id="turn_overlap_of">
+<a class="viewcode-back" href="../../_autosummary/braidio.weave_config.html#braidio.turn_overlap_of">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">turn_overlap_of</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">TurnOverlap</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">""":meth:`WeaveConfig.turn_overlap` for a serialized config (``to_dict()``).</span>
+
+<span class="sd">    A knob the mapping omits takes the :class:`WeaveConfig` default, so a</span>
+<span class="sd">    snapshot written before the knob existed means "no interruption".</span>
+
+<span class="sd">    &gt;&gt;&gt; turn_overlap_of({}).is_on</span>
+<span class="sd">    False</span>
+<span class="sd">    &gt;&gt;&gt; turn_overlap_of({"overlap_turn_s": 0.2, "voice_seed": 3}).seed</span>
+<span class="sd">    3</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">WeaveConfig</span><span class="o">.</span><span class="n">from_snapshot</span><span class="p">(</span><span class="n">config</span><span class="p">)</span><span class="o">.</span><span class="n">turn_overlap</span><span class="p">()</span></div>
 
 
 

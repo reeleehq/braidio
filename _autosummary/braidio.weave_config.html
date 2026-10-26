@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=1e158f99"></script>
+    <script src="../_static/documentation_options.js?v=461c1127"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.73" />
+  <meta name="docsearch:version" content="0.0.76" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -424,6 +424,21 @@ generic voice pools/ids only.</p>
 <p>The config is designed to serialize cleanly (<a class="reference internal" href="#braidio.weave_config.WeaveConfig.to_dict" title="braidio.weave_config.WeaveConfig.to_dict"><code class="xref py py-meth docutils literal notranslate"><span class="pre">WeaveConfig.to_dict()</span></code></a>) into a
 <code class="docutils literal notranslate"><span class="pre">render-config</span></code> provenance node (#26), so a render is reproducible from its
 recorded choices.</p>
+<p class="rubric">Functions</p>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.weave_config.pick_voice" title="braidio.weave_config.pick_voice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pick_voice</span></code></a>(voices, *, seed, ordinal)</p></td>
+<td><p>Deterministic pool pick for beat <code class="docutils literal notranslate"><span class="pre">ordinal</span></code> (<code class="docutils literal notranslate"><span class="pre">seed</span></code> rotates the pool).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.weave_config.speaker_key" title="braidio.weave_config.speaker_key"><code class="xref py py-obj docutils literal notranslate"><span class="pre">speaker_key</span></code></a>(voice)</p></td>
+<td><p>The identity two parts are compared on for interruption: unset → default.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.weave_config.turn_overlap_of" title="braidio.weave_config.turn_overlap_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">turn_overlap_of</span></code></a>(config)</p></td>
+<td><p><a class="reference internal" href="#braidio.weave_config.WeaveConfig.turn_overlap" title="braidio.weave_config.WeaveConfig.turn_overlap"><code class="xref py py-meth docutils literal notranslate"><span class="pre">WeaveConfig.turn_overlap()</span></code></a> for a serialized config (<code class="docutils literal notranslate"><span class="pre">to_dict()</span></code>).</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 <p class="rubric">Classes</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
@@ -435,11 +450,46 @@ recorded choices.</p>
 </div>
 <dl class="py class">
 <dt class="sig sig-object py" id="braidio.weave_config.WeaveConfig">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">braidio.weave_config.</span></span><span class="sig-name descname"><span class="pre">WeaveConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">voices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">('JBFqnCBsd6RMkjVDRZzb'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pool_label</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'single'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">7</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">avoid_immediate_repeat</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'eleven_multilingual_v2'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_settings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">segmentation_unit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'beat'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_turn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_turn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">speed_base</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">speed_jitter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.04</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">crossfade_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gap_turn_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overlap_turn_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clip_pre_roll_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clip_post_roll_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clip_fade_in_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clip_fade_out_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clip_min_len_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clip_edge_overlap_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duck_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-15.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_lufs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-16.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">true_peak_dbtp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">44100</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/weave_config.html#WeaveConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.weave_config.WeaveConfig" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">braidio.weave_config.</span></span><span class="sig-name descname"><span class="pre">WeaveConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">voices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">('JBFqnCBsd6RMkjVDRZzb'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pool_label</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'single'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">7</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">avoid_immediate_repeat</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">narration_voice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'eleven_multilingual_v2'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_settings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">segmentation_unit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'beat'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_turn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_turn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">speed_base</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">speed_jitter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.04</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">crossfade_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gap_turn_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overlap_turn_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overlap_jitter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overlap_duck_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clip_pre_roll_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clip_post_roll_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clip_fade_in_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clip_fade_out_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clip_min_len_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clip_edge_overlap_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duck_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-15.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_lufs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-16.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">true_peak_dbtp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">44100</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/weave_config.html#WeaveConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.weave_config.WeaveConfig" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>All editing choices for a narration+segment weave. Frozen + serializable.</p>
 <dl class="field-list simple">
 </dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="braidio.weave_config.WeaveConfig.cast_voice">
+<span class="sig-name descname"><span class="pre">cast_voice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ordinal</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">override</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/weave_config.html#WeaveConfig.cast_voice"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.weave_config.WeaveConfig.cast_voice" title="Link to this definition">#</a></dt>
+<dd><p>The voice beat <code class="docutils literal notranslate"><span class="pre">ordinal</span></code> speaks with: <code class="docutils literal notranslate"><span class="pre">override</span></code>, else the
+production’s <code class="docutils literal notranslate"><span class="pre">narration_voice</span></code>, else the pool pick.</p>
+<p><code class="docutils literal notranslate"><span class="pre">None</span></code> means “the renderer’s default voice”. One definition for both
+render paths, so a script is cast (and so interrupts) the same on each.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="braidio.weave_config.WeaveConfig.casts_voices">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">casts_voices</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><a class="headerlink" href="#braidio.weave_config.WeaveConfig.casts_voices" title="Link to this definition">#</a></dt>
+<dd><p>Whether <code class="docutils literal notranslate"><span class="pre">voices</span></code> is a real casting choice, not the inert default.</p>
+<p>The default single voice means “whatever the renderer’s default is” (the
+env override included), so it must not pin a voice onto a beat.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="braidio.weave_config.WeaveConfig.from_snapshot">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_snapshot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">snapshot</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/weave_config.html#WeaveConfig.from_snapshot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.weave_config.WeaveConfig.from_snapshot" title="Link to this definition">#</a></dt>
+<dd><p>Rebuild a config from a serialized one (<a class="reference internal" href="#braidio.weave_config.WeaveConfig.to_dict" title="braidio.weave_config.WeaveConfig.to_dict"><code class="xref py py-meth docutils literal notranslate"><span class="pre">to_dict()</span></code></a>).</p>
+<p>A knob the snapshot omits takes the default (one written before the
+knob existed); a key that is not a field is ignored.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#braidio.weave_config.WeaveConfig" title="braidio.weave_config.WeaveConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">WeaveConfig</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="braidio.weave_config.WeaveConfig.paces_narration">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">paces_narration</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><a class="headerlink" href="#braidio.weave_config.WeaveConfig.paces_narration" title="Link to this definition">#</a></dt>
@@ -468,6 +518,18 @@ path. Opt in by setting <code class="docutils literal notranslate"><span class="
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="braidio.weave_config.WeaveConfig.turn_overlap">
+<span class="sig-name descname"><span class="pre">turn_overlap</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/weave_config.html#WeaveConfig.turn_overlap"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.weave_config.WeaveConfig.turn_overlap" title="Link to this definition">#</a></dt>
+<dd><p>The speaker-interruption knobs as the value the weave consumes.</p>
+<p>Its <code class="docutils literal notranslate"><span class="pre">seed</span></code> is <code class="docutils literal notranslate"><span class="pre">voice_seed</span></code>: one seed fixes casting and interruptions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="braidio.weave.html#braidio.weave.TurnOverlap" title="braidio.weave.TurnOverlap"><code class="xref py py-class docutils literal notranslate"><span class="pre">TurnOverlap</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="braidio.weave_config.WeaveConfig.with_">
 <span class="sig-name descname"><span class="pre">with_</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">changes</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/weave_config.html#WeaveConfig.with_"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.weave_config.WeaveConfig.with_" title="Link to this definition">#</a></dt>
 <dd><p>Return a copy with fields overridden (e.g. <code class="docutils literal notranslate"><span class="pre">cfg.with_(min_turn=1)</span></code>).</p>
@@ -478,6 +540,57 @@ path. Opt in by setting <code class="docutils literal notranslate"><span class="
 </dl>
 </dd></dl>
 
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="braidio.weave_config.pick_voice">
+<span class="sig-prename descclassname"><span class="pre">braidio.weave_config.</span></span><span class="sig-name descname"><span class="pre">pick_voice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">voices</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ordinal</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/weave_config.html#pick_voice"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.weave_config.pick_voice" title="Link to this definition">#</a></dt>
+<dd><p>Deterministic pool pick for beat <code class="docutils literal notranslate"><span class="pre">ordinal</span></code> (<code class="docutils literal notranslate"><span class="pre">seed</span></code> rotates the pool).</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">pick_voice</span><span class="p">([</span><span class="s2">"a"</span><span class="p">,</span> <span class="s2">"b"</span><span class="p">,</span> <span class="s2">"c"</span><span class="p">],</span> <span class="n">seed</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">ordinal</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="go">'b'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pick_voice</span><span class="p">([],</span> <span class="n">seed</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">ordinal</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="n">DEFAULT_VOICE_ID</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="braidio.weave_config.speaker_key">
+<span class="sig-prename descclassname"><span class="pre">braidio.weave_config.</span></span><span class="sig-name descname"><span class="pre">speaker_key</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">voice</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/weave_config.html#speaker_key"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.weave_config.speaker_key" title="Link to this definition">#</a></dt>
+<dd><p>The identity two parts are compared on for interruption: unset → default.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">speaker_key</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span> <span class="o">==</span> <span class="n">speaker_key</span><span class="p">(</span><span class="s2">""</span><span class="p">)</span> <span class="o">==</span> <span class="n">DEFAULT_VOICE_ID</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="braidio.weave_config.turn_overlap_of">
+<span class="sig-prename descclassname"><span class="pre">braidio.weave_config.</span></span><span class="sig-name descname"><span class="pre">turn_overlap_of</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/weave_config.html#turn_overlap_of"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.weave_config.turn_overlap_of" title="Link to this definition">#</a></dt>
+<dd><p><a class="reference internal" href="#braidio.weave_config.WeaveConfig.turn_overlap" title="braidio.weave_config.WeaveConfig.turn_overlap"><code class="xref py py-meth docutils literal notranslate"><span class="pre">WeaveConfig.turn_overlap()</span></code></a> for a serialized config (<code class="docutils literal notranslate"><span class="pre">to_dict()</span></code>).</p>
+<p>A knob the mapping omits takes the <a class="reference internal" href="#braidio.weave_config.WeaveConfig" title="braidio.weave_config.WeaveConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">WeaveConfig</span></code></a> default, so a
+snapshot written before the knob existed means “no interruption”.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">turn_overlap_of</span><span class="p">({})</span><span class="o">.</span><span class="n">is_on</span>
+<span class="go">False</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">turn_overlap_of</span><span class="p">({</span><span class="s2">"overlap_turn_s"</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span> <span class="s2">"voice_seed"</span><span class="p">:</span> <span class="mi">3</span><span class="p">})</span><span class="o">.</span><span class="n">seed</span>
+<span class="go">3</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="braidio.weave.html#braidio.weave.TurnOverlap" title="braidio.weave.TurnOverlap"><code class="xref py py-class docutils literal notranslate"><span class="pre">TurnOverlap</span></code></a></span></p>
+</dd>
+</dl>
 </dd></dl>
 
 </section>
@@ -530,11 +643,18 @@ path. Opt in by setting <code class="docutils literal notranslate"><span class="
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.weave_config.WeaveConfig"><code class="docutils literal notranslate"><span class="pre">WeaveConfig</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.weave_config.WeaveConfig.cast_voice"><code class="docutils literal notranslate"><span class="pre">WeaveConfig.cast_voice()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.weave_config.WeaveConfig.casts_voices"><code class="docutils literal notranslate"><span class="pre">WeaveConfig.casts_voices</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.weave_config.WeaveConfig.from_snapshot"><code class="docutils literal notranslate"><span class="pre">WeaveConfig.from_snapshot()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.weave_config.WeaveConfig.paces_narration"><code class="docutils literal notranslate"><span class="pre">WeaveConfig.paces_narration</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.weave_config.WeaveConfig.to_dict"><code class="docutils literal notranslate"><span class="pre">WeaveConfig.to_dict()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.weave_config.WeaveConfig.turn_overlap"><code class="docutils literal notranslate"><span class="pre">WeaveConfig.turn_overlap()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.weave_config.WeaveConfig.with_"><code class="docutils literal notranslate"><span class="pre">WeaveConfig.with_()</span></code></a></li>
 </ul>
 </li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.weave_config.pick_voice"><code class="docutils literal notranslate"><span class="pre">pick_voice()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.weave_config.speaker_key"><code class="docutils literal notranslate"><span class="pre">speaker_key()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.weave_config.turn_overlap_of"><code class="docutils literal notranslate"><span class="pre">turn_overlap_of()</span></code></a></li>
 </ul>
   </nav></div>
 

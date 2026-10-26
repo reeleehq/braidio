@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=1e158f99"></script>
+    <script src="../../_static/documentation_options.js?v=461c1127"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.73" />
+  <meta name="docsearch:version" content="0.0.76" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -743,7 +743,7 @@ window.runMermaid = runMermaid;</script>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Mapping</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">braidio.weave</span><span class="w"> </span><span class="kn">import</span> <span class="n">layout_placed</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">braidio.weave</span><span class="w"> </span><span class="kn">import</span> <span class="n">TurnOverlap</span><span class="p">,</span> <span class="n">layout_placed</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>  <span class="c1"># pragma: no cover - typing only</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.delivery</span><span class="w"> </span><span class="kn">import</span> <span class="n">Delivery</span>
@@ -937,6 +937,8 @@ window.runMermaid = runMermaid;</script>
     <span class="n">narration_crossfade_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.12</span><span class="p">,</span>
     <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span>
     <span class="n">settings</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">speakers</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">overlap</span><span class="p">:</span> <span class="n">TurnOverlap</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TimelineBreakdown</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Assemble a :class:`TimelineBreakdown` from per-beat render data (pure).</span>
 
@@ -944,6 +946,9 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">    the layout treats specially — as an overlapping segment). ``placements`` is</span>
 <span class="sd">    the per-beat ``"sequential"``/``"under"`` used by the weave; offsets are</span>
 <span class="sd">    computed with the same :func:`~braidio.weave.layout_placed` the renderer uses.</span>
+
+<span class="sd">    ``speakers`` (one voice id per beat, ``None`` for a clip/sting) and ``overlap``</span>
+<span class="sd">    place a change of speaker as an interruption — pass what the render passed.</span>
 
 <span class="sd">    ``settings`` is the optional render record (:func:`render_settings`) — what</span>
 <span class="sd">    produced these durations. It stays optional so building a timeline by hand</span>
@@ -961,6 +966,8 @@ window.runMermaid = runMermaid;</script>
         <span class="n">placements</span><span class="p">,</span>
         <span class="n">clip_edge_overlap_s</span><span class="o">=</span><span class="n">clip_edge_overlap_s</span><span class="p">,</span>
         <span class="n">narration_crossfade_s</span><span class="o">=</span><span class="n">narration_crossfade_s</span><span class="p">,</span>
+        <span class="n">speakers</span><span class="o">=</span><span class="n">speakers</span><span class="p">,</span>
+        <span class="n">overlap</span><span class="o">=</span><span class="n">overlap</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">spans</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
         <span class="n">BeatSpan</span><span class="p">(</span>

@@ -21,7 +21,9 @@ audio-affecting input). ``None`` falls back to the process environment
 from __future__ import annotations
 
 import json
+import shutil
 import uuid
+from dataclasses import asdict
 from pathlib import Path
 
 from falaw import Plan
@@ -37,12 +39,16 @@ from braidio.bodies._render_nodes import (
     NarrationRenderBodyV1,
 )
 from braidio.cost import tts_cost_usd
+from braidio.delivery import model_supports_speed
+from braidio.render import narrate_turns, plan_beat_turns
 from braidio.tts import DEFAULT_MODEL_ID, DEFAULT_VOICE_ID
+from braidio.weave_config import WeaveConfig
 from braidio.transforms._common import (
     TIER_NARRATIVE_BEAT,
     TIER_VOICE_ASSIGNMENT,
     TIER_WEAVE_CONFIG,
     TIER_NARRATION_RENDER,
+    beat_ordinal,
     child_at_tier,
     singleton,
     graph_index,
@@ -61,7 +67,7 @@ NAME = "narration_render.tts"
 
 
 def _narration_cache_key(
-    transform, text: str, voice_id: str, model_id: str, settings
+    transform, text: str, voice_id: str, model_id: str, settings, turns=()
 ) -> str:
     """The output identity for one TTS render — nw's shared derivation.
 
@@ -71,22 +77,46 @@ def _narration_cache_key(
     bump — which is then the first salt (nw#54; drift in the previous
     private ``mixing._cache`` import would have silently changed cache keys
     on PAID calls).
+
+    ``turns`` is the paced plan (:func:`_beat_turns`): what is synthesized when
+    the config paces narration. Unpaced, it is empty and adds nothing, so an
+    unpaced project keeps its keys.
     """
     from nw.transforms import cache_key as transform_cache_key
 
-    return transform_cache_key(
-        transform,
+    parts = [
         "narration",
         text,
         voice_id,
         model_id,
         json.dumps(settings or {}, sort_keys=True),
-    )
+    ]
+    if turns:
+        parts.append(json.dumps([asdict(t) for t in turns], sort_keys=True))
+    return transform_cache_key(transform, *parts)
 
 
 def _beat_settings(beat, config: dict) -> dict:
     """The beat's own voice settings, else the config's — the fast path's rule."""
     return beat.body.get("voice_settings") or config.get("voice_settings", {})
+
+
+def _beat_turns(beat, config: dict, *, model_id: str, settings: dict) -> list:
+    """The beat's paced turns — ``[]`` when the config does not pace narration.
+
+    The fast path's planner (:func:`braidio.render.plan_beat_turns`), so a
+    ``segmentation_unit`` other than ``"beat"`` cuts a beat the same way on both
+    paths. Seeded by the beat's script position (``beat_id`` here,
+    ``PlannedBeat.from_index`` on the fast path), which a dropped beat leaves
+    unchanged.
+    """
+    return plan_beat_turns(
+        beat.body.get("text", ""),
+        config=WeaveConfig.from_snapshot(config),
+        supports_speed=model_supports_speed(model_id),
+        settings=settings,
+        seed_offset=beat_ordinal(beat),
+    )
 
 
 @register_transform(NAME)
@@ -108,8 +138,9 @@ class NarrationRenderTTS(BaseTransform):
         voice_id = va.body.get("voice_id") or DEFAULT_VOICE_ID
         model_id = config.get("model_id", DEFAULT_MODEL_ID)
         settings = _beat_settings(beat, config)
+        turns = _beat_turns(beat, config, model_id=model_id, settings=settings)
         cache_key = _narration_cache_key(
-            self, beat.body.get("text", ""), voice_id, model_id, settings
+            self, beat.body.get("text", ""), voice_id, model_id, settings, turns
         )
 
         full = TransformInputs(
@@ -180,18 +211,46 @@ class NarrationRenderTTS(BaseTransform):
         out_path.parent.mkdir(parents=True, exist_ok=True)
         # was_cached: mixing served this from its on-disk cache (no ElevenLabs call
         # = $0 real spend) even though our graph cache missed — braidio#8.
-        _, was_cached = braidio.narrate(
-            text,
-            out_path,
-            # The caller's key, if the driver handed one in (nw's `secrets=`
-            # seam; thorwhalen/braidio#58) — else None, the process env. Never
-            # persisted: not in the node, not in the cache_key.
-            api_key=elevenlabs_key(secrets),
-            voice_id=va.body.get("voice_id") or DEFAULT_VOICE_ID,
-            model_id=model_id,
-            voice_settings=_beat_settings(beat, config),
-            return_cache_status=True,
-        )
+        voice_id = va.body.get("voice_id") or DEFAULT_VOICE_ID
+        settings = _beat_settings(beat, config)
+        # The caller's key, if the driver handed one in (nw's `secrets=` seam;
+        # thorwhalen/braidio#58) — else None, the process env. Never persisted:
+        # not in the node, not in the cache_key.
+        api_key = elevenlabs_key(secrets)
+        turns = _beat_turns(beat, config, model_id=model_id, settings=settings)
+        if turns:  # paced: one call per turn, real silence between (braidio#118)
+            cached: list[bool] = []
+
+            def synthesize(turn_text, turn_path, **kwargs):
+                path, hit = braidio.narrate(
+                    turn_text, turn_path, return_cache_status=True, **kwargs
+                )
+                cached.append(hit)
+                return path
+
+            paced = narrate_turns(
+                turns,
+                stem=out_path.with_suffix(""),
+                api_key=api_key,
+                voice_id=voice_id,
+                model_id=model_id,
+                voice_settings=settings,
+                narrate_fn=synthesize,
+            )
+            shutil.move(paced, out_path)
+            for leftover in out_path.parent.glob(f"{skel.id}-turn*"):
+                leftover.unlink()  # per-turn parts and gaps: only the mix is a node
+            was_cached = all(cached)
+        else:
+            _, was_cached = braidio.narrate(
+                text,
+                out_path,
+                api_key=api_key,
+                voice_id=voice_id,
+                model_id=model_id,
+                voice_settings=settings,
+                return_cache_status=True,
+            )
         duration = safe_duration(out_path)
         artifact = audio_artifact(
             out_path,

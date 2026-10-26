@@ -404,3 +404,48 @@ def test_declaring_the_default_profile_renders_the_same_members(
         profile=braidio.Profile.PERSONAL,
     )
     assert undeclared.body["profile"] == declared.body["profile"] == "personal"
+
+
+@needs_ffmpeg
+def test_paced_seed_is_the_script_position_on_both_paths(
+    project, source, tone_narration, tmp_path, monkeypatch
+):
+    """A dropped segment shifts plan positions, not script positions: both paths
+    must seed pacing on the latter (braidio#118)."""
+    import braidio.render as render_mod
+    import braidio.transforms._narration as narration_mod
+
+    seeds: dict[str, list[int]] = {"fast": [], "graph": []}
+
+    def spy(name, real):
+        def planner(*args, **kw):
+            seeds[name].append(kw["seed_offset"])
+            return real(*args, **kw)
+
+        return planner
+
+    def fast_narrate(text, out, **kw):  # the fast path calls render's own `narrate`
+        return tone(Path(out), 220, 1.0)
+
+    monkeypatch.setattr(render_mod, "narrate", fast_narrate)
+    real = render_mod.plan_beat_turns
+    monkeypatch.setattr(render_mod, "plan_beat_turns", spy("fast", real))
+    monkeypatch.setattr(narration_mod, "plan_beat_turns", spy("graph", real))
+    script = _personal_only_script()
+    cfg = braidio.WeaveConfig(segmentation_unit="sentence", min_turn=1, max_turn=3)
+
+    braidio.render_production(
+        script,
+        source=source,
+        config=cfg,
+        profile=braidio.Profile.PUBLISHED,
+        out_path=tmp_path / "fast.mp3",
+        tts_dir=tmp_path / "tts",
+        clips_dir=tmp_path / "clips",
+    )
+    braidio.weave_project(
+        project, script, source=source, profile=braidio.Profile.PUBLISHED, config=cfg
+    )
+
+    # (the graph plans in `plan` and again in `execute`: one seed per beat)
+    assert seeds["fast"] == sorted(set(seeds["graph"])) == [0, 2]

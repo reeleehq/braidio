@@ -16,6 +16,19 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 
+#: Models that ignore ``voice_settings["speed"]`` (eleven v3 has no speed control).
+SPEEDLESS_MODELS = frozenset({"eleven_v3"})
+
+
+def model_supports_speed(model_id: str) -> bool:
+    """Whether ``model_id`` honors ``voice_settings["speed"]``.
+
+    >>> model_supports_speed("eleven_v3"), model_supports_speed("eleven_multilingual_v2")
+    (False, True)
+    """
+    return model_id not in SPEEDLESS_MODELS
+
+
 @dataclass(frozen=True)
 class Delivery:
     """A named narration delivery: which model + voice settings to synthesize with."""

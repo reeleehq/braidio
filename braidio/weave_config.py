@@ -170,8 +170,10 @@ class WeaveConfig:
         """
         known = {f.name for f in fields(cls)}
         kw = {k: v for k, v in snapshot.items() if k in known}
-        if "voices" in kw:
+        if kw.get("voices"):
             kw["voices"] = tuple(kw["voices"])
+        else:  # absent, empty or null: the default pool, as the graph always read it
+            kw.pop("voices", None)
         return cls(**kw)
 
     def with_(self, **changes: Any) -> "WeaveConfig":

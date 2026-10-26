@@ -330,8 +330,7 @@ def _plan_nodes(
                             text=planned.content,
                             style=getattr(orig, "style", None),
                             voice=getattr(orig, "voice", None),
-                        ),
-                        omit_if_none=("voice",),
+                        )
                     ),
                     body_schema_uri=NARRATIVE_BEAT_V1,
                 )
@@ -566,7 +565,7 @@ def _segment_nodes(
     return src, clip
 
 
-def _json(body, *, omit_if_none: tuple[str, ...] = ()) -> dict:
+def _json(body) -> dict:
     """A body model as the dict that round-trips through the store.
 
     ``mode="json"`` is what comes back from the graph — a tuple field dumps to
@@ -575,11 +574,7 @@ def _json(body, *, omit_if_none: tuple[str, ...] = ()) -> dict:
     node as changed and rewrite it (the same reason nw's entity upsert dumps
     in json mode).
     """
-    dumped = body.model_dump(mode="json")
-    # A field added after projects were written is left out while unset, so the
-    # value of an existing node is unchanged and re-ingest stays a no-op
-    # (absence rule) instead of re-staling every render under it.
-    return {k: v for k, v in dumped.items() if not (k in omit_if_none and v is None)}
+    return body.model_dump(mode="json")
 
 
 # --- phase 2: commit ---------------------------------------------------------

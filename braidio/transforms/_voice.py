@@ -1,8 +1,8 @@
 """``beat_to_voice_assignment.default`` — assign a voice to a narrative beat.
 
 A deterministic, no-synthesis Transform: given a narrative beat and the
-weave-config (the voice pool + seed), unless the beat names its own voice, it records which voice the beat's
-narration will use. It derives from ``[beat, weave-config]`` so a pool/seed
+weave-config (the voice pool + seed), it records which voice the beat's
+narration will use — the beat's own ``voice`` when it names one. It derives from ``[beat, weave-config]`` so a pool/seed
 change re-stales every voice-assignment (and, transitively, the narration
 renders that read them) — the freshness edge braidio's ``record_render``
 models, now on the nw project graph.

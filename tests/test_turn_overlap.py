@@ -399,7 +399,7 @@ def _starts_both_ways(monkeypatch, tmp_path, script, config):
 @needs_ffmpeg
 def test_both_paths_interrupt_at_the_same_offsets_with_a_pool(monkeypatch, tmp_path):
     cfg = WeaveConfig(
-        voices=("va", "vb"), voice_seed=0, overlap_turn_s=0.3, overlap_jitter=0.0
+        voices=("va", "vb"), voice_seed=1, overlap_turn_s=0.3, overlap_jitter=0.0
     )
     fast, graph = _starts_both_ways(monkeypatch, tmp_path, _parity_script(), cfg)
     assert graph == pytest.approx(fast, abs=1e-3)
@@ -433,3 +433,39 @@ def test_an_unset_beat_voice_leaves_the_ingested_body_unchanged(tmp_path):
         if a.body_schema_uri == braidio.bodies.NARRATIVE_BEAT_V1
     ]
     assert bodies and all("voice" not in b for b in bodies)
+
+
+@needs_ffmpeg
+def test_an_explicit_default_voice_is_the_same_speaker_as_an_unset_one(
+    monkeypatch, tmp_path
+):
+    """Unset and ``DEFAULT_VOICE_ID`` are one speaker on both paths: no interruption."""
+    from braidio.tts import DEFAULT_VOICE_ID
+
+    cfg = WeaveConfig(overlap_turn_s=0.3, overlap_jitter=0.0)
+    script = _parity_script(two={"voice": DEFAULT_VOICE_ID})
+    fast, graph = _starts_both_ways(monkeypatch, tmp_path, script, cfg)
+    assert graph == pytest.approx(fast, abs=1e-3)
+    assert fast[1] - fast[0] == pytest.approx(1.0 - 0.12, abs=0.05)
+
+
+def test_the_default_pool_casts_nothing_so_the_renderer_default_applies():
+    assert WeaveConfig().cast_voice(3) is None
+    assert WeaveConfig(voices=("a", "b"), voice_seed=1).cast_voice(0) == "b"
+    assert WeaveConfig(voices=("a", "b")).cast_voice(0, override="z") == "z"
+
+
+def test_a_snapshot_without_a_usable_pool_reads_as_the_default():
+    for bad in ({}, {"voices": []}, {"voices": None}):
+        assert not WeaveConfig.from_snapshot(bad).casts_voices
+
+
+def test_the_importer_writes_no_voice_key_for_a_beat_without_one():
+    from braidio.bodies import NarrativeBeatBodyV1
+
+    body = NarrativeBeatBodyV1(beat_id="0001", text="x").model_dump(mode="json")
+    assert "voice" not in body
+    assert NarrativeBeatBodyV1(beat_id="0001", text="x", voice="v").voice == "v"
+    assert "voice" in NarrativeBeatBodyV1(
+        beat_id="0001", text="x", voice="v"
+    ).model_dump(mode="json")

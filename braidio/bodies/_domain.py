@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_serializer
 
 from lacing.schema import register_body_schema
 
@@ -113,6 +113,16 @@ class NarrativeBeatBodyV1(BaseModel):
     voice: Optional[str] = Field(
         None, description="Per-beat voice id; overrides the weave-config pool."
     )
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_voice(self, handler):
+        """Leave ``voice`` out while unset, so a body written before the field
+        existed is byte-identical on re-write (every writer, not one call site)."""
+        data = handler(self)
+        if data.get("voice") is None:
+            data.pop("voice", None)
+        return data
+
     plays_clip: Optional[str] = Field(
         None, description="Id of an audio-clip/v1 to play here."
     )

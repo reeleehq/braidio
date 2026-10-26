@@ -32,6 +32,7 @@ from braidio.tts import resolve_voice_id
 from braidio.weave_config import WeaveConfig
 from braidio.transforms._common import (
     TIER_VOICE_ASSIGNMENT,
+    beat_ordinal,
     fresh_equivalent,
     singleton,
 )
@@ -53,7 +54,7 @@ class BeatToVoiceAssignment(BaseTransform):
         beat = inputs.primary[0]
         cfg = singleton(project, "weave-configs")
         config = WeaveConfig.from_snapshot(cfg.body.get("config", {}))
-        ordinal = int(beat.body.get("beat_id", "0") or 0)
+        ordinal = beat_ordinal(beat)
         # the beat's own override, else the pool — the fast path's rule exactly
         voice_id = config.cast_voice(
             ordinal, override=beat.body.get("voice")

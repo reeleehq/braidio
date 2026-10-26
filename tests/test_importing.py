@@ -997,8 +997,15 @@ def _spans_for(beats, *, duration_s=None, **episode_body):
     from braidio.transforms import member_spans
 
     rows = [
-        {"index": i, "kind": k, "label": "", "source": None,
-         "duration": round(e - s, 3), "start": s, "end": e}
+        {
+            "index": i,
+            "kind": k,
+            "label": "",
+            "source": None,
+            "duration": round(e - s, 3),
+            "start": s,
+            "end": e,
+        }
         for i, k, s, e in beats
     ]
     n = max([r["index"] for r in rows], default=-1) + 1
@@ -1018,14 +1025,18 @@ def test_a_member_laid_under_what_follows_keeps_its_true_span():
     from braidio.weave import layout_placed
 
     starts = layout_placed(
-        ["narration", "clip", "narration"], [5.0, 4.0, 3.0],
+        ["narration", "clip", "narration"],
+        [5.0, 4.0, 3.0],
         ["sequential", "under", "sequential"],
-        clip_edge_overlap_s=0.12, narration_crossfade_s=0.12,
+        clip_edge_overlap_s=0.12,
+        narration_crossfade_s=0.12,
     )
     spans = _spans_for(
-        [(0, "narration", starts[0], starts[0] + 5.0),
-         (1, "clip", starts[1], starts[1] + 4.0),
-         (2, "narration", starts[2], starts[2] + 3.0)]
+        [
+            (0, "narration", starts[0], starts[0] + 5.0),
+            (1, "clip", starts[1], starts[1] + 4.0),
+            (2, "narration", starts[2], starts[2] + 3.0),
+        ]
     )
     assert spans[1].concurrent and (spans[1].start_s, spans[1].end_s) == (5.0, 9.0)
     assert not spans[2].concurrent
@@ -1036,28 +1047,53 @@ def _laid_out(kinds, durs, placements, *, overlap=0.12, crossfade=0.12):
     from braidio.weave import layout_placed
 
     starts = layout_placed(
-        ["clip" if k == "clip" else "narration" for k in kinds], durs, placements,
-        clip_edge_overlap_s=overlap, narration_crossfade_s=crossfade,
+        ["clip" if k == "clip" else "narration" for k in kinds],
+        durs,
+        placements,
+        clip_edge_overlap_s=overlap,
+        narration_crossfade_s=crossfade,
     )
-    return [(i, k, round(s, 3), round(s + d, 3))
-            for i, (k, s, d) in enumerate(zip(kinds, starts, durs))]
+    return [
+        (i, k, round(s, 3), round(s + d, 3))
+        for i, (k, s, d) in enumerate(zip(kinds, starts, durs))
+    ]
 
 
 @pytest.mark.parametrize(
     "kinds, durs, placements, kw, under",
     [
         # a cold open laid under the first narration: both start at 0
-        (["clip", "narration", "narration"], [4.0, 5.0, 3.0],
-         ["under", "sequential", "sequential"], {}, {0}),
+        (
+            ["clip", "narration", "narration"],
+            [4.0, 5.0, 3.0],
+            ["under", "sequential", "sequential"],
+            {},
+            {0},
+        ),
         # no crossfade: the narration after an under clip starts at the clip
-        (["narration", "clip", "narration"], [5.0, 4.0, 3.0],
-         ["sequential", "under", "sequential"], {"crossfade": 0.0, "overlap": 0.0}, {1}),
+        (
+            ["narration", "clip", "narration"],
+            [5.0, 4.0, 3.0],
+            ["sequential", "under", "sequential"],
+            {"crossfade": 0.0, "overlap": 0.0},
+            {1},
+        ),
         # two under clips first
-        (["clip", "clip", "narration"], [4.0, 3.0, 5.0],
-         ["under", "under", "sequential"], {}, {0, 1}),
+        (
+            ["clip", "clip", "narration"],
+            [4.0, 3.0, 5.0],
+            ["under", "under", "sequential"],
+            {},
+            {0, 1},
+        ),
         # all sequential, one member shorter than the clip edge: nothing is under
-        (["narration", "narration", "clip", "narration"], [5.0, 0.4, 3.0, 4.0],
-         ["sequential"] * 4, {"overlap": 0.5}, set()),
+        (
+            ["narration", "narration", "clip", "narration"],
+            [5.0, 0.4, 3.0, 4.0],
+            ["sequential"] * 4,
+            {"overlap": 0.5},
+            set(),
+        ),
     ],
 )
 def test_an_older_timeline_s_under_members_are_read_off_the_layout(
@@ -1118,7 +1154,8 @@ def test_a_recorded_placement_is_read_rather_than_inferred():
     from braidio.transforms import member_spans
 
     tl = build_timeline(
-        kinds=["clip", "narration"], durations=[4.0, 5.0],
+        kinds=["clip", "narration"],
+        durations=[4.0, 5.0],
         placements=["under", "sequential"],
     )
     assert TimelineBreakdown.from_dict(tl.to_dict()) == tl
@@ -1135,10 +1172,12 @@ def test_spans_are_bounded_by_the_mix():
 
 
 def test_an_unplaced_member_in_the_middle_does_not_shift_the_rest():
-    spans = _spans_for(
-        [(0, "narration", 0.0, 4.0), (2, "narration", 6.0, 9.0)]
-    )
-    assert [(s.start_s, s.end_s) for s in spans] == [(0.0, 4.0), (None, None), (6.0, 9.0)]
+    spans = _spans_for([(0, "narration", 0.0, 4.0), (2, "narration", 6.0, 9.0)])
+    assert [(s.start_s, s.end_s) for s in spans] == [
+        (0.0, 4.0),
+        (None, None),
+        (6.0, 9.0),
+    ]
 
 
 @pytest.mark.parametrize(

@@ -100,26 +100,28 @@ def _tail_gap(src: Path, dst: Path, *, gap_s: float) -> Path:
     return dst
 
 
-def _plan_beat_turns(
+def plan_beat_turns(
     text: str,
     *,
     config: WeaveConfig | None,
-    delivery: Delivery,
+    supports_speed: bool,
     settings: dict,
     seed_offset: int,
 ) -> list[NarrationTurn]:
     """Plan one narration beat's turns, or ``[]`` for the unpaced single call.
 
-    The speed each turn is jittered around is the *delivery's* own ``speed``
+    The speed each turn is jittered around is the beat's own ``speed`` setting
     when it sets one (so a grave ``v2-narrator``'s 0.94 survives being paced),
     falling back to ``WeaveConfig.speed_base``. A model with no speed control
-    (eleven v3 — :attr:`braidio.delivery.Delivery.supports_speed`) plans none.
+    (eleven v3 — :attr:`braidio.delivery.Delivery.supports_speed`,
+    :func:`braidio.delivery.model_supports_speed`) plans none.
+
+    Shared by the fast path and the graph's ``narration_render.tts``, which is
+    what keeps their per-beat durations (and so their timelines) equal.
     """
     if config is None or not config.paces_narration:
         return []
-    speed_base = (
-        settings.get("speed", config.speed_base) if delivery.supports_speed else None
-    )
+    speed_base = settings.get("speed", config.speed_base) if supports_speed else None
     return plan_turns(
         text,
         unit=config.segmentation_unit,
@@ -132,7 +134,7 @@ def _plan_beat_turns(
     )
 
 
-def _narrate_turns(
+def narrate_turns(
     turns: list[NarrationTurn],
     *,
     stem: Path,
@@ -140,6 +142,7 @@ def _narrate_turns(
     voice_id: str | None,
     model_id: str,
     voice_settings: dict,
+    narrate_fn=None,
 ) -> Path:
     """Synthesize a paced narration beat: one TTS call per turn, real silence between.
 
@@ -147,13 +150,17 @@ def _narrate_turns(
     varies (a fresh prosodic arc per turn, a per-turn speed where the model has
     one) and the silence between turns is proportional to how strongly the
     boundary closes, instead of one flat arc with nothing inside it.
+
+    ``narrate_fn`` is the synthesis call (default: this module's ``narrate``);
+    a caller that wants the cache status, or a stub, passes its own.
     """
+    synthesize = narrate_fn or narrate
     parts: list[Path] = []
     for j, turn in enumerate(turns):
         settings = dict(voice_settings)
         if turn.speed is not None:
             settings["speed"] = turn.speed
-        part = narrate(
+        part = synthesize(
             turn.text,
             stem.with_name(f"{stem.name}-turn{j:02d}.mp3"),
             api_key=api_key,
@@ -375,15 +382,15 @@ def render_production(
             )
             # Intra-beat pacing — empty plan (the default `segmentation_unit=
             # "beat"`) keeps the historical one-call-per-beat path untouched.
-            turns = _plan_beat_turns(
+            turns = plan_beat_turns(
                 pb.content,
                 config=config,
-                delivery=delivery,
+                supports_speed=delivery.supports_speed,
                 settings=beat_settings,
                 seed_offset=i,
             )
             if turns:
-                raw = _narrate_turns(
+                raw = narrate_turns(
                     turns,
                     stem=beat_stem,
                     api_key=api_key,

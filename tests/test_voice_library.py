@@ -16,10 +16,20 @@ from braidio.voice_library import (
 
 
 def _v(i, gender="male", accent="american", age="young", **kw):
-    return {"voice_id": f"v{i}", "name": f"Voice{i}", "public_owner_id": f"o{i}",
-            "gender": gender, "accent": accent, "age": age, "language": "en",
-            "use_case": "narrative_story", "cloned_by_count": 100 - i,
-            "usage_character_count_1y": 1000 - i, "rate": 1.0, **kw}
+    return {
+        "voice_id": f"v{i}",
+        "name": f"Voice{i}",
+        "public_owner_id": f"o{i}",
+        "gender": gender,
+        "accent": accent,
+        "age": age,
+        "language": "en",
+        "use_case": "narrative_story",
+        "cloned_by_count": 100 - i,
+        "usage_character_count_1y": 1000 - i,
+        "rate": 1.0,
+        **kw,
+    }
 
 
 def _pages(items, size):
@@ -28,7 +38,7 @@ def _pages(items, size):
     def get_page(params):
         calls.append(params)
         p, s = params["page"], params["page_size"]
-        chunk = items[p * s: (p + 1) * s]
+        chunk = items[p * s : (p + 1) * s]
         return {"voices": chunk, "has_more": (p + 1) * s < len(items)}
 
     get_page.calls = calls
@@ -39,19 +49,41 @@ def test_fetch_pages_until_end_and_caps():
     get = _pages([_v(i) for i in range(5)], 2)
     got = list(fetch_shared_voices(get_page=get, page_size=2, language="en"))
     assert [v.voice_id for v in got] == ["v0", "v1", "v2", "v3", "v4"]
-    assert [c["page"] for c in get.calls] == [0, 1, 2] and get.calls[0]["language"] == "en"
+    assert [c["page"] for c in get.calls] == [0, 1, 2] and get.calls[0][
+        "language"
+    ] == "en"
     assert got[0].extra == {"rate": 1.0}
-    assert len(list(fetch_shared_voices(get_page=_pages([_v(i) for i in range(5)], 2),
-                                        page_size=2, max_voices=3))) == 3
+    assert (
+        len(
+            list(
+                fetch_shared_voices(
+                    get_page=_pages([_v(i) for i in range(5)], 2),
+                    page_size=2,
+                    max_voices=3,
+                )
+            )
+        )
+        == 3
+    )
 
 
 def test_curate_filters_and_ranks():
-    vs = [SharedVoice.from_api(d) for d in (
-        _v(1), _v(2, use_case="characters_animation"), _v(3, language="fr"),
-        _v(4, cloned_by_count=1), _v(5, notice_period=30), _v(0),
-    )]
+    vs = [
+        SharedVoice.from_api(d)
+        for d in (
+            _v(1),
+            _v(2, use_case="characters_animation"),
+            _v(3, language="fr"),
+            _v(4, cloned_by_count=1),
+            _v(5, notice_period=30),
+            _v(0),
+        )
+    ]
     assert [v.voice_id for v in curate(vs)] == ["v0", "v1", "v4", "v5"]
-    assert [v.voice_id for v in curate(vs, min_cloned_by=10, deny_ids=["v0"])] == ["v1", "v5"]
+    assert [v.voice_id for v in curate(vs, min_cloned_by=10, deny_ids=["v0"])] == [
+        "v1",
+        "v5",
+    ]
     assert [v.voice_id for v in curate(vs, min_notice_days=7)] == ["v5"]
     assert [v.voice_id for v in curate(vs, allow_ids=["v1"])] == ["v1"]
     assert len(curate(vs, use_cases=None, languages=None)) == 6
@@ -65,10 +97,14 @@ def test_dedup_owner_variants():
 
 
 def test_diverse_pool_balances_gender_and_accents():
-    vs = [SharedVoice.from_api(_v(i, gender=g, accent=acc)) for i, (g, acc) in enumerate(
-        [("male", "american")] * 3 + [("female", "american")] * 3
-        + [("male", "british"), ("female", "australian")]
-    )]
+    vs = [
+        SharedVoice.from_api(_v(i, gender=g, accent=acc))
+        for i, (g, acc) in enumerate(
+            [("male", "american")] * 3
+            + [("female", "american")] * 3
+            + [("male", "british"), ("female", "australian")]
+        )
+    ]
     pool = diverse_pool(vs, 4)
     assert all(isinstance(v, Voice) for v in pool)
     assert sorted(v.gender for v in pool) == ["F", "F", "M", "M"]
@@ -93,7 +129,8 @@ def test_fetch_stops_on_empty_page_with_has_more():
 
 def test_dedup_keeps_distinct_titled_names_and_ownerless():
     sv = lambda i, name, owner="o": SharedVoice.from_api(  # noqa: E731
-        {**_v(i), "name": name, "public_owner_id": owner})
+        {**_v(i), "name": name, "public_owner_id": owner}
+    )
     a, b = sv(1, "Dr. Smith"), sv(2, "Dr. Jones")
     assert dedup_voices([a, b]) == [a, b]
     c, d = sv(3, "Anna", ""), sv(4, "Anna", "")
@@ -102,9 +139,14 @@ def test_dedup_keeps_distinct_titled_names_and_ownerless():
 
 
 def test_neutral_voices_only_fill_and_case_insensitive():
-    vs = [SharedVoice.from_api(_v(i, gender=g)) for i, g in enumerate(
-        ["Male", "male", "female", "neutral", ""])]
+    vs = [
+        SharedVoice.from_api(_v(i, gender=g))
+        for i, g in enumerate(["Male", "male", "female", "neutral", ""])
+    ]
     pool = diverse_pool(vs, 4)
-    assert sorted(v.gender for v in pool[:3]) == ["F", "M", "M"] and pool[3].gender == "N"
-    assert [v.voice_id for v in curate(
-        [SharedVoice.from_api(_v(1, language="en-US"))])] == ["v1"]
+    assert (
+        sorted(v.gender for v in pool[:3]) == ["F", "M", "M"] and pool[3].gender == "N"
+    )
+    assert [
+        v.voice_id for v in curate([SharedVoice.from_api(_v(1, language="en-US"))])
+    ] == ["v1"]

@@ -141,6 +141,11 @@ def beat_id(index: int) -> str:
     return f"{index:0{BEAT_ID_WIDTH}d}"
 
 
+def beat_ordinal(beat: Annotation) -> int:
+    """A narrative beat's script position — what casting and pacing seed on."""
+    return int(beat.body.get("beat_id", "0") or 0)
+
+
 def planned_value(ann: Annotation) -> dict:
     """``ann.body`` minus its :data:`RENDER_OUTPUT_KEYS` — what its plan decided.
 

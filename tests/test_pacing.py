@@ -284,3 +284,55 @@ def test_config_crossfade_is_honoured_on_the_concat_path(
     tight = _render(script2, tmp_path, config=cfg.with_(crossfade_s=0.0), name="cf0")
     wide = _render(script2, tmp_path, config=cfg.with_(crossfade_s=0.3), name="cf3")
     assert duration_s(tight) - duration_s(wide) == pytest.approx(0.3, abs=0.1)
+
+
+# --- the graph path paces too (braidio#118) ----------------------------------
+
+
+@needs_ffmpeg
+def test_graph_narration_render_paces_like_the_fast_path(
+    script, tmp_path, tone_narration, monkeypatch
+):
+    """``segmentation_unit`` reaches ``narration_render.tts``: same turns, one
+    call each, and a rendered file as long as the fast path's."""
+    import nw
+    from nw import TransformInputs
+
+    graph_calls: list[str] = []
+
+    def graph_narrate(text, out_path, *, return_cache_status=False, **kw):
+        graph_calls.append(text)
+        path = tone(Path(out_path), 440, 0.5)
+        return (path, False) if return_cache_status else path
+
+    monkeypatch.setattr(braidio, "narrate", graph_narrate)
+    cfg = WeaveConfig(
+        segmentation_unit="sentence", min_turn=1, max_turn=1, gap_turn_s=0.2
+    )
+    fast = _render(script, tmp_path, config=cfg, name="fast")
+
+    project = braidio.Project.init(tmp_path / "proj", title="t")
+    braidio.transforms.ingest_script(project, script, source=None, config=cfg)
+    beat = nw.annotations_at_tier(project.root, "narrative-beats")[0]
+    voice = nw.get_transform("beat_to_voice_assignment.default")
+    narration = nw.get_transform("narration_render.tts")
+    voice.execute(project, *voice.plan(project, TransformInputs(primary=(beat,))))
+    plan, skel = narration.plan(project, TransformInputs(primary=(beat,)))
+    node = narration.execute(project, plan, skel).annotations[0]
+
+    assert graph_calls == [c["text"] for c in tone_narration]  # the fast path's turns
+    assert len(graph_calls) == 4
+    assert node.body["duration_s"] == pytest.approx(duration_s(fast), abs=0.15)
+
+
+def test_unpaced_graph_cache_key_is_unchanged_by_the_pacing_plan():
+    from braidio.transforms._narration import _narration_cache_key
+
+    class _T:
+        name = "narration_render.tts"
+        impl_version = 1
+
+    plain = _narration_cache_key(_T, "t", "v", "m", {})
+    assert plain == _narration_cache_key(_T, "t", "v", "m", {}, ())
+    paced = plan_turns("One. Two.", unit="sentence", min_turn=1, max_turn=1)
+    assert plain != _narration_cache_key(_T, "t", "v", "m", {}, paced)

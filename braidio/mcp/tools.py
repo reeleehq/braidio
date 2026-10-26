@@ -22,7 +22,12 @@ import os
 import braidio  # attr access (braidio.narrate, ...) so tests can monkeypatch
 from fastmcp.exceptions import ToolError
 
-from braidio.mcp._helpers import script_from_json, source_from_json, to_json
+from braidio.mcp._helpers import (
+    script_from_json,
+    script_to_json,
+    source_from_json,
+    to_json,
+)
 from braidio.rights import DEFAULT_PROFILE
 from braidio.mcp.credentials import caller_elevenlabs_key
 from braidio.mcp.metering import current_email
@@ -337,20 +342,47 @@ def project_status(project_id: str) -> dict:
     return {"project_id": project_id, "episodes": episodes}
 
 
+#: Content types whose extracted text has lost its markdown structure, so
+#: ``as_beats`` would read flattened prose as one paragraph per line.
+_NOT_MARKDOWN_TYPES = ("pdf", "html", "xml")
+
+
+def _markdown_beats(full: str, ctype: str, *, max_chars: int) -> tuple[dict, bool]:
+    """``full`` as a JSON script, cut to whole beats within ``max_chars``."""
+    if any(kind in (ctype or "").lower() for kind in _NOT_MARKDOWN_TYPES):
+        raise ToolError(
+            f"as_beats reads markdown or plain text, not {ctype!r}; "
+            "ingest without as_beats and author the beats from the text"
+        )
+    from dataclasses import replace
+
+    from braidio import script_from_markdown
+
+    script = script_from_markdown(full)
+    kept, total = [], 0
+    for beat in script.beats:
+        total += len(beat.text)
+        if total > max_chars:
+            break
+        kept.append(beat)
+    truncated = len(kept) < len(script.beats)
+    return script_to_json(replace(script, beats=kept)), truncated
+
+
 def ingest_document(
     project_id: str,
     uri: str | None = None,
     text: str | None = None,
     name: str | None = None,
     max_chars: int = 40000,
+    as_beats: bool = False,
 ) -> dict:
     """Ingest source material into a project so you can analyze it into a Script.
 
-    Provide EITHER ``uri`` (a public http/https URL — PDF, HTML, or plain text) OR
-    ``text`` (pasted content). The document is fetched (SSRF-guarded: public hosts
-    only, size/time bounded), its plaintext extracted and stored in the project, and
-    the text returned (up to ``max_chars``) for you to read and turn into narration /
-    segment beats. Free — no synthesis.
+    Give ``uri`` (public http/https: PDF, HTML, text) OR ``text``. The plaintext is
+    stored and returned (up to ``max_chars``) to turn into beats. For a markdown
+    or text document to read aloud, ``as_beats=true`` returns a ready ``script`` of
+    narration beats instead (headings, footnotes) to tag. Free.
     """
     from braidio.mcp import _docs
 
@@ -369,6 +401,9 @@ def ingest_document(
         full = _docs.extract_text(data, ctype)
     except ValueError as exc:
         raise ToolError(str(exc)) from exc
+    script, truncated = None, len(full) > max_chars
+    if as_beats:
+        script, truncated = _markdown_beats(full, ctype, max_chars=max_chars)
 
     from hashlib import sha256
 
@@ -382,8 +417,8 @@ def ingest_document(
         "source": src,
         "content_type": ctype,
         "characters": len(full),
-        "truncated": len(full) > max_chars,
-        "text": full[:max_chars],
+        "truncated": truncated,
+        **({"script": script} if script else {"text": full[:max_chars]}),
     }
 
 

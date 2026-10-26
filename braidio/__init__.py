@@ -189,6 +189,13 @@ from braidio.captions import (  # noqa: F401
     format_srt,
 )
 
+# --- markdown document -> narration beats (read-aloud) ---
+from braidio.markdown_script import (  # noqa: F401
+    TagMismatch,
+    script_from_markdown,
+    untagged_differences,
+)
+
 # --- text prep + style audit (reusable script helpers) ---
 from braidio.textprep import clean_ocr, strip_speaker_labels  # noqa: F401
 from braidio.style import (  # noqa: F401
@@ -282,6 +289,10 @@ __all__ = [
     "HAS_NW",
     "HAS_VIDEO",
     "skills_dir",
+    # markdown read-aloud
+    "TagMismatch",
+    "script_from_markdown",
+    "untagged_differences",
     # captions
     "Cue",
     "captions_for",

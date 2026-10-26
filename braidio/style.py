@@ -85,6 +85,11 @@ TAG_RATE_FLOOR = 1.5
 TAG_RATE_CEILING = 6.0
 
 
+def strip_audio_tags(text: str) -> str:
+    """``text`` with every inline ``[audio tag]`` removed (tags only; spacing kept)."""
+    return _AUDIO_TAG_RE.sub("", text)
+
+
 def audio_tags(text: str) -> list[str]:
     """Every inline ``[audio tag]`` in ``text``, in order."""
     return _AUDIO_TAG_RE.findall(text)

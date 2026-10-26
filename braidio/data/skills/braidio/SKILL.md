@@ -41,7 +41,8 @@ spending if any of it is unclear.
 ```
 1. create_project("my-episode")                     # free
 2. ingest_document("my-episode", uri="https://…")   # free — returns the text to analyze
-   #   (or text="…" for pasted content)
+   #   (or text="…" for pasted content; as_beats=true on markdown returns a ready
+   #   Script of narration beats to tag — braidio.script_from_markdown in Python)
 3.  … you read that text and author a Script (see below) …
 4. estimate_cost(script)                            # free — always do this
 5. render_format("deep_dive", script)               # [COSTED] → an mp3 url in your workspace

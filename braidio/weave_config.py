@@ -23,6 +23,10 @@ from braidio.multivoice import POOL_4, POOL_MANY
 from braidio.pacing import SEGMENTATION_UNITS
 from braidio.tts import DEFAULT_VOICE_ID
 
+# The interruption value object lives with the layout that consumes it (so the
+# weave stays free of this module's TTS imports); re-exported here for callers.
+from braidio.weave import MAX_OVERLAP_TURN_S, TurnOverlap  # noqa: F401
+
 # Base narration settings. Shaped for eleven_v3, which is the default model:
 # it honours `stability` and silently ignores `style` / `similarity_boost` /
 # `speed`, so carrying those here would advertise control that does not exist.
@@ -67,7 +71,13 @@ class WeaveConfig:
     crossfade_s: float = 0.12
     gap_turn_s: float = 0.0  # silence at a *sentence* boundary between turns;
     # other boundaries scale off it (braidio.pacing.BOUNDARIES)
-    overlap_turn_s: float = 0.0  # speaker interruption (#22 — not yet rendered)
+    # Speaker interruption (Hamilton#22): at a *change of speaker* between
+    # narration parts, the next voice starts up to this much before the previous
+    # one ends (0 = off; at most MAX_OVERLAP_TURN_S). Rendered by the weave
+    # (``braidio.weave.layout_placed``), so it engages the mixed path.
+    overlap_turn_s: float = 0.0
+    overlap_jitter: float = 0.3  # each overlap is shortened by up to this fraction
+    overlap_duck_db: float = 0.0  # lower the outgoing voice over the overlap (≤ 0)
 
     # --- Clip weaving (#21) -------------------------------------------------
     clip_pre_roll_s: float = 0.4  # extend extraction before the words
@@ -90,6 +100,7 @@ class WeaveConfig:
             raise ValueError("WeaveConfig.voices must have at least one voice id")
         if not (1 <= self.min_turn <= self.max_turn):
             raise ValueError("require 1 <= min_turn <= max_turn")
+        self.turn_overlap()  # TurnOverlap owns the overlap_* rules
         if self.segmentation_unit not in SEGMENTATION_UNITS:
             raise ValueError(
                 f"WeaveConfig.segmentation_unit must be one of {SEGMENTATION_UNITS}, "
@@ -116,6 +127,18 @@ class WeaveConfig:
     @property
     def is_multivoice(self) -> bool:
         return len(self.voices) > 1
+
+    def turn_overlap(self) -> TurnOverlap:
+        """The speaker-interruption knobs as the value the weave consumes.
+
+        Its ``seed`` is ``voice_seed``: one seed fixes casting and interruptions.
+        """
+        return TurnOverlap(
+            max_s=self.overlap_turn_s,
+            jitter=self.overlap_jitter,
+            duck_db=self.overlap_duck_db,
+            seed=self.voice_seed,
+        )
 
     def with_(self, **changes: Any) -> "WeaveConfig":
         """Return a copy with fields overridden (e.g. ``cfg.with_(min_turn=1)``)."""

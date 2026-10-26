@@ -21,12 +21,71 @@ refinement (see #21 / the research).
 from __future__ import annotations
 
 import json
+import random
 import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 _LOUDNESS_RANGE = 11  # loudnorm LRA target for the mastered mix
+
+#: Upper bound of the intelligible range for a speaker interruption: past it two
+#: voices talking over each other stop being understood (Hamilton#22).
+MAX_OVERLAP_TURN_S = 0.4
+
+
+@dataclass(frozen=True)
+class TurnOverlap:
+    """How much the next speaker may start before the previous one finishes.
+
+    The pure, render-time view of :class:`~braidio.weave_config.WeaveConfig`'s
+    ``overlap_*`` knobs, so the layout and the mixer take one value instead of
+    four loose floats. ``max_s == 0`` means no interruption (the historical
+    butt-join with a crossfade). It lives here, not in ``weave_config``, so the
+    weave stays free of the TTS/mixing imports that module carries.
+
+    ``jitter`` shortens each overlap by a seeded random fraction up to that
+    amount (so it is not mechanical); ``duck_db`` (≤ 0) lowers the outgoing voice
+    over the overlap; ``seed`` makes both reproducible — ``WeaveConfig`` passes
+    its ``voice_seed``, so one seed fixes the casting and the interruptions.
+
+    The overlap is measured between *file* boundaries: the layout sees each
+    part's duration only, so a beat that opens with its own lead silence
+    (``Narration.lead_gap_s``) spends the overlap on that silence first — an
+    incoming beat with a lead gap ≥ the overlap is not heard to interrupt.
+
+    >>> TurnOverlap(max_s=0.5)
+    Traceback (most recent call last):
+        ...
+    ValueError: TurnOverlap.max_s (WeaveConfig.overlap_turn_s) must be in [0, 0.4], got 0.5
+    """
+
+    max_s: float = 0.0
+    jitter: float = 0.3
+    duck_db: float = 0.0
+    seed: int = 0
+
+    def __post_init__(self) -> None:
+        if not (0.0 <= self.max_s <= MAX_OVERLAP_TURN_S):
+            raise ValueError(
+                "TurnOverlap.max_s (WeaveConfig.overlap_turn_s) must be in "
+                f"[0, {MAX_OVERLAP_TURN_S}], got {self.max_s}"
+            )
+        if not (0.0 <= self.jitter <= 1.0):
+            raise ValueError(
+                "TurnOverlap.jitter (WeaveConfig.overlap_jitter) must be in [0, 1], "
+                f"got {self.jitter}"
+            )
+        if self.duck_db > 0:
+            raise ValueError(
+                "TurnOverlap.duck_db (WeaveConfig.overlap_duck_db) must be <= 0 "
+                f"(it attenuates), got {self.duck_db}"
+            )
+
+    @property
+    def is_on(self) -> bool:
+        """Whether a change of speaker is laid out as an interruption."""
+        return self.max_s > 0
 
 
 def _require_ffmpeg() -> None:
@@ -122,6 +181,8 @@ class TimelineItem:
     placement: str = "sequential"  # "sequential" | "under"
     duck_db: float = 0.0  # attenuation applied when placement == "under" (e.g. -15)
     spotlight: bool = False  # the bed drops out over this part (see braidio.structure)
+    # who talks (voice id); None = no speaker (clips, stings)
+    speaker: str | None = None
 
 
 def layout_placed(
@@ -131,6 +192,8 @@ def layout_placed(
     *,
     clip_edge_overlap_s: float,
     narration_crossfade_s: float,
+    speakers: list[str | None] | None = None,
+    overlap: TurnOverlap | None = None,
 ) -> list[float]:
     """Start offset (s) of each part, placement-aware. Pure function.
 
@@ -140,26 +203,133 @@ def layout_placed(
     An ``"under"`` part starts *at* the cursor (concurrent with the next
     sequential part) and does **not** advance it — so it overlays what follows.
     Clamped ≥ 0.
+
+    With ``speakers`` (one id per part, ``None`` = no speaker) and an ``overlap``
+    that is on, each boundary :func:`interrupting_boundaries` names starts up to
+    ``max_s`` early instead (an interruption), capped by both turns' lengths and
+    shortened by a jitter drawn from ``Random(f"{seed}:{i}")`` — per part index,
+    so editing one boundary does not reshuffle the others. Overlap is measured
+    between file boundaries, lead silence included (see :class:`TurnOverlap`).
+
+    While overlap is on, two floors keep it to two voices at once: a part laid
+    after a non-clip part never starts before the end of any earlier sequential
+    part but the last, and a narration part never starts before the end of any
+    earlier narration but the most recent. Neither applies with overlap off, so
+    the default layout is unchanged.
+
+    >>> layout_placed(["narration"] * 3, [2.0, 0.3, 2.0], ["sequential"] * 3,
+    ...     clip_edge_overlap_s=0.5, narration_crossfade_s=0.12,
+    ...     speakers=["a", "b", "b"], overlap=TurnOverlap(0.4, 0.0))
+    [0.0, 1.7, 2.0]
     """
+    on = overlap is not None and overlap.is_on
+    cuts = (
+        set(interrupting_boundaries(kinds, placements, speakers, overlap))
+        if on
+        else set()
+    )
     starts: list[float] = [0.0] * len(kinds)
+    ends: list[float] = [0.0] * len(kinds)
     cursor = 0.0
     prev_seq_kind: str | None = None
+    seq: list[int] = []  # indices of the sequential parts laid so far
+    talk: list[int] = []  # indices of the narration parts laid so far
     for i, kind in enumerate(kinds):
         if placements[i] == "under":
-            starts[i] = (
-                cursor  # overlay the following sequential part; cursor unchanged
-            )
+            # overlay the following sequential part; cursor unchanged
+            starts[i] = cursor
+            ends[i] = cursor + durs[i]
+            if kind == "narration":
+                talk.append(i)
             continue
+        floor = 0.0
         if prev_seq_kind is None:
             start = 0.0
         elif kind == "clip" or prev_seq_kind == "clip":
             start = max(0.0, cursor - clip_edge_overlap_s)
         else:
-            start = max(0.0, cursor - narration_crossfade_s)
-        starts[i] = start
-        cursor = start + durs[i]
+            lead = narration_crossfade_s
+            if (seq[-1], i) in cuts:
+                lead = max(lead, _jittered_overlap(overlap, i, durs[seq[-1]], durs[i]))
+            if on:  # no third part under the two at this boundary
+                floor = max((ends[j] for j in seq[:-1]), default=0.0)
+            start = max(0.0, cursor - lead)
+        if on and kind == "narration":  # no third voice, whatever lies between
+            floor = max([floor] + [ends[j] for j in talk[:-1]])
+        start = max(start, floor)
+        starts[i], ends[i] = start, start + durs[i]
+        cursor = ends[i]
         prev_seq_kind = kind
+        seq.append(i)
+        if kind == "narration":
+            talk.append(i)
     return starts
+
+
+def interrupting_boundaries(
+    kinds: list[str],
+    placements: list[str],
+    speakers: list[str | None] | None,
+    overlap: TurnOverlap | None,
+) -> list[tuple[int, int]]:
+    """The ``(prev, cur)`` sequential-part pairs where ``cur`` interrupts ``prev``.
+
+    The one definition :func:`layout_placed` (where to start) and
+    :func:`duck_regions` (what to duck) share: overlap is on, both parts are
+    narration (a clip or sting never interrupts nor is interrupted), both have a
+    speaker, and the speakers differ.
+
+    >>> interrupting_boundaries(
+    ...     ["narration", "narration", "clip", "narration", "narration"],
+    ...     ["sequential"] * 5, ["a", "b", None, "b", "c"], TurnOverlap(0.3))
+    [(0, 1), (3, 4)]
+    """
+    if not (overlap is not None and overlap.is_on and speakers):
+        return []
+    seq = [i for i, p in enumerate(placements) if p != "under"]
+
+    def _talks(i: int) -> bool:
+        return kinds[i] == "narration" and speakers[i] is not None
+
+    return [
+        (prev, cur)
+        for prev, cur in zip(seq, seq[1:])
+        if _talks(prev) and _talks(cur) and speakers[prev] != speakers[cur]
+    ]
+
+
+def _jittered_overlap(
+    overlap: TurnOverlap, index: int, prev_dur: float, cur_dur: float
+) -> float:
+    """Part ``index``'s overlap: ``max_s`` shortened by a seeded fraction, capped
+    by both turns' lengths. The draw is keyed on ``(seed, index)``, not on a
+    shared stream, so it does not depend on how many boundaries came before."""
+    draw = random.Random(f"{overlap.seed}:{index}").random()
+    amount = overlap.max_s * (1.0 - overlap.jitter * draw)
+    return min(amount, prev_dur, cur_dur)
+
+
+def duck_regions(
+    starts: list[float],
+    durs: list[float],
+    kinds: list[str],
+    placements: list[str],
+    speakers: list[str | None] | None,
+    overlap: TurnOverlap | None,
+) -> dict[int, tuple[float, float]]:
+    """Per part, the ``(from_s, to_s)`` span *within its own audio* to duck.
+
+    The tail of an outgoing voice that the next speaker talks over, at each of
+    :func:`interrupting_boundaries`; empty when ``overlap.duck_db`` is 0. Pure,
+    from the laid-out starts.
+    """
+    if not (overlap is not None and overlap.duck_db):
+        return {}
+    regions = {}
+    for prev, cur in interrupting_boundaries(kinds, placements, speakers, overlap):
+        if starts[cur] < starts[prev] + durs[prev]:
+            regions[prev] = (starts[cur] - starts[prev], durs[prev])
+    return regions
 
 
 def layout_starts(
@@ -190,6 +360,7 @@ def weave_timeline(
     true_peak: float = -1.0,
     sample_rate: int = 44100,
     bed=None,  # optional braidio.music.MusicBed — instrumental underscore under all
+    overlap: TurnOverlap | None = None,
 ) -> Path:
     """Place items on a timeline and mix. Clips overlap neighbours by
     ``clip_edge_overlap_s`` (their faded edges tuck under narration); narration
@@ -202,19 +373,29 @@ def weave_timeline(
     :func:`braidio.music.bed_regions`); with none marked the bed is the single
     whole-span file. Falls back to a plain concat feel when
     ``clip_edge_overlap_s == 0`` and there's nothing to overlay.
+
+    ``overlap`` (a :class:`TurnOverlap`, e.g. ``WeaveConfig.turn_overlap()``)
+    lays a change of speaker as an interruption and, with ``duck_db``, lowers
+    the outgoing voice's talked-over tail (see :func:`layout_placed`).
     """
     _require_ffmpeg()
     if not items:
         raise ValueError("weave_timeline needs at least one item")
 
     durs = [duration_s(it.path) for it in items]
+    kinds = [it.kind for it in items]
+    placements = [it.placement for it in items]
+    speakers = [it.speaker for it in items]
     starts = layout_placed(
-        [it.kind for it in items],
+        kinds,
         durs,
-        [it.placement for it in items],
+        placements,
         clip_edge_overlap_s=clip_edge_overlap_s,
         narration_crossfade_s=narration_crossfade_s,
+        speakers=speakers,
+        overlap=overlap,
     )
+    ducks = duck_regions(starts, durs, kinds, placements, speakers, overlap)
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)
 
@@ -233,6 +414,11 @@ def weave_timeline(
         # ducked underlay: attenuate before delaying so it sits beneath the talk.
         if it.placement == "under" and it.duck_db:
             chain += f",volume={it.duck_db}dB"
+        if i in ducks:  # lower the outgoing voice while the next speaker cuts in
+            lo, hi = ducks[i]
+            chain += (
+                f",volume={overlap.duck_db}dB:enable='between(t,{lo:.3f},{hi:.3f})'"
+            )
         chain += f",adelay={delay_ms}:all=1[{lbl}]"
         filters.append(chain)
         labels.append(f"[{lbl}]")

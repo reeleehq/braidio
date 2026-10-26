@@ -337,6 +337,7 @@ def render_production(
     spans: list[tuple[float, float] | None] = []  # source [start,end) for clips
     labels: list[str] = []
     spotlights: list[bool] = []  # per part: the bed drops out over it
+    speakers: list[str | None] = []  # per part: voice id talking (None: clip/sting)
     for i, pb in enumerate(plan.beats):
         orig = script.beats[pb.from_index]
         clip_span: tuple[float, float] | None = None
@@ -358,6 +359,7 @@ def render_production(
             labels.append(orig.label)
             spans.append(None)
             spotlights.append(False)
+            speakers.append(None)
             continue
         if pb.kind == "narration":
             beat_voice = getattr(orig, "voice", None) or voice_id  # per-beat override
@@ -431,6 +433,8 @@ def render_production(
             if normalize
             else raw
         )
+        # a dialogue beat is several speakers in one file: it never interrupts
+        speakers.append((beat_voice or "") if pb.kind == "narration" else None)
         # dialogue + narration are spoken → treated as "narration" on the timeline
         kinds.append("clip" if pb.kind == "clip" else "narration")
         # a "under" clip becomes a ducked underlay; "before"/"after" play clean
@@ -457,9 +461,13 @@ def render_production(
     has_under = "under" in placements
     edge_overlap = config.clip_edge_overlap_s if config is not None else 0.0
     crossfade = config.crossfade_s if config is not None else crossfade_s
-    # a music bed also needs the mix path (even for narration-only productions)
-    woven = music_bed is not None or (
-        "clip" in kinds and (edge_overlap > 0 or has_under)
+    turn_overlap = config.turn_overlap() if config is not None else None
+    # a music bed also needs the mix path (even for narration-only productions);
+    # so does a speaker interruption, which a plain concat cannot place
+    woven = (
+        music_bed is not None
+        or ("clip" in kinds and (edge_overlap > 0 or has_under))
+        or (turn_overlap is not None and turn_overlap.max_s > 0)
     )
 
     if woven:
@@ -470,8 +478,9 @@ def render_production(
                 placement=pl,
                 duck_db=(duck_db if pl == "under" else 0.0),
                 spotlight=sp,
+                speaker=spk,
             )
-            for k, p, pl, sp in zip(kinds, parts, placements, spotlights)
+            for k, p, pl, sp, spk in zip(kinds, parts, placements, spotlights, speakers)
         ]
         weave_timeline(
             items,
@@ -480,6 +489,7 @@ def render_production(
             narration_crossfade_s=crossfade,
             target_lufs=target_lufs,
             bed=music_bed,
+            overlap=turn_overlap,
         )
     else:
         # `crossfade`, not `crossfade_s`: the config's crossfade was read by the
@@ -507,6 +517,8 @@ def render_production(
             source_spans=spans,
             clip_edge_overlap_s=edge_overlap,
             narration_crossfade_s=crossfade,
+            speakers=speakers,
+            overlap=turn_overlap,
             title=script.title,
             # The settings that produced these timings, not the ones asked for:
             # `crossfade`/`edge_overlap`/`target_lufs`/`duck_db` are the values

@@ -931,7 +931,7 @@ def test_oneshot_render_resolves_asset_id(monkeypatch):
 def test_docs_rejects_disallowed_port(monkeypatch):
     from braidio.mcp import _docs
 
-    monkeypatch.setattr(_docs, "_host_is_public", lambda h, **kw: True)
+    monkeypatch.setattr(_docs, "_host_is_public", lambda h, port: True)
     with pytest.raises(ValueError, match="port"):
         _docs._validate_target("http://example.com:8080/x")
     _docs._validate_target("https://example.com/x")  # 443 default is fine
@@ -944,11 +944,12 @@ def _scripted_connector(responses, hops):
 
     def connect(address, timeout):
         hops.append(address[0])
+        response = responses[len(hops) - 1]
         client, server = socket.socketpair()
 
         def serve():
             server.recv(65536)
-            server.sendall(responses[len(hops) - 1])
+            server.sendall(response)
             server.close()
 
         threading.Thread(target=serve, daemon=True).start()
@@ -964,7 +965,7 @@ def test_docs_redirect_to_private_is_rejected():
 
     hops = []
     redirect = b"HTTP/1.1 302 Found\r\nLocation: http://127.0.0.1/secret\r\n\r\n"
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="not allowed|non-public|refus"):
         _docs.fetch_uri(
             "http://public.example/start",
             resolver=lambda host, port: (
@@ -996,8 +997,10 @@ def test_docs_fetch_pins_the_address_it_validated():
     assert hops == ["93.184.216.34"] and len(lookups) == 1
 
 
-def test_docs_fetch_enforces_the_byte_cap():
+def test_docs_fetch_enforces_the_byte_cap(monkeypatch):
     from braidio.mcp import _docs
+
+    monkeypatch.setattr(_docs, "MAX_BYTES", 10)  # braidio's own cap must reach graze
 
     body = b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n" + b"x" * 100
     with pytest.raises(ValueError, match="limit"):
@@ -1005,7 +1008,6 @@ def test_docs_fetch_enforces_the_byte_cap():
             "http://big.example/x",
             resolver=lambda host, port: ["93.184.216.34"],
             connector=_scripted_connector([body], []),
-            max_bytes=10,
         )
 
 

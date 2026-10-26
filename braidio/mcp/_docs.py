@@ -60,16 +60,14 @@ class _TextHTMLParser(HTMLParser):
         return " ".join(" ".join(self._chunks).split())
 
 
-def _host_is_public(host: str, *, port: int = 443, **policy) -> bool:
+def _host_is_public(host: str, port: int) -> bool:
     """True only if every address ``host`` resolves to passes graze's public-only policy."""
-    is_allowed = policy.get("is_allowed_address", graze.default_public_only)
-    resolver = policy.get("resolver", graze.system_resolver)
     try:
-        addresses = resolver(host, port)
+        addresses = graze.system_resolver(host, port)
     except OSError:
         return False
     return bool(addresses) and all(
-        is_allowed(ipaddress.ip_address(a)) for a in addresses
+        graze.default_public_only(ipaddress.ip_address(a)) for a in addresses
     )
 
 
@@ -85,7 +83,7 @@ def _validate_target(uri: str) -> None:
     port = parts.port or (443 if parts.scheme == "https" else 80)
     if port not in ALLOWED_PORTS:
         raise ValueError(f"port {port} is not allowed (only 80/443)")
-    if not parts.hostname or not _host_is_public(parts.hostname, port=port):
+    if not parts.hostname or not _host_is_public(parts.hostname, port):
         raise ValueError(f"refusing to fetch a non-public host: {parts.hostname!r}")
 
 
@@ -108,7 +106,7 @@ def fetch_uri(uri: str, **fetch_options) -> tuple[bytes, str]:
             ctype = (resp.headers.get("Content-Type") or "").split(";")[0].strip()
             data = resp.read()
     except graze.UnsafeTarget as err:
-        raise ValueError(f"refusing to fetch {uri!r}: {err}") from err
+        raise ValueError(str(err)) from err
     except graze.HTTPStatusError as err:
         raise ValueError(f"fetch failed: HTTP {err.status}") from err
     except graze.GuardedFetchError as err:

@@ -26,11 +26,11 @@ import html as _html
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Mapping
 
-from braidio.weave import layout_placed
+from braidio.weave import TurnOverlap, layout_placed
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from braidio.delivery import Delivery
-    from braidio.weave_config import TurnOverlap, WeaveConfig
+    from braidio.weave_config import WeaveConfig
 
 # Neutral kind → accent colour for the HTML view (falls back to a grey).
 KIND_COLORS: dict[str, str] = {
@@ -201,7 +201,7 @@ def build_timeline(
     title: str = "",
     settings: Mapping[str, Any] | None = None,
     speakers: list[str | None] | None = None,
-    overlap: "TurnOverlap | None" = None,
+    overlap: TurnOverlap | None = None,
 ) -> TimelineBreakdown:
     """Assemble a :class:`TimelineBreakdown` from per-beat render data (pure).
 

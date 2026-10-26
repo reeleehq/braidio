@@ -23,29 +23,9 @@ from braidio.multivoice import POOL_4, POOL_MANY
 from braidio.pacing import SEGMENTATION_UNITS
 from braidio.tts import DEFAULT_VOICE_ID
 
-#: Upper bound of the intelligible range for a speaker interruption: past it two
-#: voices talking over each other stop being understood (Hamilton#22).
-MAX_OVERLAP_TURN_S = 0.4
-
-
-@dataclass(frozen=True)
-class TurnOverlap:
-    """How much the next speaker may start before the previous one finishes.
-
-    The pure, render-time view of :class:`WeaveConfig`'s ``overlap_*`` knobs, so the
-    layout and the mixer take one value instead of four loose floats. ``max_s == 0``
-    means no interruption (the historical butt-join with a crossfade).
-
-    ``jitter`` shortens each overlap by a seeded random fraction up to that
-    amount (so it is not mechanical); ``duck_db`` (≤ 0) lowers the outgoing voice
-    over the overlap; ``seed`` makes both reproducible.
-    """
-
-    max_s: float = 0.0
-    jitter: float = 0.3
-    duck_db: float = 0.0
-    seed: int = 0
-
+# The interruption value object lives with the layout that consumes it (so the
+# weave stays free of this module's TTS imports); re-exported here for callers.
+from braidio.weave import MAX_OVERLAP_TURN_S, TurnOverlap  # noqa: F401
 
 # Base narration settings. Shaped for eleven_v3, which is the default model:
 # it honours `stability` and silently ignores `style` / `similarity_boost` /
@@ -120,15 +100,7 @@ class WeaveConfig:
             raise ValueError("WeaveConfig.voices must have at least one voice id")
         if not (1 <= self.min_turn <= self.max_turn):
             raise ValueError("require 1 <= min_turn <= max_turn")
-        if not (0.0 <= self.overlap_turn_s <= MAX_OVERLAP_TURN_S):
-            raise ValueError(
-                f"overlap_turn_s must be in [0, {MAX_OVERLAP_TURN_S}], "
-                f"got {self.overlap_turn_s}"
-            )
-        if not (0.0 <= self.overlap_jitter <= 1.0):
-            raise ValueError("overlap_jitter must be in [0, 1]")
-        if self.overlap_duck_db > 0:
-            raise ValueError("overlap_duck_db must be <= 0 (it attenuates)")
+        self.turn_overlap()  # TurnOverlap owns the overlap_* rules
         if self.segmentation_unit not in SEGMENTATION_UNITS:
             raise ValueError(
                 f"WeaveConfig.segmentation_unit must be one of {SEGMENTATION_UNITS}, "
@@ -157,7 +129,10 @@ class WeaveConfig:
         return len(self.voices) > 1
 
     def turn_overlap(self) -> TurnOverlap:
-        """The speaker-interruption knobs as the value the weave consumes."""
+        """The speaker-interruption knobs as the value the weave consumes.
+
+        Its ``seed`` is ``voice_seed``: one seed fixes casting and interruptions.
+        """
         return TurnOverlap(
             max_s=self.overlap_turn_s,
             jitter=self.overlap_jitter,

@@ -281,6 +281,7 @@ PINNED: dict[str, dict] = {
             "style": "string|null = null",
             "text": "string",
             "voice": "string|null = null",
+            "voice_settings": "object<string,any>|null = null",
         },
     },
     "DialogueBeatBodyV1": {

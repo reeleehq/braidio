@@ -84,6 +84,11 @@ def _narration_cache_key(
     )
 
 
+def _beat_settings(beat, config: dict) -> dict:
+    """The beat's own voice settings, else the config's — the fast path's rule."""
+    return beat.body.get("voice_settings") or config.get("voice_settings", {})
+
+
 @register_transform(NAME)
 class NarrationRenderTTS(BaseTransform):
     """Narrative beat (+ voice-assignment + weave-config) → ``narration-render/v1``."""
@@ -102,7 +107,7 @@ class NarrationRenderTTS(BaseTransform):
         config = cfg.body.get("config", {})
         voice_id = va.body.get("voice_id") or DEFAULT_VOICE_ID
         model_id = config.get("model_id", DEFAULT_MODEL_ID)
-        settings = config.get("voice_settings", {})
+        settings = _beat_settings(beat, config)
         cache_key = _narration_cache_key(
             self, beat.body.get("text", ""), voice_id, model_id, settings
         )
@@ -184,7 +189,7 @@ class NarrationRenderTTS(BaseTransform):
             api_key=elevenlabs_key(secrets),
             voice_id=va.body.get("voice_id") or DEFAULT_VOICE_ID,
             model_id=model_id,
-            voice_settings=config.get("voice_settings", {}),
+            voice_settings=_beat_settings(beat, config),
             return_cache_status=True,
         )
         duration = safe_duration(out_path)

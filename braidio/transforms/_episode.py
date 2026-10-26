@@ -67,7 +67,7 @@ from nw.transforms._provenance import derive_provenance
 
 from braidio.weave import TimelineItem
 from braidio.timeline import TimelineBreakdown, build_timeline
-from braidio.weave_config import WeaveConfig, speaker_key, turn_overlap_of
+from braidio.weave_config import WeaveConfig, speaker_key
 from braidio.bodies._domain import SCENE_BREAK_V1
 from braidio.rights import (
     DEFAULT_PROFILE,
@@ -142,12 +142,6 @@ def _structure_and_bed(node: Annotation | None):
     return MusicStructure(sting=sting, **(body.get("structure") or {})), bed
 
 
-def _layout_knobs(config: dict) -> tuple[float, float]:
-    """``(clip_edge_overlap_s, narration_crossfade_s)`` from a weave-config snapshot."""
-    cfg = WeaveConfig.from_snapshot(config)
-    return cfg.clip_edge_overlap_s, cfg.crossfade_s
-
-
 def _member_role(member: Annotation, index: dict, *, structure):
     """``(role, label, source_span)`` for one episode member — the timeline's
     per-beat metadata, mirroring ``braidio.render``'s conventions exactly.
@@ -215,7 +209,8 @@ def member_timeline(
         roles.append(role)
         labels.append(label)
         spans.append(span)
-    edge_overlap_s, crossfade_s = _layout_knobs(config)
+    weave = WeaveConfig.from_snapshot(config)  # omitted knobs → the defaults
+    edge_overlap_s, crossfade_s = weave.clip_edge_overlap_s, weave.crossfade_s
     speakers = [_member_speaker(m, index) for m in members]
     return build_timeline(
         kinds=roles,
@@ -225,7 +220,7 @@ def member_timeline(
         clip_edge_overlap_s=edge_overlap_s,
         narration_crossfade_s=crossfade_s,
         speakers=speakers,
-        overlap=turn_overlap_of(config),
+        overlap=weave.turn_overlap(),
         title=title,
         settings={
             "weave": dict(config),
@@ -678,7 +673,6 @@ class WeaveToEpisode(BaseTransform):
         # The timeline is built from the SAME parts the mixer is about to lay
         # out — probed the way weave_timeline probes them — and persisted on
         # the episode, so the cut points survive the process (plan §3).
-        edge_overlap_s, crossfade_s = _layout_knobs(config)
         timeline = member_timeline(
             members,
             [braidio.duration_s(it.path) for it in items],
@@ -693,13 +687,13 @@ class WeaveToEpisode(BaseTransform):
         out_path.parent.mkdir(parents=True, exist_ok=True)
         # Interruption is off unless the config asks: leave the call exactly as
         # it was for a project that never set it (the absence rule, as above).
-        overlap = turn_overlap_of(config)  # also what member_timeline laid out
+        overlap = weave.turn_overlap()  # also what member_timeline laid out
         overlap_kw = {"overlap": overlap} if overlap.is_on else {}
         braidio.weave_timeline(
             items,
             out_path,
-            clip_edge_overlap_s=edge_overlap_s,
-            narration_crossfade_s=crossfade_s,
+            clip_edge_overlap_s=weave.clip_edge_overlap_s,
+            narration_crossfade_s=weave.crossfade_s,
             target_lufs=target_lufs,
             true_peak=weave.true_peak_dbtp,
             sample_rate=weave.sample_rate,

@@ -38,6 +38,7 @@ from __future__ import annotations
 from nw import TransformInputs
 
 from braidio.transforms._common import ELEVENLABS_SECRET
+from braidio.weave_config import WeaveConfig
 from braidio.transforms._ingest import ingest_script, IngestedScript
 from braidio.transforms import (  # noqa: F401
     _asset_refs,
@@ -132,6 +133,7 @@ def weave_project(
     profile=None,
     rights=None,
     cast=None,
+    voice_id=None,
     api_key=None,
 ):
     """Ingest ``script`` and run the whole commentary-weave chain, in order.
@@ -160,6 +162,12 @@ def weave_project(
     :data:`~braidio.conversation.DEFAULT_CAST`. It is recorded as the singleton
     ``dialogue-cast/v1`` node only when the script has a dialogue beat, and
     each ``dialogue-render/v1`` derives from it (thorwhalen/braidio#46).
+
+    ``voice_id`` is the narration voice, resolved as on the fast path: the
+    beat's own voice, else ``voice_id``, else the format's ``narration_voice``,
+    else the config's pool. It is recorded in the weave-config, so changing it
+    re-stales (and re-bills) every narration render that did not name its own
+    voice. Left unset it writes nothing (thorwhalen/braidio#115).
 
     ``profile`` (a :class:`~braidio.rights.Profile`) and ``rights`` (a
     :class:`~braidio.rights.RightsPolicy`) are the rights seam, and they mean
@@ -196,6 +204,9 @@ def weave_project(
         config = config if config is not None else fmt.weave
         structure = structure if structure is not None else fmt.structure
         cast = cast if cast is not None else fmt.cast
+        voice_id = voice_id if voice_id is not None else fmt.narration_voice
+    if voice_id is not None:
+        config = (config or WeaveConfig()).with_(narration_voice=voice_id)
 
     ing = ingest_script(
         project,

@@ -46,6 +46,10 @@ class WeaveConfig:
     pool_label: str = "single"
     voice_seed: int = 7
     avoid_immediate_repeat: bool = True
+    # The voice narration speaks with when a beat names none — a production
+    # decision that outranks the pool (the fast path's ``voice_id``). ``None`` =
+    # unset: left out of ``to_dict`` so a config written before it is unchanged.
+    narration_voice: str | None = None
 
     # --- Delivery (TTS) -----------------------------------------------------
     model_id: str = "eleven_multilingual_v2"
@@ -150,13 +154,14 @@ class WeaveConfig:
         return tuple(self.voices) != (DEFAULT_VOICE_ID,)
 
     def cast_voice(self, ordinal: int, *, override: str | None = None) -> str | None:
-        """The voice beat ``ordinal`` speaks with: ``override``, else the pool pick.
+        """The voice beat ``ordinal`` speaks with: ``override``, else the
+        production's ``narration_voice``, else the pool pick.
 
         ``None`` means "the renderer's default voice". One definition for both
         render paths, so a script is cast (and so interrupts) the same on each.
         """
-        if override:
-            return override
+        if override or self.narration_voice:
+            return override or self.narration_voice
         if not self.casts_voices:
             return None
         return pick_voice(self.voices, seed=self.voice_seed, ordinal=ordinal)
@@ -185,6 +190,8 @@ class WeaveConfig:
         d = asdict(self)
         d["voices"] = list(self.voices)
         d["voice_settings"] = dict(self.voice_settings)
+        if d["narration_voice"] is None:  # the absence rule: unset writes nothing
+            del d["narration_voice"]
         return d
 
 

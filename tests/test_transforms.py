@@ -634,7 +634,11 @@ def test_weave_project_applies_a_format_and_its_declared_structure(
     }
     assert structure.body["sting_asset_id"] is None  # no asset supplied
     (cfg,) = nw.annotations_at_tier(project.root, "weave-configs")
-    assert cfg.body["config"] == braidio.SOLO_EXPLAINER.weave.to_dict()
+    # the format's narration voice rides in the config now (braidio#115)
+    expected = braidio.SOLO_EXPLAINER.weave.with_(
+        narration_voice=braidio.SOLO_EXPLAINER.narration_voice
+    )
+    assert cfg.body["config"] == expected.to_dict()
 
 
 # --- re-ingest: identity, freshness, retry (braidio#49, braidio#51) ------------

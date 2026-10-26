@@ -703,7 +703,7 @@ class WeaveToEpisode(BaseTransform):
         out_path.parent.mkdir(parents=True, exist_ok=True)
         # Interruption is off unless the config asks: leave the call exactly as
         # it was for a project that never set it (the absence rule, as above).
-        overlap = turn_overlap_of(config)
+        overlap = turn_overlap_of(config)  # also what member_timeline laid out
         overlap_kw = {"overlap": overlap} if overlap.is_on else {}
         braidio.weave_timeline(
             items,

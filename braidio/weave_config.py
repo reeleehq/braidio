@@ -147,7 +147,11 @@ class WeaveConfig:
         return d
 
 
-_FIELD_DEFAULTS = {f.name: f.default for f in fields(WeaveConfig)}
+_OVERLAP_DEFAULTS = {
+    f.name: f.default
+    for f in fields(WeaveConfig)
+    if f.name in ("overlap_turn_s", "overlap_jitter", "overlap_duck_db", "voice_seed")
+}
 
 
 def turn_overlap_of(config: Mapping[str, Any]) -> TurnOverlap:
@@ -161,7 +165,7 @@ def turn_overlap_of(config: Mapping[str, Any]) -> TurnOverlap:
     >>> turn_overlap_of({"overlap_turn_s": 0.2, "voice_seed": 3}).seed
     3
     """
-    get = lambda name: config.get(name, _FIELD_DEFAULTS[name])  # noqa: E731
+    get = lambda name: config.get(name, _OVERLAP_DEFAULTS[name])  # noqa: E731
     return TurnOverlap(
         max_s=get("overlap_turn_s"),
         jitter=get("overlap_jitter"),

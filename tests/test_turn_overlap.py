@@ -368,7 +368,7 @@ def _parity_script(**voices):
     )
 
 
-def _starts_both_ways(monkeypatch, tmp_path, script, config):
+def _starts_both_ways(monkeypatch, tmp_path, script, config, **kw):
     """Offsets of one script rendered on the fast path and through the graph."""
     import braidio.render as render_mod
 
@@ -389,9 +389,10 @@ def _starts_both_ways(monkeypatch, tmp_path, script, config):
         return_timeline=True,
         tts_dir=tmp_path / "tts",
         clips_dir=tmp_path / "clips",
+        **kw,
     )
     project = braidio.Project.init(tmp_path / "graph", title="graph")
-    ep = braidio.weave_project(project, script, config=config)
+    ep = braidio.weave_project(project, script, config=config, **kw)
     graph = braidio.transforms._episode.episode_timeline(project, ep)
     return [b.start for b in fast.beats], [b.start for b in graph.beats]
 
@@ -469,3 +470,105 @@ def test_the_importer_writes_no_voice_key_for_a_beat_without_one():
     assert "voice" in NarrativeBeatBodyV1(
         beat_id="0001", text="x", voice="v"
     ).model_dump(mode="json")
+
+
+@needs_ffmpeg
+def test_both_paths_honour_the_narration_voice(monkeypatch, tmp_path):
+    """``voice_id`` casts the same on both paths (braidio#115): beat 2 names the
+    default voice, so it is a different speaker from the narration voice."""
+    from braidio.tts import DEFAULT_VOICE_ID
+
+    cfg = WeaveConfig(overlap_turn_s=0.3, overlap_jitter=0.0)
+    script = _parity_script(two={"voice": DEFAULT_VOICE_ID})
+    fast, graph = _starts_both_ways(monkeypatch, tmp_path, script, cfg, voice_id="vn")
+    assert graph == pytest.approx(fast, abs=1e-3)
+    assert fast[1] - fast[0] < 1.0 - 0.12  # vn -> default: interrupts
+
+
+def test_a_format_narration_voice_reaches_the_graph(monkeypatch, tmp_path):
+    from braidio.formats import FORMATS
+
+    seen = []
+
+    def fake(text, out, *, return_cache_status=False, **kw):
+        seen.append(kw["voice_id"])
+        path = tone(Path(out), 440, 0.2)
+        return (path, False) if return_cache_status else path
+
+    monkeypatch.setattr(braidio, "narrate", fake)
+    fmt = FORMATS["debate"]  # narrates in a voice other than the default
+    assert fmt.narration_voice != braidio.tts.DEFAULT_VOICE_ID
+    project = braidio.Project.init(tmp_path / "g", title="g")
+    braidio.weave_project(project, _parity_script(), fmt=fmt)
+    assert set(seen) == {fmt.narration_voice}
+
+
+def test_the_env_voice_is_the_graph_default_too(monkeypatch, tmp_path):
+    from braidio.tts import VOICE_ENV_VAR
+
+    seen = []
+
+    def fake(text, out, *, return_cache_status=False, **kw):
+        seen.append(kw["voice_id"])
+        path = tone(Path(out), 440, 0.2)
+        return (path, False) if return_cache_status else path
+
+    monkeypatch.setattr(braidio, "narrate", fake)
+    monkeypatch.setenv(VOICE_ENV_VAR, "venv")
+    project = braidio.Project.init(tmp_path / "g", title="g")
+    braidio.weave_project(project, _parity_script())
+    assert set(seen) == {"venv"}
+
+
+def test_a_beat_voice_settings_reach_the_graph_render(monkeypatch, tmp_path):
+    seen = []
+
+    def fake(text, out, *, return_cache_status=False, **kw):
+        seen.append((text, kw["voice_settings"]))
+        path = tone(Path(out), 440, 0.2)
+        return (path, False) if return_cache_status else path
+
+    monkeypatch.setattr(braidio, "narrate", fake)
+    script = _parity_script(two={"voice_settings": {"stability": 0.9}})
+    project = braidio.Project.init(tmp_path / "g", title="g")
+    braidio.weave_project(project, script)
+    by_text = dict(seen)
+    import nw
+
+    keys = {
+        a.body["cache_key"]
+        for a in nw.iter_all_annotations(project.root)
+        if a.body_schema_uri == braidio.bodies.NARRATION_RENDER_V1
+    }
+    assert len(keys) == 4  # the settings are part of the render's identity
+    assert by_text["Two."] == {"stability": 0.9}
+    assert by_text["One."] == dict(WeaveConfig().voice_settings)
+
+
+def test_the_narration_voice_outranks_the_pool_and_an_unset_one_writes_nothing():
+    cfg = WeaveConfig(voices=("a", "b"), voice_seed=1, narration_voice="n")
+    assert cfg.cast_voice(0) == "n"
+    assert cfg.cast_voice(0, override="z") == "z"
+    assert "narration_voice" not in WeaveConfig().to_dict()
+    assert WeaveConfig.from_snapshot(cfg.to_dict()).narration_voice == "n"
+
+
+@needs_ffmpeg
+def test_both_paths_agree_when_the_env_voice_is_set(monkeypatch, tmp_path):
+    from braidio.tts import DEFAULT_VOICE_ID, VOICE_ENV_VAR
+
+    monkeypatch.setenv(VOICE_ENV_VAR, "venv")
+    cfg = WeaveConfig(overlap_turn_s=0.3, overlap_jitter=0.0)
+    script = _parity_script(two={"voice": DEFAULT_VOICE_ID})
+    fast, graph = _starts_both_ways(monkeypatch, tmp_path, script, cfg)
+    assert graph == pytest.approx(fast, abs=1e-3)
+
+
+def test_save_script_and_weave_project_record_one_config(tmp_path):
+    from braidio.formats import FORMATS
+
+    fmt = FORMATS["debate"]
+    assert braidio.transforms.format_config(fmt).narration_voice == fmt.narration_voice
+    assert braidio.transforms.format_config(None) is None
+    explicit = braidio.transforms.format_config(fmt, voice_id="vx")
+    assert explicit.narration_voice == "vx"

@@ -28,7 +28,7 @@ from braidio.bodies._render_nodes import (
     VOICE_ASSIGNMENT_V1,
     VoiceAssignmentBodyV1,
 )
-from braidio.tts import DEFAULT_VOICE_ID
+from braidio.tts import resolve_voice_id
 from braidio.weave_config import WeaveConfig
 from braidio.transforms._common import (
     TIER_VOICE_ASSIGNMENT,
@@ -55,10 +55,9 @@ class BeatToVoiceAssignment(BaseTransform):
         config = WeaveConfig.from_snapshot(cfg.body.get("config", {}))
         ordinal = int(beat.body.get("beat_id", "0") or 0)
         # the beat's own override, else the pool — the fast path's rule exactly
-        voice_id = (
-            config.cast_voice(ordinal, override=beat.body.get("voice"))
-            or DEFAULT_VOICE_ID
-        )
+        voice_id = config.cast_voice(
+            ordinal, override=beat.body.get("voice")
+        ) or resolve_voice_id(None)  # unset: BRAIDIO_TTS_VOICE, else the default
         pool_label, seed = config.pool_label, config.voice_seed
 
         full = TransformInputs(primary=(beat,), context={WEAVE_CONFIG_V1: (cfg,)})

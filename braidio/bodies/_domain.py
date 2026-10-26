@@ -113,14 +113,19 @@ class NarrativeBeatBodyV1(BaseModel):
     voice: Optional[str] = Field(
         None, description="Per-beat voice id; overrides the weave-config pool."
     )
+    voice_settings: Optional[dict] = Field(
+        None, description="Per-beat ElevenLabs voice settings; override the config's."
+    )
 
     @model_serializer(mode="wrap")
     def _omit_unset_voice(self, handler):
-        """Leave ``voice`` out while unset, so a body written before the field
-        existed is byte-identical on re-write (every writer, not one call site)."""
+        """Leave ``voice`` / ``voice_settings`` out while unset, so a body written
+        before the fields existed is byte-identical on re-write (every writer,
+        not one call site)."""
         data = handler(self)
-        if data.get("voice") is None:
-            data.pop("voice", None)
+        for key in ("voice", "voice_settings"):
+            if data.get(key) is None:
+                data.pop(key, None)
         return data
 
     plays_clip: Optional[str] = Field(

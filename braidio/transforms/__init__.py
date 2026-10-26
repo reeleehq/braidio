@@ -38,6 +38,7 @@ from __future__ import annotations
 from nw import TransformInputs
 
 from braidio.transforms._common import ELEVENLABS_SECRET
+from braidio.weave_config import WeaveConfig
 from braidio.transforms._ingest import ingest_script, IngestedScript
 from braidio.transforms import (  # noqa: F401
     _asset_refs,
@@ -89,6 +90,7 @@ VIDEO_CUT_FINISH_TRANSFORM = _video_cut.FINISH_NAME
 video_cut_reuses_existing = _video_cut.reuses_existing_cut
 
 __all__ = [
+    "format_config",
     "ingest_script",
     "IngestedScript",
     "weave_project",
@@ -120,6 +122,23 @@ __all__ = [
 ]
 
 
+def format_config(fmt=None, *, config=None, voice_id=None):
+    """The weave-config a production records: one rule for every writer.
+
+    ``config`` else the format's ``weave``, carrying the narration voice —
+    ``voice_id`` else ``fmt.narration_voice`` — when there is one. ``weave_project``
+    and ``save_script`` both resolve through here, so saving and then weaving a
+    format never rewrites the config node (and so never re-stales its renders).
+    """
+    if config is None and fmt is not None:
+        config = fmt.weave
+    if voice_id is None and fmt is not None:
+        voice_id = fmt.narration_voice
+    if voice_id is not None:
+        config = (config or WeaveConfig()).with_(narration_voice=voice_id)
+    return config
+
+
 def weave_project(
     project,
     script,
@@ -132,6 +151,7 @@ def weave_project(
     profile=None,
     rights=None,
     cast=None,
+    voice_id=None,
     api_key=None,
 ):
     """Ingest ``script`` and run the whole commentary-weave chain, in order.
@@ -160,6 +180,12 @@ def weave_project(
     :data:`~braidio.conversation.DEFAULT_CAST`. It is recorded as the singleton
     ``dialogue-cast/v1`` node only when the script has a dialogue beat, and
     each ``dialogue-render/v1`` derives from it (thorwhalen/braidio#46).
+
+    ``voice_id`` is the narration voice, resolved as on the fast path: the
+    beat's own voice, else ``voice_id``, else the format's ``narration_voice``,
+    else the config's pool. It is recorded in the weave-config, so changing it
+    re-stales (and re-bills) every narration render that did not name its own
+    voice. Left unset it writes nothing (thorwhalen/braidio#115).
 
     ``profile`` (a :class:`~braidio.rights.Profile`) and ``rights`` (a
     :class:`~braidio.rights.RightsPolicy`) are the rights seam, and they mean
@@ -192,8 +218,8 @@ def weave_project(
     """
     import nw
 
+    config = format_config(fmt, config=config, voice_id=voice_id)
     if fmt is not None:
-        config = config if config is not None else fmt.weave
         structure = structure if structure is not None else fmt.structure
         cast = cast if cast is not None else fmt.cast
 

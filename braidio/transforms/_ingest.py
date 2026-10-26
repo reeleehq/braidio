@@ -330,6 +330,7 @@ def _plan_nodes(
                             text=planned.content,
                             style=getattr(orig, "style", None),
                             voice=getattr(orig, "voice", None),
+                            voice_settings=getattr(orig, "voice_settings", None),
                         )
                     ),
                     body_schema_uri=NARRATIVE_BEAT_V1,

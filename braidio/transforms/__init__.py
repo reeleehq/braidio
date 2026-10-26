@@ -90,6 +90,7 @@ VIDEO_CUT_FINISH_TRANSFORM = _video_cut.FINISH_NAME
 video_cut_reuses_existing = _video_cut.reuses_existing_cut
 
 __all__ = [
+    "format_config",
     "ingest_script",
     "IngestedScript",
     "weave_project",
@@ -119,6 +120,23 @@ __all__ = [
     "video_cut_reuses_existing",
     "VIDEO_CUT_FINISH_TRANSFORM",
 ]
+
+
+def format_config(fmt=None, *, config=None, voice_id=None):
+    """The weave-config a production records: one rule for every writer.
+
+    ``config`` else the format's ``weave``, carrying the narration voice —
+    ``voice_id`` else ``fmt.narration_voice`` — when there is one. ``weave_project``
+    and ``save_script`` both resolve through here, so saving and then weaving a
+    format never rewrites the config node (and so never re-stales its renders).
+    """
+    if config is None and fmt is not None:
+        config = fmt.weave
+    if voice_id is None and fmt is not None:
+        voice_id = fmt.narration_voice
+    if voice_id is not None:
+        config = (config or WeaveConfig()).with_(narration_voice=voice_id)
+    return config
 
 
 def weave_project(
@@ -200,13 +218,10 @@ def weave_project(
     """
     import nw
 
+    config = format_config(fmt, config=config, voice_id=voice_id)
     if fmt is not None:
-        config = config if config is not None else fmt.weave
         structure = structure if structure is not None else fmt.structure
         cast = cast if cast is not None else fmt.cast
-        voice_id = voice_id if voice_id is not None else fmt.narration_voice
-    if voice_id is not None:
-        config = (config or WeaveConfig()).with_(narration_voice=voice_id)
 
     ing = ingest_script(
         project,

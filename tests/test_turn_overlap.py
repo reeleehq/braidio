@@ -496,7 +496,8 @@ def test_a_format_narration_voice_reaches_the_graph(monkeypatch, tmp_path):
         return (path, False) if return_cache_status else path
 
     monkeypatch.setattr(braidio, "narrate", fake)
-    fmt = FORMATS["solo_explainer"]
+    fmt = FORMATS["debate"]  # narrates in a voice other than the default
+    assert fmt.narration_voice != braidio.tts.DEFAULT_VOICE_ID
     project = braidio.Project.init(tmp_path / "g", title="g")
     braidio.weave_project(project, _parity_script(), fmt=fmt)
     assert set(seen) == {fmt.narration_voice}
@@ -532,6 +533,14 @@ def test_a_beat_voice_settings_reach_the_graph_render(monkeypatch, tmp_path):
     project = braidio.Project.init(tmp_path / "g", title="g")
     braidio.weave_project(project, script)
     by_text = dict(seen)
+    import nw
+
+    keys = {
+        a.body["cache_key"]
+        for a in nw.iter_all_annotations(project.root)
+        if a.body_schema_uri == braidio.bodies.NARRATION_RENDER_V1
+    }
+    assert len(keys) == 4  # the settings are part of the render's identity
     assert by_text["Two."] == {"stability": 0.9}
     assert by_text["One."] == dict(WeaveConfig().voice_settings)
 
@@ -542,3 +551,24 @@ def test_the_narration_voice_outranks_the_pool_and_an_unset_one_writes_nothing()
     assert cfg.cast_voice(0, override="z") == "z"
     assert "narration_voice" not in WeaveConfig().to_dict()
     assert WeaveConfig.from_snapshot(cfg.to_dict()).narration_voice == "n"
+
+
+@needs_ffmpeg
+def test_both_paths_agree_when_the_env_voice_is_set(monkeypatch, tmp_path):
+    from braidio.tts import DEFAULT_VOICE_ID, VOICE_ENV_VAR
+
+    monkeypatch.setenv(VOICE_ENV_VAR, "venv")
+    cfg = WeaveConfig(overlap_turn_s=0.3, overlap_jitter=0.0)
+    script = _parity_script(two={"voice": DEFAULT_VOICE_ID})
+    fast, graph = _starts_both_ways(monkeypatch, tmp_path, script, cfg)
+    assert graph == pytest.approx(fast, abs=1e-3)
+
+
+def test_save_script_and_weave_project_record_one_config(tmp_path):
+    from braidio.formats import FORMATS
+
+    fmt = FORMATS["debate"]
+    assert braidio.transforms.format_config(fmt).narration_voice == fmt.narration_voice
+    assert braidio.transforms.format_config(None) is None
+    explicit = braidio.transforms.format_config(fmt, voice_id="vx")
+    assert explicit.narration_voice == "vx"

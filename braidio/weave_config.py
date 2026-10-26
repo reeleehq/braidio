@@ -21,7 +21,7 @@ from typing import Any, Mapping, Sequence
 
 from braidio.multivoice import POOL_4, POOL_MANY
 from braidio.pacing import SEGMENTATION_UNITS
-from braidio.tts import DEFAULT_VOICE_ID
+from braidio.tts import DEFAULT_VOICE_ID, resolve_voice_id
 
 # The interruption value object lives with the layout that consumes it (so the
 # weave stays free of this module's TTS imports); re-exported here for callers.
@@ -160,8 +160,9 @@ class WeaveConfig:
         ``None`` means "the renderer's default voice". One definition for both
         render paths, so a script is cast (and so interrupts) the same on each.
         """
-        if override or self.narration_voice:
-            return override or self.narration_voice
+        voice = override or self.narration_voice
+        if voice:
+            return voice
         if not self.casts_voices:
             return None
         return pick_voice(self.voices, seed=self.voice_seed, ordinal=ordinal)
@@ -214,7 +215,7 @@ def speaker_key(voice: str | None) -> str:
     >>> speaker_key(None) == speaker_key("") == DEFAULT_VOICE_ID
     True
     """
-    return voice or DEFAULT_VOICE_ID
+    return resolve_voice_id(voice or None)  # unset: the env voice, else the default
 
 
 def turn_overlap_of(config: Mapping[str, Any]) -> TurnOverlap:

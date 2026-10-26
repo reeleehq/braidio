@@ -457,7 +457,7 @@ def save_script(
     ingested = braidio.transforms.ingest_script(
         proj,
         scr,
-        config=fmt.weave if fmt is not None else None,
+        config=braidio.transforms.format_config(fmt),
         source=src,
         structure=structure,
         bed=bed,

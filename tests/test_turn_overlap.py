@@ -278,7 +278,8 @@ def test_render_production_interrupts_on_a_voice_change(monkeypatch, tmp_path):
     assert starts[1] == pytest.approx(starts[0] + d[0] - 0.3, abs=1e-3)  # a → b
     assert starts[2] - starts[1] == pytest.approx(d[1] - 0.12, abs=1e-3)  # b → b
     assert starts[1] < base_starts[1]
-    assert duration_s(out) < duration_s(base_out) - 0.1  # the mix really is shorter
+    # the mixed file is as long as the layout says (tolerance: encoder padding)
+    assert duration_s(out) == pytest.approx(starts[2] + d[2], abs=0.15)
 
 
 @needs_ffmpeg

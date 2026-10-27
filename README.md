@@ -151,7 +151,7 @@ ElevenLabs is the default, not a requirement. `render_production` and `render_fo
 render_format(DEEP_DIVE, script, source=None, speak=my_local_tts)
 ```
 
-`voice` is the id braidio resolved for the line (the format's narrator, the cast's roles): pass `voice_id=` / `cast=` in your backend's vocabulary, or map them inside `speak`. The render's settings record names the backend under `resolved.tts`.
+`voice` is the id braidio resolved for the line (the format's narrator, the cast's roles), which under the shipped formats is an ElevenLabs id: pass `voice_id=` / `cast=` in your backend's vocabulary, or map ids inside `speak`. Inline `[audio tags]` are stripped before `speak` sees the text, speed and other ElevenLabs settings are ignored, and nothing is cached. The render's settings record names the backend under `resolved.tts`. Only the one-call path takes `speak` today; the graph path (`weave_project`) still synthesizes through ElevenLabs (#132).
 
 ## What it deliberately does *not* do
 

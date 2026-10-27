@@ -26,6 +26,7 @@ import html as _html
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Mapping
 
+from braidio.tts import DEFAULT_TTS
 from braidio.weave import TurnOverlap, layout_placed
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -246,10 +247,6 @@ def build_timeline(
         for i in range(n)
     )
     return TimelineBreakdown(spans, title=title, settings=settings)
-
-
-#: How the settings record names the default voice backend (no ``speak=``).
-DEFAULT_TTS = "elevenlabs"
 
 
 def render_settings(

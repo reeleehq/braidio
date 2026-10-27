@@ -42,7 +42,7 @@ from braidio.leveling import DEFAULT_TARGET_LUFS, level_part
 from braidio.script import Script
 from braidio.sources import SegmentSource
 from braidio.structure import DEFAULT_STRUCTURE, prepare_pause, prepare_sting
-from braidio.tts import Speak, narrate, narrator_from_speak
+from braidio.tts import Speak, narrate, narrator_from_speak, tts_name
 from braidio.weave import TimelineItem, extract_padded, weave_timeline
 from braidio.weave_config import WeaveConfig, speaker_key
 
@@ -215,16 +215,6 @@ def _end_tail(path: Path, *, fade_s: float, silence_s: float) -> None:
         tmp.replace(path)
     except (subprocess.CalledProcessError, ValueError, KeyError):
         pass  # not a real/probeable audio file — leave it untailed
-
-
-def _tts_name(speak: Speak | None) -> str:
-    """The voice backend a render used, as its settings record names it."""
-    if speak is None:
-        from braidio.timeline import DEFAULT_TTS
-
-        return DEFAULT_TTS
-    name = getattr(speak, "__qualname__", None) or type(speak).__qualname__
-    return f"{getattr(speak, '__module__', '') or ''}:{name}".lstrip(":")
 
 
 def render_production(
@@ -555,7 +545,7 @@ def render_production(
                 delivery=delivery,
                 profile=profile,
                 normalize=normalize,
-                tts=_tts_name(speak),
+                tts=tts_name(speak),
             ),
         )
         return out, tl

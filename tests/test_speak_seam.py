@@ -109,14 +109,52 @@ def test_a_paced_format_speaks_every_turn_through_speak(tmp_path, no_elevenlabs)
     assert out.exists()
 
 
-def test_without_speak_the_settings_record_names_elevenlabs():
-    from braidio.timeline import DEFAULT_TTS, render_settings
-
-    rec = render_settings(
-        config=None,
-        crossfade_s=0.1,
-        clip_edge_overlap_s=0.0,
-        target_lufs=-16.0,
-        duck_db=-15.0,
+def test_audio_tags_are_not_read_aloud_by_another_backend(tmp_path, no_elevenlabs):
+    # eleven_v3 markup the formats' authoring guides ask for ([pause], [dryly])
+    script = braidio.Script(
+        title="Tags",
+        id_slug="tags",
+        beats=[
+            braidio.Narration(text="[pause] Hello [dryly] there."),
+            braidio.Dialogue(
+                turns=[("host_a", "[laughs] Really?"), ("host_b", "Yes.")]
+            ),
+        ],
     )
-    assert rec["resolved"]["tts"] == DEFAULT_TTS == "elevenlabs"
+    speak = _ToneSpeaker()
+    braidio.render_format(
+        DEEP_DIVE,
+        script,
+        source=None,
+        out_path=tmp_path / "tags.mp3",
+        speak=speak,
+        tts_dir=tmp_path / "tts",
+        episodes_dir=tmp_path / "eps",
+    )
+    assert [text for text, _ in speak.calls] == ["Hello there.", "Really?", "Yes."]
+
+
+def test_without_speak_the_render_records_elevenlabs(tmp_path, monkeypatch):
+    import braidio.render as render_mod
+
+    tone = _ToneSpeaker()
+
+    def _narrate(text, out_path, **kw):  # the ElevenLabs call, stubbed
+        audio, _ = tone(text, voice=None)
+        out = tmp_path / "n.wav"
+        out.write_bytes(audio)
+        return out
+
+    monkeypatch.setattr(render_mod, "narrate", _narrate)
+    script = braidio.Script(
+        title="Plain", id_slug="plain", beats=[braidio.Narration(text="Plain words.")]
+    )
+    _, timeline = braidio.render_production(
+        script,
+        source=None,
+        out_path=tmp_path / "plain.mp3",
+        return_timeline=True,
+        tts_dir=tmp_path / "tts",
+        episodes_dir=tmp_path / "eps",
+    )
+    assert timeline.settings["resolved"]["tts"] == "elevenlabs"

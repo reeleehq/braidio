@@ -175,10 +175,7 @@ def resolve_config(project, fmt=None, *, config=None, voice_id=None):
     nodes = nw.annotations_at_tier(project.root, "weave-configs")
     recorded = dict(nodes[0].body.get("config", {})) if nodes else {}
     kept = {key: recorded[key] for key in VOICE_KEYS if key in recorded}
-    base = resolved or WeaveConfig()
-    if all(getattr(base, k) == v for k, v in kept.items()) and resolved is None:
-        return None  # nothing asked for, nothing to keep: the plain default
-    return base.with_(**kept)
+    return (resolved or WeaveConfig()).with_(**kept)
 
 
 def weave_project(

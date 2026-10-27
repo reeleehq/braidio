@@ -16,6 +16,7 @@
 - [braidio.delivery](_autosummary/braidio.delivery.html.md): Narration &#42;delivery&#42; presets — model + voice settings (issue #10, expressiveness).
 - [braidio.formats](_autosummary/braidio.formats.html.md): Ready-made &#42;&#42;format templates&#42;&#42; — high-quality presets under standard names.
 - [braidio.kinds](_autosummary/braidio.kinds.html.md): Production kinds braidio defines. Pure (no optional deps).
+- [braidio.leveling](_autosummary/braidio.leveling.html.md): Level one spoken part to a loudness target with a single measured gain.
 - [braidio.markdown_script](_autosummary/braidio.markdown_script.html.md): Markdown → narration beats, for reading a written document aloud.
 - [braidio.multivoice](_autosummary/braidio.multivoice.html.md): Multi-voice narration: cycle a pool of voices across segments (issue #10).
 - [braidio.music](_autosummary/braidio.music.html.md): Music bed — an instrumental underscore laid under the whole production, ducked.
@@ -35,7 +36,7 @@
 - [braidio.weave](_autosummary/braidio.weave.html.md): Weave narration + audio clips on a timeline (#21) — the reusable mix engine.
 - [braidio.weave_config](_autosummary/braidio.weave_config.html.md): WeaveConfig — every editing choice for weaving narration + segments (#20).
 - [For AI agents](ai-agents.html.md): &#96;braidio&#96; ships artifacts for coding agents alongside its code. This page lists
-- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-26 22:23 UTC&#42;&#42; from commit &lt;a href="https://github.com/ree...
+- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-27 18:07 UTC&#42;&#42; from commit &lt;a href="https://github.com/ree...
 
 ## Optional
 

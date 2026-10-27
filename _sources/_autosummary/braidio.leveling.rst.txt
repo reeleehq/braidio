@@ -1,0 +1,21 @@
+braidio.leveling
+================
+
+.. automodule:: braidio.leveling
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      DEFAULT_TARGET_LUFS
+      DEFAULT_TRUE_PEAK_DB
+      OUTPUT_SAMPLE_RATE
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      level_part
+      peak_ceiling
+   

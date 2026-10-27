@@ -120,6 +120,7 @@
    genre
    importing
    kinds
+   leveling
    markdown_script
    mcp
    multivoice

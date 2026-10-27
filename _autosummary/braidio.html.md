@@ -1361,6 +1361,7 @@ the outgoing voice’s talked-over tail (see `layout_placed()`).
 | [`delivery`](braidio.delivery.html.md#module-braidio.delivery)               | Narration *delivery* presets — model + voice settings (issue #10, expressiveness).                         |
 | [`formats`](braidio.formats.html.md#module-braidio.formats)                 | Ready-made **format templates** — high-quality presets under standard names.                               |
 | [`kinds`](braidio.kinds.html.md#module-braidio.kinds)                     | Production kinds braidio defines.                                                                          |
+| [`leveling`](braidio.leveling.html.md#module-braidio.leveling)               | Level one spoken part to a loudness target with a single measured gain.                                    |
 | [`markdown_script`](braidio.markdown_script.html.md#module-braidio.markdown_script) | Markdown → narration beats, for reading a written document aloud.                                          |
 | [`multivoice`](braidio.multivoice.html.md#module-braidio.multivoice)           | Multi-voice narration: cycle a pool of voices across segments (issue #10).                                 |
 | [`music`](braidio.music.html.md#module-braidio.music)                     | Music bed — an instrumental underscore laid under the whole production, ducked.                            |

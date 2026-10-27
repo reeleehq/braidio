@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=ae06b2e5"></script>
+    <script src="../../_static/documentation_options.js?v=f81738d5"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.79" />
+  <meta name="docsearch:version" content="0.0.81" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -724,11 +724,20 @@ window.runMermaid = runMermaid;</script>
 
 <span class="sd">Voice defaults to "George — Warm, Captivating Storyteller"; override with the</span>
 <span class="sd">``BRAIDIO_TTS_VOICE`` env var (:data:`VOICE_ENV_VAR`) or the ``voice_id`` arg.</span>
+
+<span class="sd">ElevenLabs is the default, not the only voice: a :data:`Speak` callable</span>
+<span class="sd">(``speak(text, *, voice) -&gt; (audio_bytes, format)``) is the seam any other</span>
+<span class="sd">backend plugs into — a local model through ``voxy`` for a free preview, a test,</span>
+<span class="sd">CI. :func:`narrator_from_speak` adapts one to :func:`narrate`'s shape, which is</span>
+<span class="sd">what the renderers call.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">mixing</span><span class="w"> </span><span class="kn">import</span> <span class="n">text_to_speech</span>
@@ -752,6 +761,94 @@ window.runMermaid = runMermaid;</script>
     <span class="s2">"use_speaker_boost"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
     <span class="s2">"speed"</span><span class="p">:</span> <span class="mf">0.97</span><span class="p">,</span>
 <span class="p">}</span>
+
+
+<span class="c1">#: How a render's settings record names the default voice backend (no ``speak=``).</span>
+<span class="n">DEFAULT_TTS</span> <span class="o">=</span> <span class="s2">"elevenlabs"</span>
+
+<span class="n">_SPACE_BEFORE_PUNCT</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\s+([.,!?;:])"</span><span class="p">)</span>  <span class="c1"># what a removed tag leaves</span>
+
+<span class="c1">#: A text-to-speech backend: ``speak(text, *, voice) -&gt; (audio_bytes, format)``,</span>
+<span class="c1">#: ``format`` being the audio's file extension (``"wav"``, ``"mp3"``). ``voice``</span>
+<span class="c1">#: is the voice braidio resolved for the line (``None``: the backend's default).</span>
+<span class="n">Speak</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span>
+
+
+<div class="viewcode-block" id="narrator_from_speak">
+<a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.narrator_from_speak">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">narrator_from_speak</span><span class="p">(</span>
+    <span class="n">speak</span><span class="p">:</span> <span class="n">Speak</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">strip_tags</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Path</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""A :func:`narrate`-shaped synthesizer that speaks through ``speak``.</span>
+
+<span class="sd">    ``voice_id`` is handed to ``speak`` as ``voice``: braidio's resolved id for</span>
+<span class="sd">    the line, which under the shipped formats and the default cast is an</span>
+<span class="sd">    ElevenLabs id (pass ``voice_id=`` / ``cast=`` in the backend's vocabulary,</span>
+<span class="sd">    or map ids inside ``speak``); ``None`` only when nothing named a voice.</span>
+<span class="sd">    Inline ``[audio tags]`` are eleven_v3 markup, so with ``strip_tags`` (the</span>
+<span class="sd">    default) they are removed before ``speak`` sees the text, rather than read</span>
+<span class="sd">    aloud. The ElevenLabs-only arguments (``api_key``, ``model_id``,</span>
+<span class="sd">    ``voice_settings``, so a paced turn's ``speed`` too) are accepted and</span>
+<span class="sd">    ignored. Nothing is cached: every call reaches ``speak``. The file is</span>
+<span class="sd">    written at ``out_path`` with the suffix ``speak`` reported.</span>
+
+<span class="sd">    &gt;&gt;&gt; import tempfile</span>
+<span class="sd">    &gt;&gt;&gt; fake = lambda text, *, voice: (text.encode(), "wav")</span>
+<span class="sd">    &gt;&gt;&gt; with tempfile.TemporaryDirectory() as d:</span>
+<span class="sd">    ...     out = narrator_from_speak(fake)("[pause] hi", Path(d) / "a.mp3", voice_id="v")</span>
+<span class="sd">    ...     out.suffix, out.read_bytes()</span>
+<span class="sd">    ('.wav', b'hi')</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.style</span><span class="w"> </span><span class="kn">import</span> <span class="n">strip_audio_tags</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_narrate</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">out_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">voice_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">_</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">strip_tags</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">_SPACE_BEFORE_PUNCT</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span>
+                <span class="sa">r</span><span class="s2">"\1"</span><span class="p">,</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">strip_audio_tags</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">"a line of nothing but [audio tags] has nothing to speak"</span>
+                <span class="p">)</span>
+        <span class="n">audio</span><span class="p">,</span> <span class="n">fmt</span> <span class="o">=</span> <span class="n">speak</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="n">voice_id</span><span class="p">)</span>
+        <span class="n">ext</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">fmt</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">"."</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">ext</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">tts_name</span><span class="p">(</span><span class="n">speak</span><span class="p">)</span><span class="si">}</span><span class="s2"> returned no audio format for </span><span class="si">{</span><span class="n">text</span><span class="p">[:</span><span class="mi">40</span><span class="p">]</span><span class="si">!r}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">out_path</span><span class="p">)</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">"."</span> <span class="o">+</span> <span class="n">ext</span><span class="p">)</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span>
+
+    <span class="k">return</span> <span class="n">_narrate</span></div>
+
+
+
+<div class="viewcode-block" id="tts_name">
+<a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.tts_name">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">tts_name</span><span class="p">(</span><span class="n">speak</span><span class="p">:</span> <span class="n">Speak</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The voice backend a render used, as its settings record names it.</span>
+
+<span class="sd">    ``None`` is the default backend; a callable is named ``module:qualname``,</span>
+<span class="sd">    seeing through ``functools.partial`` (a ``name`` attribute wins).</span>
+
+<span class="sd">    &gt;&gt;&gt; import functools</span>
+<span class="sd">    &gt;&gt;&gt; tts_name(None)</span>
+<span class="sd">    'elevenlabs'</span>
+<span class="sd">    &gt;&gt;&gt; tts_name(functools.partial(narrator_from_speak, strip_tags=False))</span>
+<span class="sd">    'braidio.tts:narrator_from_speak'</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">speak</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">DEFAULT_TTS</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">speak</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">speak</span><span class="o">.</span><span class="n">name</span>
+    <span class="k">while</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">speak</span><span class="p">,</span> <span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">):</span>
+        <span class="n">speak</span> <span class="o">=</span> <span class="n">speak</span><span class="o">.</span><span class="n">func</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">speak</span><span class="p">,</span> <span class="s2">"__qualname__"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">speak</span><span class="p">)</span><span class="o">.</span><span class="vm">__qualname__</span>
+    <span class="n">module</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">speak</span><span class="p">,</span> <span class="s2">"__module__"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">speak</span><span class="p">)</span><span class="o">.</span><span class="vm">__module__</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">module</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span></div>
+
 
 
 <div class="viewcode-block" id="resolve_voice_id">

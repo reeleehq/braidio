@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=ae06b2e5"></script>
+    <script src="../_static/documentation_options.js?v=f81738d5"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.79" />
+  <meta name="docsearch:version" content="0.0.81" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -421,11 +421,22 @@ quality model and a locked voice + settings so a whole production sounds like
 one narrator.</p>
 <p>Voice defaults to “George — Warm, Captivating Storyteller”; override with the
 <code class="docutils literal notranslate"><span class="pre">BRAIDIO_TTS_VOICE</span></code> env var (<code class="xref py py-data docutils literal notranslate"><span class="pre">VOICE_ENV_VAR</span></code>) or the <code class="docutils literal notranslate"><span class="pre">voice_id</span></code> arg.</p>
+<p>ElevenLabs is the default, not the only voice: a <a class="reference internal" href="#braidio.tts.Speak" title="braidio.tts.Speak"><code class="xref py py-data docutils literal notranslate"><span class="pre">Speak</span></code></a> callable
+(<code class="docutils literal notranslate"><span class="pre">speak(text,</span> <span class="pre">*,</span> <span class="pre">voice)</span> <span class="pre">-&gt;</span> <span class="pre">(audio_bytes,</span> <span class="pre">format)</span></code>) is the seam any other
+backend plugs into — a local model through <code class="docutils literal notranslate"><span class="pre">voxy</span></code> for a free preview, a test,
+CI. <a class="reference internal" href="#braidio.tts.narrator_from_speak" title="braidio.tts.narrator_from_speak"><code class="xref py py-func docutils literal notranslate"><span class="pre">narrator_from_speak()</span></code></a> adapts one to <a class="reference internal" href="#braidio.tts.narrate" title="braidio.tts.narrate"><code class="xref py py-func docutils literal notranslate"><span class="pre">narrate()</span></code></a>’s shape, which is
+what the renderers call.</p>
 <p class="rubric">Module Attributes</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#braidio.tts.DEFAULT_MODEL_ID" title="braidio.tts.DEFAULT_MODEL_ID"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DEFAULT_MODEL_ID</span></code></a></p></td>
 <td><p>The narration model.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.tts.DEFAULT_TTS" title="braidio.tts.DEFAULT_TTS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DEFAULT_TTS</span></code></a></p></td>
+<td><p>How a render's settings record names the default voice backend (no <code class="docutils literal notranslate"><span class="pre">speak=</span></code>).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.tts.Speak" title="braidio.tts.Speak"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Speak</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">speak(text,</span> <span class="pre">*,</span> <span class="pre">voice)</span> <span class="pre">-&gt;</span> <span class="pre">(audio_bytes,</span> <span class="pre">format)</span></code>, <code class="docutils literal notranslate"><span class="pre">format</span></code> being the audio's file extension (<code class="docutils literal notranslate"><span class="pre">&quot;wav&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mp3&quot;</span></code>).</p></td>
 </tr>
 </tbody>
 </table>
@@ -436,11 +447,17 @@ one narrator.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#braidio.tts.narrate" title="braidio.tts.narrate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">narrate</span></code></a>(text, out_path, *[, api_key, ...])</p></td>
 <td><p>Synthesize <code class="docutils literal notranslate"><span class="pre">text</span></code> to <code class="docutils literal notranslate"><span class="pre">out_path</span></code> (mp3).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.tts.resolve_voice_id" title="braidio.tts.resolve_voice_id"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_voice_id</span></code></a>([voice_id])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.tts.narrator_from_speak" title="braidio.tts.narrator_from_speak"><code class="xref py py-obj docutils literal notranslate"><span class="pre">narrator_from_speak</span></code></a>(speak, *[, strip_tags])</p></td>
+<td><p>A <a class="reference internal" href="#braidio.tts.narrate" title="braidio.tts.narrate"><code class="xref py py-func docutils literal notranslate"><span class="pre">narrate()</span></code></a>-shaped synthesizer that speaks through <code class="docutils literal notranslate"><span class="pre">speak</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.tts.resolve_voice_id" title="braidio.tts.resolve_voice_id"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_voice_id</span></code></a>([voice_id])</p></td>
 <td><p>Voice id from arg → <code class="xref py py-data docutils literal notranslate"><span class="pre">VOICE_ENV_VAR</span></code> env → default.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.tts.text_to_dialogue" title="braidio.tts.text_to_dialogue"><code class="xref py py-obj docutils literal notranslate"><span class="pre">text_to_dialogue</span></code></a>(turns, *[, model_id, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.tts.text_to_dialogue" title="braidio.tts.text_to_dialogue"><code class="xref py py-obj docutils literal notranslate"><span class="pre">text_to_dialogue</span></code></a>(turns, *[, model_id, ...])</p></td>
 <td><p>Synthesize a multi-speaker exchange in ONE pass (ElevenLabs Text-to-Dialogue).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.tts.tts_name" title="braidio.tts.tts_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tts_name</span></code></a>(speak)</p></td>
+<td><p>The voice backend a render used, as its settings record names it.</p></td>
 </tr>
 </tbody>
 </table>
@@ -454,6 +471,26 @@ lever on whether a read sounds alive (braidio.style.audio_tag_rate). A v2
 default caps every production at the flat end before an author writes a
 word. Override per-render with <code class="code docutils literal notranslate"><span class="pre">delivery=</span></code>, or persist your own in
 ~/.config/braidio/config.json — see braidio.defaults.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="braidio.tts.DEFAULT_TTS">
+<span class="sig-prename descclassname"><span class="pre">braidio.tts.</span></span><span class="sig-name descname"><span class="pre">DEFAULT_TTS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'elevenlabs'</span></span><a class="headerlink" href="#braidio.tts.DEFAULT_TTS" title="Link to this definition">#</a></dt>
+<dd><p>How a render’s settings record names the default voice backend (no <code class="docutils literal notranslate"><span class="pre">speak=</span></code>).</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="braidio.tts.Speak">
+<span class="sig-prename descclassname"><span class="pre">braidio.tts.</span></span><span class="sig-name descname"><span class="pre">Speak</span></span><a class="headerlink" href="#braidio.tts.Speak" title="Link to this definition">#</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">speak(text,</span> <span class="pre">*,</span> <span class="pre">voice)</span> <span class="pre">-&gt;</span> <span class="pre">(audio_bytes,</span> <span class="pre">format)</span></code>,
+<code class="docutils literal notranslate"><span class="pre">format</span></code> being the audio’s file extension (<code class="docutils literal notranslate"><span class="pre">&quot;wav&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mp3&quot;</span></code>). <code class="docutils literal notranslate"><span class="pre">voice</span></code>
+is the voice braidio resolved for the line (<code class="docutils literal notranslate"><span class="pre">None</span></code>: the backend’s default).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A text-to-speech backend</p>
+</dd>
+</dl>
+<p>alias of <a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Callable</span></code></a>[[…], <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#bytes" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bytes</span></code></a>, <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]]</p>
 </dd></dl>
 
 <dl class="py function">
@@ -473,6 +510,35 @@ thread a per-user BYO key without touching the process environment.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>, <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="braidio.tts.narrator_from_speak">
+<span class="sig-prename descclassname"><span class="pre">braidio.tts.</span></span><span class="sig-name descname"><span class="pre">narrator_from_speak</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">speak</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">strip_tags</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/tts.html#narrator_from_speak"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.tts.narrator_from_speak" title="Link to this definition">#</a></dt>
+<dd><p>A <a class="reference internal" href="#braidio.tts.narrate" title="braidio.tts.narrate"><code class="xref py py-func docutils literal notranslate"><span class="pre">narrate()</span></code></a>-shaped synthesizer that speaks through <code class="docutils literal notranslate"><span class="pre">speak</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">voice_id</span></code> is handed to <code class="docutils literal notranslate"><span class="pre">speak</span></code> as <code class="docutils literal notranslate"><span class="pre">voice</span></code>: braidio’s resolved id for
+the line, which under the shipped formats and the default cast is an
+ElevenLabs id (pass <code class="docutils literal notranslate"><span class="pre">voice_id=</span></code> / <code class="docutils literal notranslate"><span class="pre">cast=</span></code> in the backend’s vocabulary,
+or map ids inside <code class="docutils literal notranslate"><span class="pre">speak</span></code>); <code class="docutils literal notranslate"><span class="pre">None</span></code> only when nothing named a voice.
+Inline <code class="docutils literal notranslate"><span class="pre">[audio</span> <span class="pre">tags]</span></code> are eleven_v3 markup, so with <code class="docutils literal notranslate"><span class="pre">strip_tags</span></code> (the
+default) they are removed before <code class="docutils literal notranslate"><span class="pre">speak</span></code> sees the text, rather than read
+aloud. The ElevenLabs-only arguments (<code class="docutils literal notranslate"><span class="pre">api_key</span></code>, <code class="docutils literal notranslate"><span class="pre">model_id</span></code>,
+<code class="docutils literal notranslate"><span class="pre">voice_settings</span></code>, so a paced turn’s <code class="docutils literal notranslate"><span class="pre">speed</span></code> too) are accepted and
+ignored. Nothing is cached: every call reaches <code class="docutils literal notranslate"><span class="pre">speak</span></code>. The file is
+written at <code class="docutils literal notranslate"><span class="pre">out_path</span></code> with the suffix <code class="docutils literal notranslate"><span class="pre">speak</span></code> reported.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fake</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">text</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">voice</span><span class="p">:</span> <span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span> <span class="s2">"wav"</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">d</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">out</span> <span class="o">=</span> <span class="n">narrator_from_speak</span><span class="p">(</span><span class="n">fake</span><span class="p">)(</span><span class="s2">"[pause] hi"</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"a.mp3"</span><span class="p">,</span> <span class="n">voice_id</span><span class="o">=</span><span class="s2">"v"</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">out</span><span class="o">.</span><span class="n">suffix</span><span class="p">,</span> <span class="n">out</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">()</span>
+<span class="go">('.wav', b'hi')</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Callable</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/constants.html#Ellipsis" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">...</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]</span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -527,6 +593,26 @@ Keep each request under ~2000 chars total (API limit).</p></li>
 </dl>
 </dd></dl>
 
+<dl class="py function">
+<dt class="sig sig-object py" id="braidio.tts.tts_name">
+<span class="sig-prename descclassname"><span class="pre">braidio.tts.</span></span><span class="sig-name descname"><span class="pre">tts_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">speak</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/tts.html#tts_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.tts.tts_name" title="Link to this definition">#</a></dt>
+<dd><p>The voice backend a render used, as its settings record names it.</p>
+<p><code class="docutils literal notranslate"><span class="pre">None</span></code> is the default backend; a callable is named <code class="docutils literal notranslate"><span class="pre">module:qualname</span></code>,
+seeing through <code class="docutils literal notranslate"><span class="pre">functools.partial</span></code> (a <code class="docutils literal notranslate"><span class="pre">name</span></code> attribute wins).</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tts_name</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+<span class="go">'elevenlabs'</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tts_name</span><span class="p">(</span><span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span><span class="n">narrator_from_speak</span><span class="p">,</span> <span class="n">strip_tags</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+<span class="go">'braidio.tts:narrator_from_speak'</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 
 
@@ -577,9 +663,13 @@ Keep each request under ~2000 chars total (API limit).</p></li>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.DEFAULT_MODEL_ID"><code class="docutils literal notranslate"><span class="pre">DEFAULT_MODEL_ID</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.DEFAULT_TTS"><code class="docutils literal notranslate"><span class="pre">DEFAULT_TTS</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.Speak"><code class="docutils literal notranslate"><span class="pre">Speak</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.narrate"><code class="docutils literal notranslate"><span class="pre">narrate()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.narrator_from_speak"><code class="docutils literal notranslate"><span class="pre">narrator_from_speak()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.resolve_voice_id"><code class="docutils literal notranslate"><span class="pre">resolve_voice_id()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.text_to_dialogue"><code class="docutils literal notranslate"><span class="pre">text_to_dialogue()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.tts_name"><code class="docutils literal notranslate"><span class="pre">tts_name()</span></code></a></li>
 </ul>
   </nav></div>
 

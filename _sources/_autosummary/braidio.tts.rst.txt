@@ -9,12 +9,16 @@ braidio.tts
    .. autosummary::
    
       DEFAULT_MODEL_ID
+      DEFAULT_TTS
+      Speak
    
    .. rubric:: Functions
 
    .. autosummary::
    
       narrate
+      narrator_from_speak
       resolve_voice_id
       text_to_dialogue
+      tts_name
    

@@ -123,7 +123,7 @@ extra; a real render always passes one.
 * **Return type:**
   [`TimelineBreakdown`](#braidio.timeline.TimelineBreakdown)
 
-### braidio.timeline.render_settings(, config, crossfade_s, clip_edge_overlap_s, target_lufs, duck_db, delivery=None, profile=None, normalize=True)
+### braidio.timeline.render_settings(, config, crossfade_s, clip_edge_overlap_s, target_lufs, duck_db, delivery=None, profile=None, normalize=True, tts='elevenlabs')
 
 The record of *how* a production was rendered, as plain JSON types.
 

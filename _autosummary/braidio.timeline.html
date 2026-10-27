@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=ae06b2e5"></script>
+    <script src="../_static/documentation_options.js?v=f81738d5"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.79" />
+  <meta name="docsearch:version" content="0.0.81" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -567,7 +567,7 @@ extra; a real render always passes one.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="braidio.timeline.render_settings">
-<span class="sig-prename descclassname"><span class="pre">braidio.timeline.</span></span><span class="sig-name descname"><span class="pre">render_settings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">crossfade_s</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clip_edge_overlap_s</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_lufs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duck_db</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delivery</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/timeline.html#render_settings"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.timeline.render_settings" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">braidio.timeline.</span></span><span class="sig-name descname"><span class="pre">render_settings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">crossfade_s</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clip_edge_overlap_s</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_lufs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duck_db</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delivery</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'elevenlabs'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/timeline.html#render_settings"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.timeline.render_settings" title="Link to this definition">#</a></dt>
 <dd><p>The record of <em>how</em> a production was rendered, as plain JSON types.</p>
 <p>Why it exists: since braidio#63 the pacing knobs are real, so two renders of
 one script can differ by minutes — and until this, nothing on disk said which

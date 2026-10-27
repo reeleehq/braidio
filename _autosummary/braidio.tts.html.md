@@ -10,17 +10,27 @@ one narrator.
 Voice defaults to “George — Warm, Captivating Storyteller”; override with the
 `BRAIDIO_TTS_VOICE` env var (`VOICE_ENV_VAR`) or the `voice_id` arg.
 
+ElevenLabs is the default, not the only voice: a [`Speak`](#braidio.tts.Speak) callable
+(`speak(text, *, voice) -> (audio_bytes, format)`) is the seam any other
+backend plugs into — a local model through `voxy` for a free preview, a test,
+CI. [`narrator_from_speak()`](#braidio.tts.narrator_from_speak) adapts one to [`narrate()`](#braidio.tts.narrate)’s shape, which is
+what the renderers call.
+
 ### Module Attributes
 
-| [`DEFAULT_MODEL_ID`](#braidio.tts.DEFAULT_MODEL_ID)   | The narration model.   |
-|---------------------------------------------------------------------|------------------------|
+| [`DEFAULT_MODEL_ID`](#braidio.tts.DEFAULT_MODEL_ID)   | The narration model.                                                                                            |
+|---------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
+| [`DEFAULT_TTS`](#braidio.tts.DEFAULT_TTS)        | How a render's settings record names the default voice backend (no `speak=`).                                   |
+| [`Speak`](#braidio.tts.Speak)              | `speak(text, *, voice) -> (audio_bytes, format)`, `format` being the audio's file extension (`"wav"`, `"mp3"`). |
 
 ### Functions
 
-| [`narrate`](#braidio.tts.narrate)(text, out_path, \*[, api_key, ...])   | Synthesize `text` to `out_path` (mp3).                                         |
-|------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------|
-| [`resolve_voice_id`](#braidio.tts.resolve_voice_id)([voice_id])                  | Voice id from arg → `VOICE_ENV_VAR` env → default.                             |
-| [`text_to_dialogue`](#braidio.tts.text_to_dialogue)(turns, \*[, model_id, ...])  | Synthesize a multi-speaker exchange in ONE pass (ElevenLabs Text-to-Dialogue). |
+| [`narrate`](#braidio.tts.narrate)(text, out_path, \*[, api_key, ...])   | Synthesize `text` to `out_path` (mp3).                                                                       |
+|------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|
+| [`narrator_from_speak`](#braidio.tts.narrator_from_speak)(speak, \*[, strip_tags])  | A [`narrate()`](#braidio.tts.narrate)-shaped synthesizer that speaks through `speak`. |
+| [`resolve_voice_id`](#braidio.tts.resolve_voice_id)([voice_id])                  | Voice id from arg → `VOICE_ENV_VAR` env → default.                                                           |
+| [`text_to_dialogue`](#braidio.tts.text_to_dialogue)(turns, \*[, model_id, ...])  | Synthesize a multi-speaker exchange in ONE pass (ElevenLabs Text-to-Dialogue).                               |
+| [`tts_name`](#braidio.tts.tts_name)(speak)                               | The voice backend a render used, as its settings record names it.                                            |
 
 ### braidio.tts.DEFAULT_MODEL_ID *= 'eleven_v3'*
 
@@ -30,6 +40,21 @@ lever on whether a read sounds alive (braidio.style.audio_tag_rate). A v2
 default caps every production at the flat end before an author writes a
 word. Override per-render with `delivery=`, or persist your own in
 ~/.config/braidio/config.json — see braidio.defaults.
+
+### braidio.tts.DEFAULT_TTS *= 'elevenlabs'*
+
+How a render’s settings record names the default voice backend (no `speak=`).
+
+### braidio.tts.Speak
+
+`speak(text, *, voice) -> (audio_bytes, format)`,
+`format` being the audio’s file extension (`"wav"`, `"mp3"`). `voice`
+is the voice braidio resolved for the line (`None`: the backend’s default).
+
+* **Type:**
+  A text-to-speech backend
+
+alias of [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[…], [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]
 
 ### braidio.tts.narrate(text, out_path, , api_key=None, voice_id=None, model_id='eleven_v3', voice_settings=None, output_format='mp3_44100_128', refresh=False, return_cache_status=False)
 
@@ -50,6 +75,33 @@ thread a per-user BYO key without touching the process environment.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path) | [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`bool`](https://docs.python.org/3/builtins/functions.html#bool)]
+
+### braidio.tts.narrator_from_speak(speak, , strip_tags=True)
+
+A [`narrate()`](#braidio.tts.narrate)-shaped synthesizer that speaks through `speak`.
+
+`voice_id` is handed to `speak` as `voice`: braidio’s resolved id for
+the line, which under the shipped formats and the default cast is an
+ElevenLabs id (pass `voice_id=` / `cast=` in the backend’s vocabulary,
+or map ids inside `speak`); `None` only when nothing named a voice.
+Inline `[audio tags]` are eleven_v3 markup, so with `strip_tags` (the
+default) they are removed before `speak` sees the text, rather than read
+aloud. The ElevenLabs-only arguments (`api_key`, `model_id`,
+`voice_settings`, so a paced turn’s `speed` too) are accepted and
+ignored. Nothing is cached: every call reaches `speak`. The file is
+written at `out_path` with the suffix `speak` reported.
+
+```pycon
+>>> import tempfile
+>>> fake = lambda text, *, voice: (text.encode(), "wav")
+>>> with tempfile.TemporaryDirectory() as d:
+...     out = narrator_from_speak(fake)("[pause] hi", Path(d) / "a.mp3", voice_id="v")
+...     out.suffix, out.read_bytes()
+('.wav', b'hi')
+```
+
+* **Return type:**
+  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)]
 
 ### braidio.tts.resolve_voice_id(voice_id=None)
 
@@ -90,3 +142,21 @@ seedless call freezes one random take — pass a `seed` for reproducibility.
   [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes), [`bool`](https://docs.python.org/3/builtins/functions.html#bool)]
 * **Returns:**
   raw audio bytes in `output_format`.
+
+### braidio.tts.tts_name(speak)
+
+The voice backend a render used, as its settings record names it.
+
+`None` is the default backend; a callable is named `module:qualname`,
+seeing through `functools.partial` (a `name` attribute wins).
+
+```pycon
+>>> import functools
+>>> tts_name(None)
+'elevenlabs'
+>>> tts_name(functools.partial(narrator_from_speak, strip_tags=False))
+'braidio.tts:narrator_from_speak'
+```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)

@@ -59,14 +59,17 @@ cost (braidio#8). Default `False` keeps the `Path` return.
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path) | [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`bool`](https://docs.python.org/3/builtins/functions.html#bool)]
 
-### braidio.conversation.render_turns_sequential(turns, cast=ConversationCast(roles={'A': 'cgSgspJ2msm6clMCkdW9', 'B': 'iP95p4xoKVk53GoZ742B'}, model_id='eleven_v3', settings={'stability': 0.45}), , api_key=None, out_path, work_dir='data/tts/conversation', voice_settings=None, gap_s=0.25)
+### braidio.conversation.render_turns_sequential(turns, cast=ConversationCast(roles={'A': 'cgSgspJ2msm6clMCkdW9', 'B': 'iP95p4xoKVk53GoZ742B'}, model_id='eleven_v3', settings={'stability': 0.45}), , api_key=None, out_path, work_dir='data/tts/conversation', voice_settings=None, gap_s=0.25, narrate_fn=None)
 
 Per-line baseline: synthesize each turn alone (its role’s voice) and
 concatenate with `gap_s` gaps. Prosody is NOT shared across turns — this is
 what tends to sound like alternating monologues (the thing to beat).
 
 `api_key` is threaded to [`braidio.tts.narrate()`](braidio.tts.html.md#braidio.tts.narrate); `None` (default)
-keeps the `$ELEVENLABS_API_KEY` fallback.
+keeps the `$ELEVENLABS_API_KEY` fallback. `narrate_fn` is the per-turn
+synthesizer (default [`braidio.tts.narrate()`](braidio.tts.html.md#braidio.tts.narrate)): a renderer given another
+TTS backend ([`braidio.tts.narrator_from_speak()`](braidio.tts.html.md#braidio.tts.narrator_from_speak)) renders dialogue here,
+since only ElevenLabs has the one-pass path.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)

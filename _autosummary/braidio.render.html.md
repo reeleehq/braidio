@@ -53,7 +53,7 @@ what keeps their per-beat durations (and so their timelines) equal.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`NarrationTurn`](braidio.pacing.html.md#braidio.pacing.NarrationTurn)]
 
-### braidio.render.render_production(script, , source, api_key=None, config=None, profile=Profile.PERSONAL, rights=None, delivery=None, cast=ConversationCast(roles={'A': 'cgSgspJ2msm6clMCkdW9', 'B': 'iP95p4xoKVk53GoZ742B'}, model_id='eleven_v3', settings={'stability': 0.45}), out_path=None, voice_id=None, crossfade_s=0.12, normalize=True, music_bed=None, structure=None, end_fade_s=0.35, end_silence_s=0.7, return_timeline=False, tts_dir='data/tts', clips_dir='data/clips', episodes_dir='data/episodes')
+### braidio.render.render_production(script, , source, api_key=None, speak=None, config=None, profile=Profile.PERSONAL, rights=None, delivery=None, cast=ConversationCast(roles={'A': 'cgSgspJ2msm6clMCkdW9', 'B': 'iP95p4xoKVk53GoZ742B'}, model_id='eleven_v3', settings={'stability': 0.45}), out_path=None, voice_id=None, crossfade_s=0.12, normalize=True, music_bed=None, structure=None, end_fade_s=0.35, end_silence_s=0.7, return_timeline=False, tts_dir='data/tts', clips_dir='data/clips', episodes_dir='data/episodes')
 
 Render `script` under `profile` → a single audio file. Returns the path.
 
@@ -96,6 +96,14 @@ synthesizer falls back to `$ELEVENLABS_API_KEY` (unchanged behavior); an
 explicit key lets a caller (e.g. a per-user BYO-key request) override the
 environment without mutating it. Segment beats never call ElevenLabs, so the
 key does not touch them.
+
+`speak` swaps the voice backend (a [`braidio.tts.Speak`](braidio.tts.html.md#braidio.tts.Speak), e.g. a local
+model through `voxy`): every narration beat and turn is spoken through it,
+and a dialogue beat is spoken turn by turn (only ElevenLabs has the one-pass
+Text-to-Dialogue path). Formats, pacing and weaving are unchanged. It is
+handed the voice ids this render resolves (the format’s, the cast’s), so
+pass `voice_id=` / `cast=` in its vocabulary, or map them inside it.
+`None` (default) is the ElevenLabs path, exactly as before.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path) | [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`object`](https://docs.python.org/3/builtins/functions.html#object)]

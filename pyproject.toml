@@ -128,6 +128,10 @@ video = ["burns>=0.0.16", "pillow", "tituli>=0.0.4"]
 # published in 0.0.58). braidio declares `production-structure/v1`'s sting and bed
 # asset ids at import of `braidio.transforms`, so an older nw fails at IMPORT —
 # the floor is what stops that.
+# nw>=0.0.108: tolerant verifying-trace readers (nw#184, braidio#136). An older
+# reader drops a trace written by a newer nw (it carries `excluded_paths`) and
+# reads the child stale, which can re-render and spend. Every extra pulling nw
+# carries this floor.
 nw-app = ["lacing", "nw>=0.0.108", "falaw[fal]"]
 # The MCP server (`braidio.mcp`): a Claude.ai connector's tool surface + usage
 # metering. `fastmcp` + `py2mcp` build and serve it; the nw-app powers the project
@@ -137,8 +141,8 @@ nw-app = ["lacing", "nw>=0.0.108", "falaw[fal]"]
 # dol>=0.3.57: the asset tools use dol.content (ContentRef + content-addressed
 #   store), added in that release — pin the floor so installs don't resolve an
 #   older dol without it.
-# nw>=0.0.58: see the nw-app note above (the `secrets=` seam, braidio#58; the
-#   asset-ref declarations `braidio.transforms` makes on import, nw#55).
+# nw>=0.0.108: see the nw-app notes above (the `secrets=` seam, braidio#58; the
+#   asset-ref declarations, nw#55; tolerant trace readers, nw#184).
 mcp = ["fastmcp", "py2mcp>=0.1.9", "pypdf", "dol>=0.3.57", "lacing", "nw>=0.0.108", "falaw[fal]", "yb[download]>=0.1.24", "graze>=0.1.45", "markdown-it-py", "mdit-py-plugins"]
 # The importer (`braidio.importing`): a finished commentary production ->
 # a real project graph. Needs the nw-app layer (it writes annotations) plus

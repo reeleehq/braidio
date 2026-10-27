@@ -687,6 +687,18 @@ def test_create_and_list_projects():
 
 
 @_NW
+def test_project_status_serves_the_genre_status_plus_full_episodes():
+    from braidio.project import NEXT_STEP_SAVE_SCRIPT
+
+    server = _local_server(ledger={})
+    _call(server, "create_project", {"project_id": "demo", "title": "Demo"})
+    out = _call(server, "project_status", {"project_id": "demo"}).structured_content
+    assert out["project_id"] == "demo"
+    assert out["next_step"] == NEXT_STEP_SAVE_SCRIPT
+    assert out["narration_beats"] == 0 and out["episodes"] == []
+
+
+@_NW
 def test_weave_project_records_cost(monkeypatch):
     server = _local_server(ledger={})
     _call(server, "create_project", {"project_id": "demo", "title": "Demo"})

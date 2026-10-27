@@ -7,11 +7,20 @@ one narrator.
 
 Voice defaults to "George — Warm, Captivating Storyteller"; override with the
 ``BRAIDIO_TTS_VOICE`` env var (:data:`VOICE_ENV_VAR`) or the ``voice_id`` arg.
+
+ElevenLabs is the default, not the only voice: a :data:`Speak` callable
+(``speak(text, *, voice) -> (audio_bytes, format)``) is the seam any other
+backend plugs into — a local model through ``voxy`` for a free preview, a test,
+CI. :func:`narrator_from_speak` adapts one to :func:`narrate`'s shape, which is
+what the renderers call.
 """
 
 from __future__ import annotations
 
+import functools
 import os
+import re
+from collections.abc import Callable
 from pathlib import Path
 
 from mixing import text_to_speech
@@ -35,6 +44,88 @@ DEFAULT_VOICE_SETTINGS: dict[str, float | bool] = {
     "use_speaker_boost": True,
     "speed": 0.97,
 }
+
+
+#: How a render's settings record names the default voice backend (no ``speak=``).
+DEFAULT_TTS = "elevenlabs"
+
+_SPACE_BEFORE_PUNCT = re.compile(r"\s+([.,!?;:])")  # what a removed tag leaves
+
+#: A text-to-speech backend: ``speak(text, *, voice) -> (audio_bytes, format)``,
+#: ``format`` being the audio's file extension (``"wav"``, ``"mp3"``). ``voice``
+#: is the voice braidio resolved for the line (``None``: the backend's default).
+Speak = Callable[..., tuple[bytes, str]]
+
+
+def narrator_from_speak(
+    speak: Speak, *, strip_tags: bool = True
+) -> Callable[..., Path]:
+    """A :func:`narrate`-shaped synthesizer that speaks through ``speak``.
+
+    ``voice_id`` is handed to ``speak`` as ``voice``: braidio's resolved id for
+    the line, which under the shipped formats and the default cast is an
+    ElevenLabs id (pass ``voice_id=`` / ``cast=`` in the backend's vocabulary,
+    or map ids inside ``speak``); ``None`` only when nothing named a voice.
+    Inline ``[audio tags]`` are eleven_v3 markup, so with ``strip_tags`` (the
+    default) they are removed before ``speak`` sees the text, rather than read
+    aloud. The ElevenLabs-only arguments (``api_key``, ``model_id``,
+    ``voice_settings``, so a paced turn's ``speed`` too) are accepted and
+    ignored. Nothing is cached: every call reaches ``speak``. The file is
+    written at ``out_path`` with the suffix ``speak`` reported.
+
+    >>> import tempfile
+    >>> fake = lambda text, *, voice: (text.encode(), "wav")
+    >>> with tempfile.TemporaryDirectory() as d:
+    ...     out = narrator_from_speak(fake)("[pause] hi", Path(d) / "a.mp3", voice_id="v")
+    ...     out.suffix, out.read_bytes()
+    ('.wav', b'hi')
+    """
+    from braidio.style import strip_audio_tags
+
+    def _narrate(text: str, out_path: str | Path, *, voice_id=None, **_) -> Path:
+        if strip_tags:
+            text = _SPACE_BEFORE_PUNCT.sub(
+                r"\1", " ".join(strip_audio_tags(text).split())
+            )
+            if not text:
+                raise ValueError(
+                    "a line of nothing but [audio tags] has nothing to speak"
+                )
+        audio, fmt = speak(text, voice=voice_id)
+        ext = str(fmt or "").strip().lstrip(".")
+        if not ext:
+            raise ValueError(
+                f"{tts_name(speak)} returned no audio format for {text[:40]!r}"
+            )
+        out = Path(out_path).with_suffix("." + ext)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(audio)
+        return out
+
+    return _narrate
+
+
+def tts_name(speak: Speak | None) -> str:
+    """The voice backend a render used, as its settings record names it.
+
+    ``None`` is the default backend; a callable is named ``module:qualname``,
+    seeing through ``functools.partial`` (a ``name`` attribute wins).
+
+    >>> import functools
+    >>> tts_name(None)
+    'elevenlabs'
+    >>> tts_name(functools.partial(narrator_from_speak, strip_tags=False))
+    'braidio.tts:narrator_from_speak'
+    """
+    if speak is None:
+        return DEFAULT_TTS
+    if isinstance(getattr(speak, "name", None), str):
+        return speak.name
+    while isinstance(speak, functools.partial):
+        speak = speak.func
+    name = getattr(speak, "__qualname__", None) or type(speak).__qualname__
+    module = getattr(speak, "__module__", None) or type(speak).__module__
+    return f"{module}:{name}"
 
 
 def resolve_voice_id(voice_id: str | None = None) -> str:

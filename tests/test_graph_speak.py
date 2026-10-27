@@ -11,13 +11,14 @@ from __future__ import annotations
 
 import io
 import shutil
+from pathlib import Path
 
 import numpy as np
 import pytest
 from scipy.io import wavfile
 
 import braidio
-from braidio.tts import TTS_BACKENDS, register_tts
+from braidio.tts import register_tts, unregister_tts
 
 pytestmark = [
     pytest.mark.skipif(not braidio.HAS_NW, reason="nw layer not installed"),
@@ -53,13 +54,13 @@ def backends(monkeypatch):
     monkeypatch.setattr(braidio, "render_dialogue", _refuse)
     monkeypatch.setattr(braidio.tts, "text_to_speech", _refuse)
     monkeypatch.setattr(braidio.conversation, "text_to_dialogue", _refuse)
-    saved = dict(TTS_BACKENDS)
-    tones = {"tone": _Tone(), "tone2": _Tone()}
+    tones = {"tone": _Tone(), "tone2": _Tone(), "unpriced": _Tone()}
     for name, speak in tones.items():
-        register_tts(name, speak, usd_per_1k_chars=0.0)
+        rate = None if name == "unpriced" else 0.0
+        register_tts(name, speak, usd_per_1k_chars=rate)
     yield tones
-    TTS_BACKENDS.clear()
-    TTS_BACKENDS.update(saved)
+    for name in tones:
+        unregister_tts(name)
 
 
 def _script():
@@ -162,3 +163,87 @@ def test_an_unregistered_backend_names_the_registered_ones(tmp_path, backends):
     assert (
         nw.annotations_at_tier(project.root, "weave-configs") == []
     )  # nothing written
+
+
+def _narrate_one(project, script, *, config):
+    """Ingest, cast and run the narration transform on the first beat."""
+    import nw
+    from nw import TransformInputs
+
+    braidio.transforms.ingest_script(project, script, config=config)
+    beat = nw.annotations_at_tier(project.root, "narrative-beats")[0]
+    voice = nw.get_transform("beat_to_voice_assignment.default")
+    voice.execute(project, *voice.plan(project, TransformInputs(primary=(beat,))))
+    narration = nw.get_transform("narration_render.tts")
+    plan, skel = narration.plan(project, TransformInputs(primary=(beat,)))
+    return narration, beat, narration.execute(project, plan, skel)
+
+
+def _one_line(text="Hello there."):
+    return braidio.Script(
+        title="One", id_slug="one", beats=[braidio.Narration(text=text)]
+    )
+
+
+def test_a_backend_prices_at_its_own_rate(tmp_path, backends):
+    """A free backend costs $0, known; an unpriced one is flagged, not faked as $0."""
+    _, _, free = _narrate_one(
+        braidio.Project.init(tmp_path / "a", title="a"),
+        _one_line(),
+        config=braidio.WeaveConfig(tts="tone"),
+    )
+    assert free.cost_usd_actual == 0.0 and free.has_unknown_costs is False
+    _, _, unknown = _narrate_one(
+        braidio.Project.init(tmp_path / "b", title="b"),
+        _one_line(),
+        config=braidio.WeaveConfig(tts="unpriced"),
+    )
+    assert unknown.has_unknown_costs is True
+
+
+def test_a_cached_render_is_served_without_the_backend_registered(tmp_path, backends):
+    """A runner that only serves fresh nodes need not register the backend."""
+    from nw import TransformInputs
+
+    project = braidio.Project.init(tmp_path / "p", title="p")
+    narration, beat, first = _narrate_one(
+        project, _one_line(), config=braidio.WeaveConfig(tts="tone")
+    )
+    unregister_tts("tone")
+    plan, skel = narration.plan(project, TransformInputs(primary=(beat,)))
+    again = narration.execute(project, plan, skel)
+    assert again.annotations[0].id == first.annotations[0].id
+    assert again.has_unknown_costs is True  # the rate is not known here
+
+
+def test_a_paced_beat_keeps_its_backends_format_and_leaves_no_parts(tmp_path, backends):
+    """One paced turn is that turn's own file: it must not be renamed .mp3."""
+    from urllib.parse import urlparse
+
+    config = braidio.WeaveConfig(tts="tone", segmentation_unit="sentence", min_turn=1)
+    project = braidio.Project.init(tmp_path / "p", title="p")
+    _, _, result = _narrate_one(
+        project, _one_line("Only one sentence here."), config=config
+    )
+    node = result.annotations[0]
+    path = Path(urlparse(node.body["url"]).path)
+    assert path.read_bytes()[:4] == b"RIFF" and path.suffix == ".wav"
+    assert sorted(p.name for p in path.parent.iterdir()) == [path.name]
+
+
+def test_a_dialogue_render_leaves_only_its_take(tmp_path, backends):
+    import nw
+
+    project = braidio.Project.init(tmp_path / "p", title="p")
+    braidio.weave_project(project, _script(), config=braidio.WeaveConfig(tts="tone"))
+    (take,) = nw.annotations_at_tier(project.root, "dialogue-renders")
+    folder = project.root / "data" / "dialogue"
+    assert [p.name for p in folder.iterdir()] == [f"{take.id}.mp3"]
+
+
+def test_a_rate_must_be_a_real_price():
+    for bad in (-1.0, float("nan"), float("inf")):
+        with pytest.raises(ValueError, match="finite rate"):
+            register_tts(
+                "bad", lambda text, *, voice: (b"", "wav"), usd_per_1k_chars=bad
+            )

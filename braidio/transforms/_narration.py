@@ -38,7 +38,7 @@ from braidio.bodies._render_nodes import (
     NARRATION_RENDER_V1,
     NarrationRenderBodyV1,
 )
-from braidio.cost import tts_cost_usd
+from braidio.cost import backend_cost_usd
 from braidio.delivery import model_supports_speed
 from braidio.render import narrate_turns, plan_beat_turns
 from braidio.tts import (
@@ -105,14 +105,6 @@ def _narration_cache_key(
     return transform_cache_key(transform, *parts)
 
 
-def _beat_cost(text: str, *, model_id: str, tts: str | None) -> float | None:
-    """The estimated spend for ``text``: ElevenLabs' rate, or the registered
-    backend's (``None``: unpriced)."""
-    if tts:
-        return tts_backend(tts).cost_usd(text)
-    return tts_cost_usd(text, model_id=model_id)
-
-
 def _speak_beat(
     text: str,
     out_path: Path,
@@ -155,10 +147,12 @@ def _speak_beat(
             narrate_fn=synthesize,
             **kwargs,
         )
-        shutil.move(paced, out_path)
+        # one turn and no gap is that turn's own file, in the backend's format
+        final = out_path.with_suffix(Path(paced).suffix)
+        shutil.move(paced, final)
         for leftover in out_path.parent.glob(f"{out_path.stem}-turn*"):
             leftover.unlink()  # per-turn parts and gaps: only the mix is a node
-        return out_path, bool(cached) and all(cached)
+        return final, bool(cached) and all(cached)
     path = synthesize(text, out_path, voice_settings=settings, **kwargs)
     return Path(path), bool(cached) and all(cached)
 
@@ -253,7 +247,7 @@ class NarrationRenderTTS(BaseTransform):
         # ElevenLabs bills per character — the only real spend here. A rate ESTIMATE
         # (== live-call spend; may over-report on a lower-level mixing-cache hit that
         # braidio can't yet detect — thorwhalen/braidio#8).
-        cost = _beat_cost(text, model_id=model_id, tts=tts)
+        cost = backend_cost_usd(text, tts=tts, model_id=model_id)
 
         if use_cache and not force:
             # Idempotent re-run: the same render over the same, still-fresh

@@ -130,7 +130,8 @@ def _concat_with_gaps(
     if gap_s <= 0:
         concatenate_audio(*[str(p) for p in parts], output=str(out), crossfade=0.0)
         return out
-    sil = out.parent / "_gap.mp3"
+    # beside its output, named for it: two renders in one folder never share it
+    sil = out.with_name(f".{out.stem}-gap.mp3")
     subprocess.run(
         [
             "ffmpeg",
@@ -151,7 +152,10 @@ def _concat_with_gaps(
         if i:
             interleaved.append(str(sil))
         interleaved.append(str(p))
-    concatenate_audio(*interleaved, output=str(out), crossfade=0.0)
+    try:
+        concatenate_audio(*interleaved, output=str(out), crossfade=0.0)
+    finally:
+        sil.unlink(missing_ok=True)
     return out
 
 

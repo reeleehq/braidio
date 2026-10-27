@@ -116,6 +116,31 @@ def tts_cost_usd(
     return round(chars / 1000 * rate, 6)
 
 
+def backend_cost_usd(
+    text: Optional[str], *, tts: Optional[str], model_id: Optional[str] = None
+) -> Optional[float]:
+    """Estimated USD for ``text`` on the voice backend that speaks it.
+
+    ``tts=None`` is ElevenLabs (:func:`tts_cost_usd`); a registered backend
+    (:func:`braidio.tts.register_tts`) prices at its own rate. A name that is
+    not registered (a runner serving cached renders need not register it)
+    is unpriced, ``None``, never an error and never ``0.0``.
+
+    >>> backend_cost_usd("", tts="anything")
+    0.0
+    >>> backend_cost_usd("hi", tts="not-registered") is None
+    True
+    """
+    from braidio.tts import TTS_BACKENDS
+
+    if not tts:
+        return tts_cost_usd(text, model_id=model_id)
+    if billable_chars(text) == 0:
+        return 0.0
+    backend = TTS_BACKENDS.get(tts)
+    return None if backend is None else backend.cost_usd(text or "")
+
+
 @dataclass(frozen=True)
 class CostLine:
     """One billable line of an estimate (a narration beat or a dialogue beat).

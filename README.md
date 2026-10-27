@@ -161,7 +161,7 @@ register_tts("kokoro", my_local_tts, usd_per_1k_chars=0.0)   # None: unpriced
 weave_project(project, script, config=WeaveConfig(tts="kokoro"))
 ```
 
-The name is recorded in the weave-config and the dialogue cast and folded into the render cache keys, so switching backends re-renders exactly the spoken parts, and an ElevenLabs project (no `tts`) keeps its graph and keys byte for byte.
+The name is recorded in the weave-config and the dialogue cast and folded into the render cache keys, so switching backends re-synthesizes the spoken parts (the free nodes that also read the weave-config re-run too, served from cache), and an ElevenLabs project (no `tts`) keeps its graph and keys byte for byte. An explicit `config=` replaces a format's `weave` entirely, so to keep a format's knobs write `fmt.weave.with_(tts="kokoro")`. The key is the name: register a different name for a different voice, since re-registering one keeps the renders cached under it.
 
 ## What it deliberately does *not* do
 

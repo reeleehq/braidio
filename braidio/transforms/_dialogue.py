@@ -47,7 +47,7 @@ from braidio.bodies._render_nodes import (
     DialogueRenderBodyV1,
 )
 from braidio.conversation import ConversationCast
-from braidio.cost import tts_cost_usd
+from braidio.cost import backend_cost_usd
 from braidio.tts import narrator_from_speak, tts_backend
 from braidio.transforms._common import (
     TIER_DIALOGUE_BEAT,
@@ -168,12 +168,7 @@ class DialogueRenderTTS(BaseTransform):
         # ElevenLabs bills per character of the submitted turns — the only real
         # spend here. A rate ESTIMATE (== live-call spend; see braidio#8). A
         # registered backend reports its own rate, or none (unpriced).
-        billable = _billable_text(turns)
-        cost = (
-            tts_backend(tts).cost_usd(billable)
-            if tts
-            else tts_cost_usd(billable, model_id=cast.model_id)
-        )
+        cost = backend_cost_usd(_billable_text(turns), tts=tts, model_id=cast.model_id)
 
         if use_cache and not force:
             # Same two-step as narration_render: the fresh equivalent node if
@@ -204,14 +199,17 @@ class DialogueRenderTTS(BaseTransform):
         if tts:
             # another backend has no one-pass dialogue: turn by turn, never
             # cached (the fast path's fallback, braidio#123)
-            braidio.render_turns_sequential(
-                turns,
-                cast,
-                out_path=out_path,
-                work_dir=out_path.with_suffix(""),
-                narrate_fn=narrator_from_speak(tts_backend(tts).speak),
-            )
-            shutil.rmtree(out_path.with_suffix(""), ignore_errors=True)
+            work = out_path.with_suffix("")
+            try:
+                braidio.render_turns_sequential(
+                    turns,
+                    cast,
+                    out_path=out_path,
+                    work_dir=work,
+                    narrate_fn=narrator_from_speak(tts_backend(tts).speak),
+                )
+            finally:
+                shutil.rmtree(work, ignore_errors=True)
             was_cached = False
         else:
             _, was_cached = braidio.render_dialogue(

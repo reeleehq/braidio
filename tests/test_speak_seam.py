@@ -115,7 +115,7 @@ def test_audio_tags_are_not_read_aloud_by_another_backend(tmp_path, no_elevenlab
         title="Tags",
         id_slug="tags",
         beats=[
-            braidio.Narration(text="[pause] Hello [dryly] there."),
+            braidio.Narration(text="[pause] Hello [dryly] there [laughs]."),
             braidio.Dialogue(
                 turns=[("host_a", "[laughs] Really?"), ("host_b", "Yes.")]
             ),

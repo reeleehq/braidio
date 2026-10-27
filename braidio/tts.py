@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import functools
 import os
+import re
 from collections.abc import Callable
 from pathlib import Path
 
@@ -47,6 +48,8 @@ DEFAULT_VOICE_SETTINGS: dict[str, float | bool] = {
 
 #: How a render's settings record names the default voice backend (no ``speak=``).
 DEFAULT_TTS = "elevenlabs"
+
+_SPACE_BEFORE_PUNCT = re.compile(r"\s+([.,!?;:])")  # what a removed tag leaves
 
 #: A text-to-speech backend: ``speak(text, *, voice) -> (audio_bytes, format)``,
 #: ``format`` being the audio's file extension (``"wav"``, ``"mp3"``). ``voice``
@@ -81,7 +84,13 @@ def narrator_from_speak(
 
     def _narrate(text: str, out_path: str | Path, *, voice_id=None, **_) -> Path:
         if strip_tags:
-            text = " ".join(strip_audio_tags(text).split())
+            text = _SPACE_BEFORE_PUNCT.sub(
+                r"\1", " ".join(strip_audio_tags(text).split())
+            )
+            if not text:
+                raise ValueError(
+                    "a line of nothing but [audio tags] has nothing to speak"
+                )
         audio, fmt = speak(text, voice=voice_id)
         ext = str(fmt or "").strip().lstrip(".")
         if not ext:

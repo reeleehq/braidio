@@ -122,16 +122,46 @@ __all__ = [
 ]
 
 
-def format_config(fmt=None, *, config=None, voice_id=None):
+def recorded_config(project) -> dict | None:
+    """The weave-config snapshot ``project`` already records, or ``None``."""
+    import nw
+
+    nodes = nw.annotations_at_tier(project.root, "weave-configs")
+    return dict(nodes[0].body.get("config", {})) if nodes else None
+
+
+def format_config(fmt=None, *, config=None, voice_id=None, recorded=None):
     """The weave-config a production records: one rule for every writer.
 
     ``config`` else the format's ``weave``, carrying the narration voice —
     ``voice_id`` else ``fmt.narration_voice`` — when there is one. ``weave_project``
     and ``save_script`` both resolve through here, so saving and then weaving a
     format never rewrites the config node (and so never re-stales its renders).
+
+    The narration model and settings, from the format (braidio#120, #135): a
+    format's ``weave`` holds the editing knobs and its ``narration_delivery``
+    holds what the narrator speaks with, which is what the fast path renders.
+    A project's **first** weave-config takes them from the delivery, so a
+    format sounds the same on both paths. A project that already records a
+    weave-config (``recorded``, :func:`recorded_config`) keeps the model and
+    settings it recorded: switching them would re-synthesize, and re-bill,
+    every narration beat on the next weave. An explicit ``config`` is used as
+    given.
     """
     if config is None and fmt is not None:
-        config = fmt.weave
+        delivery = fmt.narration_delivery
+        source = (
+            recorded
+            if recorded is not None
+            else {
+                "model_id": delivery.model_id,
+                "voice_settings": dict(delivery.voice_settings),
+            }
+        )
+        config = fmt.weave.with_(
+            model_id=source.get("model_id", fmt.weave.model_id),
+            voice_settings=source.get("voice_settings", fmt.weave.voice_settings),
+        )
     if voice_id is None and fmt is not None:
         voice_id = fmt.narration_voice
     if voice_id is not None:
@@ -218,7 +248,9 @@ def weave_project(
     """
     import nw
 
-    config = format_config(fmt, config=config, voice_id=voice_id)
+    config = format_config(
+        fmt, config=config, voice_id=voice_id, recorded=recorded_config(project)
+    )
     if fmt is not None:
         structure = structure if structure is not None else fmt.structure
         cast = cast if cast is not None else fmt.cast

@@ -450,7 +450,9 @@ def save_script(
     ingested = braidio.transforms.ingest_script(
         proj,
         scr,
-        config=braidio.transforms.format_config(fmt),
+        config=braidio.transforms.format_config(
+            fmt, recorded=braidio.transforms.recorded_config(proj)
+        ),
         source=src,
         structure=structure,
         bed=bed,

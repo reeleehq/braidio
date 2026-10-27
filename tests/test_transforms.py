@@ -634,11 +634,57 @@ def test_weave_project_applies_a_format_and_its_declared_structure(
     }
     assert structure.body["sting_asset_id"] is None  # no asset supplied
     (cfg,) = nw.annotations_at_tier(project.root, "weave-configs")
-    # the format's narration voice rides in the config now (braidio#115)
+    # the format's narration voice rides in the config (braidio#115), and so do
+    # its delivery's model and settings, which is what the fast path speaks with
+    # (braidio#120: the graph used to record the weave's v2 default instead)
+    delivery = braidio.SOLO_EXPLAINER.narration_delivery
     expected = braidio.SOLO_EXPLAINER.weave.with_(
-        narration_voice=braidio.SOLO_EXPLAINER.narration_voice
+        narration_voice=braidio.SOLO_EXPLAINER.narration_voice,
+        model_id=delivery.model_id,
+        voice_settings=dict(delivery.voice_settings),
     )
     assert cfg.body["config"] == expected.to_dict()
+
+
+def test_a_format_narrates_with_its_delivery_on_the_graph(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """Fast/graph parity (braidio#120): the model a format's narrator speaks
+    with is its ``narration_delivery``'s on both paths."""
+    seen = []
+    real = braidio.narrate
+
+    def _narrate(text, out, **kw):
+        seen.append(kw["model_id"])
+        return real(text, out, **kw)
+
+    monkeypatch.setattr(braidio, "narrate", _narrate)
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source, fmt=braidio.DEEP_DIVE)
+    assert seen and set(seen) == {braidio.DEEP_DIVE.narration_delivery.model_id}
+
+
+def test_an_existing_project_keeps_the_model_it_recorded(
+    project, script_and_source, patched_synthesis
+):
+    """No surprise re-bill (braidio#135): a project whose weave-config predates
+    the delivery rule keeps its model and settings, so re-weaving it under a
+    format re-synthesizes nothing."""
+    import nw
+
+    script, source = script_and_source
+    legacy = braidio.SOLO_EXPLAINER.weave.with_(
+        narration_voice=braidio.SOLO_EXPLAINER.narration_voice
+    )  # what the graph recorded before #120
+    braidio.weave_project(project, script, source=source, config=legacy)
+    renders = {a.id for a in nw.annotations_at_tier(project.root, "narration-renders")}
+
+    braidio.weave_project(project, script, source=source, fmt=braidio.SOLO_EXPLAINER)
+    (cfg,) = nw.annotations_at_tier(project.root, "weave-configs")
+    assert cfg.body["config"] == legacy.to_dict()
+    assert {
+        a.id for a in nw.annotations_at_tier(project.root, "narration-renders")
+    } == renders
 
 
 # --- re-ingest: identity, freshness, retry (braidio#49, braidio#51) ------------

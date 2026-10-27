@@ -128,7 +128,7 @@ video = ["burns>=0.0.16", "pillow", "tituli>=0.0.4"]
 # published in 0.0.58). braidio declares `production-structure/v1`'s sting and bed
 # asset ids at import of `braidio.transforms`, so an older nw fails at IMPORT —
 # the floor is what stops that.
-nw-app = ["lacing", "nw>=0.0.65", "falaw[fal]"]
+nw-app = ["lacing", "nw>=0.0.108", "falaw[fal]"]
 # The MCP server (`braidio.mcp`): a Claude.ai connector's tool surface + usage
 # metering. `fastmcp` + `py2mcp` build and serve it; the nw-app powers the project
 # and weave tools. The usage-ledger store is dependency-injected by the connector
@@ -139,7 +139,7 @@ nw-app = ["lacing", "nw>=0.0.65", "falaw[fal]"]
 #   older dol without it.
 # nw>=0.0.58: see the nw-app note above (the `secrets=` seam, braidio#58; the
 #   asset-ref declarations `braidio.transforms` makes on import, nw#55).
-mcp = ["fastmcp", "py2mcp>=0.1.9", "pypdf", "dol>=0.3.57", "lacing", "nw>=0.0.65", "falaw[fal]", "yb[download]>=0.1.24", "graze>=0.1.45", "markdown-it-py", "mdit-py-plugins"]
+mcp = ["fastmcp", "py2mcp>=0.1.9", "pypdf", "dol>=0.3.57", "lacing", "nw>=0.0.108", "falaw[fal]", "yb[download]>=0.1.24", "graze>=0.1.45", "markdown-it-py", "mdit-py-plugins"]
 # The importer (`braidio.importing`): a finished commentary production ->
 # a real project graph. Needs the nw-app layer (it writes annotations) plus
 # `illustration` for licence normalization.
@@ -156,7 +156,7 @@ mcp = ["fastmcp", "py2mcp>=0.1.9", "pypdf", "dol>=0.3.57", "lacing", "nw>=0.0.65
 # changelog — the same wads caveat noted for nw and burns above (the version
 # bump lands in a commit AFTER the feature, so the git log reads one release
 # early).
-importing = ["illustration>=0.0.11", "lacing", "nw>=0.0.65", "falaw"]
+importing = ["illustration>=0.0.11", "lacing", "nw>=0.0.108", "falaw"]
 
 # Packaging. The two shipped skills live at braidio/data/skills/<name>/ with
 # relative symlinks from .claude/skills/. hatchling walks the tree with

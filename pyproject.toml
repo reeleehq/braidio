@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "braidio"
-version = "0.0.85"
+version = "0.0.86"
 description = "Weave narration with extracted media segments into audiovisual productions"
 readme = "README.md"
 requires-python = ">=3.10"

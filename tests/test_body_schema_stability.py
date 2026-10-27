@@ -340,6 +340,7 @@ PINNED: dict[str, dict] = {
             "model_id": "string",
             "roles": "object<string,string>",
             "settings": "object<string,any>|null = null",
+            "tts": "string|null = null",
         },
     },
     "SourceMediaBodyV1": {

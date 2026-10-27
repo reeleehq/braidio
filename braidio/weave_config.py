@@ -52,6 +52,9 @@ class WeaveConfig:
     narration_voice: str | None = None
 
     # --- Delivery (TTS) -----------------------------------------------------
+    # The voice backend by registered name (braidio.tts.register_tts); None is
+    # ElevenLabs. A name, so the graph can persist it and key renders on it.
+    tts: str | None = None
     model_id: str = "eleven_multilingual_v2"
     voice_settings: Mapping[str, Any] = field(
         default_factory=lambda: dict(_DEFAULT_VOICE_SETTINGS)
@@ -191,8 +194,9 @@ class WeaveConfig:
         d = asdict(self)
         d["voices"] = list(self.voices)
         d["voice_settings"] = dict(self.voice_settings)
-        if d["narration_voice"] is None:  # the absence rule: unset writes nothing
-            del d["narration_voice"]
+        for key in ("narration_voice", "tts"):  # the absence rule: unset writes nothing
+            if d[key] is None:
+                del d[key]
         return d
 
 

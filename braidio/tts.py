@@ -18,9 +18,12 @@ what the renderers call.
 from __future__ import annotations
 
 import functools
+import math
 import os
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
+from types import MappingProxyType
 from pathlib import Path
 
 from mixing import text_to_speech
@@ -126,6 +129,81 @@ def tts_name(speak: Speak | None) -> str:
     name = getattr(speak, "__qualname__", None) or type(speak).__qualname__
     module = getattr(speak, "__module__", None) or type(speak).__module__
     return f"{module}:{name}"
+
+
+@dataclass(frozen=True)
+class TTSBackend:
+    """A named voice backend: its ``speak`` and what it costs.
+
+    ``usd_per_1k_chars`` is the backend's rate: ``0.0`` for a local model,
+    ``None`` (default) when unknown, which a cost report then reads as
+    *unpriced* rather than free (the same rule as :mod:`braidio.cost`).
+    """
+
+    speak: Speak
+    usd_per_1k_chars: float | None = None
+
+    def __post_init__(self) -> None:
+        rate = self.usd_per_1k_chars
+        if rate is not None and not (math.isfinite(rate) and rate >= 0):
+            raise ValueError(
+                f"usd_per_1k_chars must be a finite rate >= 0, or None (unpriced); got {rate!r}"
+            )
+
+    def cost_usd(self, text: str) -> float | None:
+        """The spend for ``text`` at this backend's rate (``None``: unpriced)."""
+        if self.usd_per_1k_chars is None:
+            return None
+        return len(text) / 1000 * self.usd_per_1k_chars
+
+
+_TTS_BACKENDS: dict[str, TTSBackend] = {}
+
+#: The registered voice backends by name, read-only (:func:`register_tts`,
+#: :func:`unregister_tts`). A name, not a callable, is what a
+#: :class:`~braidio.weave_config.WeaveConfig` records (``tts=``), so the graph
+#: can persist it, fold it into a cache key, and resolve it at render time.
+#: Re-registering a name keeps the renders already cached under it: the key is
+#: the name, so register a *different* name for a different voice.
+TTS_BACKENDS: Mapping[str, TTSBackend] = MappingProxyType(_TTS_BACKENDS)
+
+
+def register_tts(
+    name: str, speak: Speak, *, usd_per_1k_chars: float | None = None
+) -> TTSBackend:
+    """Register ``speak`` as the voice backend ``name`` (replacing any before).
+
+    ``name`` is what ``WeaveConfig(tts=name)`` selects, on either render path.
+    :data:`DEFAULT_TTS` is ElevenLabs itself and cannot be taken.
+
+    >>> b = register_tts("doc-tone", lambda text, *, voice: (b"", "wav"), usd_per_1k_chars=0.0)
+    >>> tts_backend("doc-tone") is b, b.cost_usd("hello")
+    (True, 0.0)
+    >>> unregister_tts("doc-tone") is b
+    True
+    """
+    if not name or name == DEFAULT_TTS:
+        raise ValueError(f"{name!r} is not a registrable voice-backend name")
+    backend = TTSBackend(speak=speak, usd_per_1k_chars=usd_per_1k_chars)
+    _TTS_BACKENDS[name] = backend
+    return backend
+
+
+def unregister_tts(name: str) -> TTSBackend | None:
+    """Remove the backend registered as ``name``; returns it, or ``None``."""
+    return _TTS_BACKENDS.pop(name, None)
+
+
+def tts_backend(name: str) -> TTSBackend:
+    """The backend registered as ``name``; ``KeyError`` naming the registered ones."""
+    try:
+        return _TTS_BACKENDS[name]
+    except KeyError:
+        known = sorted(_TTS_BACKENDS) or "none"
+        raise KeyError(
+            f"no voice backend {name!r} is registered (registered: {known}); "
+            "register one with braidio.tts.register_tts(name, speak)"
+        ) from None
 
 
 def resolve_voice_id(voice_id: str | None = None) -> str:

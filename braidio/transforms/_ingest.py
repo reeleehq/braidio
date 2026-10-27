@@ -67,6 +67,7 @@ from braidio.rights import (
     plan_production,
 )
 from braidio.script import Script, SegmentBeat
+from braidio.tts import tts_backend
 from braidio.weave_config import WeaveConfig
 from braidio.bodies._domain import (
     NARRATIVE_BEAT_V1,
@@ -233,6 +234,8 @@ def ingest_script(
     and a retry after any failure converges (see the module docstring).
     """
     config = config or WeaveConfig()
+    if config.tts:  # an unregistered voice backend fails here, before any write
+        tts_backend(config.tts)
     publishable = rights.publishable_clip_rights if rights else PUBLISHABLE_CLIP_RIGHTS
     plan = plan_production(
         script,
@@ -305,7 +308,7 @@ def _plan_nodes(
     profile_node = _profile_node(profile=profile, publishable=publishable, plan=plan)
     if profile_node is not None:
         nodes.append(profile_node)
-    cast_node = _cast_node(cast=cast, plan=plan)
+    cast_node = _cast_node(cast=cast, plan=plan, tts=config.tts)
     if cast_node is not None:
         nodes.append(cast_node)
 
@@ -408,7 +411,9 @@ def _profile_node(
     )
 
 
-def _cast_node(*, cast: ConversationCast, plan: RenderPlan) -> _AuthoringNode | None:
+def _cast_node(
+    *, cast: ConversationCast, plan: RenderPlan, tts: str | None = None
+) -> _AuthoringNode | None:
     """The singleton ``dialogue-cast/v1`` node, or ``None``.
 
     Written iff the plan has a dialogue beat: the cast is the decision of what
@@ -416,20 +421,26 @@ def _cast_node(*, cast: ConversationCast, plan: RenderPlan) -> _AuthoringNode | 
     a script without dialogue keeps the graph it had before this node existed,
     whatever cast the caller or format supplied. With dialogue it is always
     written, default cast included, because the dialogue renders must derive
-    from the voices they actually used (thorwhalen/braidio#46).
+    from the voices they actually used (thorwhalen/braidio#46). ``tts`` (the
+    config's registered voice backend, braidio#132) is recorded only when set,
+    so an ElevenLabs production keeps the exact body it had.
     """
     if not any(b.kind == "dialogue" for b in plan.beats):
         return None
+    body = _json(
+        DialogueCastBodyV1(
+            roles=dict(cast.roles),
+            model_id=cast.model_id,
+            settings=dict(cast.settings) if cast.settings is not None else None,
+            tts=tts,
+        )
+    )
+    if body["tts"] is None:  # the absence rule
+        del body["tts"]
     return _AuthoringNode(
         tier=TIER_DIALOGUE_CAST,
         identity=TIER_DIALOGUE_CAST,
-        body=_json(
-            DialogueCastBodyV1(
-                roles=dict(cast.roles),
-                model_id=cast.model_id,
-                settings=dict(cast.settings) if cast.settings is not None else None,
-            )
-        ),
+        body=body,
         body_schema_uri=DIALOGUE_CAST_V1,
     )
 

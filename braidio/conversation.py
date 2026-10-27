@@ -119,7 +119,7 @@ def render_dialogue(
     return (out, was_cached) if return_cache_status else out
 
 
-def _concat_with_gaps(
+def concat_with_gaps(
     parts: list[Path], out: Path, *, gap_s: float, sample_rate: int = 44100
 ) -> Path:
     """Concatenate audio parts with ``gap_s`` seconds of silence between them."""
@@ -130,7 +130,8 @@ def _concat_with_gaps(
     if gap_s <= 0:
         concatenate_audio(*[str(p) for p in parts], output=str(out), crossfade=0.0)
         return out
-    sil = out.parent / "_gap.mp3"
+    # beside its output, named for it: two renders in one folder never share it
+    sil = out.with_name(f".{out.stem}-gap.mp3")
     subprocess.run(
         [
             "ffmpeg",
@@ -151,7 +152,10 @@ def _concat_with_gaps(
         if i:
             interleaved.append(str(sil))
         interleaved.append(str(p))
-    concatenate_audio(*interleaved, output=str(out), crossfade=0.0)
+    try:
+        concatenate_audio(*interleaved, output=str(out), crossfade=0.0)
+    finally:
+        sil.unlink(missing_ok=True)
     return out
 
 
@@ -190,4 +194,4 @@ def render_turns_sequential(
         )
         parts.append(raw)
     out = Path(out_path)
-    return _concat_with_gaps(parts, out, gap_s=gap_s)
+    return concat_with_gaps(parts, out, gap_s=gap_s)

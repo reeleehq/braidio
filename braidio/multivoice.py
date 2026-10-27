@@ -18,12 +18,12 @@ from __future__ import annotations
 
 import random
 import re
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 from mixing import concatenate_audio
 
+from braidio.conversation import concat_with_gaps
 from braidio.leveling import DEFAULT_TARGET_LUFS, level_part
 from braidio.tts import narrate
 
@@ -180,43 +180,9 @@ def render_multivoice(
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)
     if gap_s > 0:
-        _concat_with_gaps(parts, out, gap_s=gap_s)
+        concat_with_gaps(parts, out, gap_s=gap_s)
     else:
         concatenate_audio(
             *[str(p) for p in parts], output=str(out), crossfade=crossfade_s
         )
     return list(zip(voices, turns))
-
-
-def _concat_with_gaps(parts: list[Path], out: Path, *, gap_s: float) -> Path:
-    """Concatenate audio parts with ``gap_s`` seconds of silence between them."""
-    from mixing import Audio  # local import; audio object model
-
-    silence = None
-    pieces: list[str] = []
-    for p in parts:
-        pieces.append(str(p))
-    # Build via ffmpeg: create a silence file and interleave.
-    sil = out.parent / "_gap.mp3"
-    subprocess.run(
-        [
-            "ffmpeg",
-            "-y",
-            "-f",
-            "lavfi",
-            "-i",
-            f"anullsrc=r=44100:cl=stereo",
-            "-t",
-            f"{gap_s:.3f}",
-            str(sil),
-        ],
-        check=True,
-        capture_output=True,
-    )
-    interleaved: list[str] = []
-    for i, p in enumerate(pieces):
-        if i:
-            interleaved.append(str(sil))
-        interleaved.append(p)
-    concatenate_audio(*interleaved, output=str(out), crossfade=0.0)
-    return out

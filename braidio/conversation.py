@@ -164,18 +164,23 @@ def render_turns_sequential(
     work_dir: str | Path = "data/tts/conversation",
     voice_settings: dict | None = None,
     gap_s: float = 0.25,
+    narrate_fn=None,
 ) -> Path:
     """Per-line baseline: synthesize each turn alone (its role's voice) and
     concatenate with ``gap_s`` gaps. Prosody is NOT shared across turns — this is
     what tends to sound like alternating monologues (the thing to beat).
 
     ``api_key`` is threaded to :func:`braidio.tts.narrate`; ``None`` (default)
-    keeps the ``$ELEVENLABS_API_KEY`` fallback."""
+    keeps the ``$ELEVENLABS_API_KEY`` fallback. ``narrate_fn`` is the per-turn
+    synthesizer (default :func:`braidio.tts.narrate`): a renderer given another
+    TTS backend (:func:`braidio.tts.narrator_from_speak`) renders dialogue here,
+    since only ElevenLabs has the one-pass path."""
+    synthesize = narrate_fn or narrate
     work = Path(work_dir)
     work.mkdir(parents=True, exist_ok=True)
     parts: list[Path] = []
     for i, (role, text) in enumerate(turns):
-        raw = narrate(
+        raw = synthesize(
             text,
             work / f"turn{i:02d}-{role}.mp3",
             api_key=api_key,

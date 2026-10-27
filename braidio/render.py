@@ -22,7 +22,12 @@ from pathlib import Path
 
 from mixing import concatenate_audio
 
-from braidio.conversation import DEFAULT_CAST, ConversationCast, render_dialogue
+from braidio.conversation import (
+    DEFAULT_CAST,
+    ConversationCast,
+    render_dialogue,
+    render_turns_sequential,
+)
 from braidio.defaults import default_delivery
 from braidio.delivery import Delivery
 from braidio.pacing import NarrationTurn, plan_turns
@@ -37,7 +42,7 @@ from braidio.leveling import DEFAULT_TARGET_LUFS, level_part
 from braidio.script import Script
 from braidio.sources import SegmentSource
 from braidio.structure import DEFAULT_STRUCTURE, prepare_pause, prepare_sting
-from braidio.tts import narrate
+from braidio.tts import Speak, narrate, narrator_from_speak
 from braidio.weave import TimelineItem, extract_padded, weave_timeline
 from braidio.weave_config import WeaveConfig, speaker_key
 
@@ -212,11 +217,22 @@ def _end_tail(path: Path, *, fade_s: float, silence_s: float) -> None:
         pass  # not a real/probeable audio file — leave it untailed
 
 
+def _tts_name(speak: Speak | None) -> str:
+    """The voice backend a render used, as its settings record names it."""
+    if speak is None:
+        from braidio.timeline import DEFAULT_TTS
+
+        return DEFAULT_TTS
+    name = getattr(speak, "__qualname__", None) or type(speak).__qualname__
+    return f"{getattr(speak, '__module__', '') or ''}:{name}".lstrip(":")
+
+
 def render_production(
     script: Script,
     *,
     source: SegmentSource,
     api_key: str | None = None,
+    speak: Speak | None = None,
     config: WeaveConfig | None = None,
     profile: Profile = DEFAULT_PROFILE,
     rights: RightsPolicy | None = None,
@@ -276,7 +292,17 @@ def render_production(
     explicit key lets a caller (e.g. a per-user BYO-key request) override the
     environment without mutating it. Segment beats never call ElevenLabs, so the
     key does not touch them.
+
+    ``speak`` swaps the voice backend (a :data:`braidio.tts.Speak`, e.g. a local
+    model through ``voxy``): every narration beat and turn is spoken through it,
+    and a dialogue beat is spoken turn by turn (only ElevenLabs has the one-pass
+    Text-to-Dialogue path). Formats, pacing and weaving are unchanged. It is
+    handed the voice ids this render resolves (the format's, the cast's), so
+    pass ``voice_id=`` / ``cast=`` in its vocabulary, or map them inside it.
+    ``None`` (default) is the ElevenLabs path, exactly as before.
     """
+    # the voice backend: ElevenLabs unless the caller supplied another one
+    synthesize = narrate if speak is None else narrator_from_speak(speak)
     publishable = rights.publishable_clip_rights if rights else PUBLISHABLE_CLIP_RIGHTS
     plan = plan_production(script, profile, publishable_clip_rights=publishable)
     target_lufs = config.target_lufs if config is not None else DEFAULT_TARGET_LUFS
@@ -373,9 +399,10 @@ def render_production(
                     voice_id=beat_voice,
                     model_id=delivery.model_id,
                     voice_settings=beat_settings,
+                    narrate_fn=synthesize,
                 )
             else:
-                raw = narrate(
+                raw = synthesize(
                     pb.content,
                     beat_stem.with_name(beat_stem.name + ".mp3"),
                     api_key=api_key,
@@ -390,13 +417,21 @@ def render_production(
                     raw, Path(tts_dir) / f"{script.id_slug}-lead{i:02d}.mp3", gap_s=gap
                 )
         elif pb.kind == "dialogue":
-            raw = render_dialogue(
-                list(pb.turns),
-                cast,
-                api_key=api_key,
-                out_path=Path(tts_dir)
-                / f"{script.id_slug}-{profile.value}-dlg{i:02d}.mp3",
+            dlg_path = (
+                Path(tts_dir) / f"{script.id_slug}-{profile.value}-dlg{i:02d}.mp3"
             )
+            if speak is None:
+                raw = render_dialogue(
+                    list(pb.turns), cast, api_key=api_key, out_path=dlg_path
+                )
+            else:
+                raw = render_turns_sequential(
+                    list(pb.turns),
+                    cast,
+                    out_path=dlg_path,
+                    work_dir=dlg_path.with_suffix(""),
+                    narrate_fn=synthesize,
+                )
         else:  # segment
             rs = source.resolve(pb.content)
             if rs is None:
@@ -520,6 +555,7 @@ def render_production(
                 delivery=delivery,
                 profile=profile,
                 normalize=normalize,
+                tts=_tts_name(speak),
             ),
         )
         return out, tl

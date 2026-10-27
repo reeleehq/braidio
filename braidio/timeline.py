@@ -248,6 +248,10 @@ def build_timeline(
     return TimelineBreakdown(spans, title=title, settings=settings)
 
 
+#: How the settings record names the default voice backend (no ``speak=``).
+DEFAULT_TTS = "elevenlabs"
+
+
 def render_settings(
     *,
     config: "WeaveConfig | None",
@@ -258,6 +262,7 @@ def render_settings(
     delivery: "Delivery | None" = None,
     profile: Any = None,
     normalize: bool = True,
+    tts: str = DEFAULT_TTS,
 ) -> dict[str, Any]:
     """The record of *how* a production was rendered, as plain JSON types.
 
@@ -315,6 +320,9 @@ def render_settings(
             "target_lufs": float(target_lufs),
             "duck_db": float(duck_db),
             "normalize": bool(normalize),
+            # which voice backend spoke: with another one, "delivery" was
+            # never consulted for the voice
+            "tts": tts,
         },
     }
 

@@ -26,9 +26,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 | | |
 |---|---|
 | Repository | <code>reeleehq/braidio</code> |
-| Run | <a href="https://github.com/reeleehq/braidio/actions/runs/40577157419">40577157419</a> |
+| Run | <a href="https://github.com/reeleehq/braidio/actions/runs/40577166340">40577166340</a> |
 | Ref | <code>refs/heads/main</code> |
-| Event commit | <code>c051dae1d6b093f1cdbed4bcd36246cfb1ec3957</code> (in the history of the built commit) |
+| Event commit | <code>5d04b2aaca3cee81dbf59e1857e092d83ef3cd9a</code> (in the history of the built commit) |
 
 ## Tools
 

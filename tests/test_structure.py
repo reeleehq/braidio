@@ -385,6 +385,47 @@ def test_sting_gap_after_renders_as_trailingsilence(tmp_path):
 
 
 @needs_ffmpeg
+def test_a_sting_is_levelled_with_one_gain_and_keeps_its_dynamics(tmp_path):
+    """braidio#130: a quiet swell into a hit stays a swell into a hit. One-pass
+    loudnorm (what this replaced) rode the gain over anything 3 s or longer and
+    pulled the two together (under 3 s it fell back to one linear gain)."""
+    import numpy as np
+    from mixing.decode import decode_float_chunks
+    from mixing.loudness import integrated_lufs as lufs
+    from scipy.io import wavfile
+
+    from braidio.structure import prepare_sting
+
+    rate, each_s = 48000, 4
+    t = np.arange(rate * each_s) / rate
+    swell, hit = 0.02 * np.sin(2 * np.pi * 440 * t), 0.1 * np.sin(2 * np.pi * 440 * t)
+    asset = tmp_path / "sting.wav"
+    wavfile.write(asset, rate, np.concatenate([swell, hit]).astype(np.float32))
+    sting = Sting(
+        str(asset), gain_db=0.0, max_len_s=2 * each_s, fade_out_s=0.05, gap_after_s=0.0
+    )
+
+    got_rate, chunks = decode_float_chunks(
+        prepare_sting(sting, tmp_path / "s.mp3", target_lufs=-20.0)
+    )
+    out = np.concatenate(list(chunks))
+    n, edge = got_rate * each_s, got_rate // 10  # one half, and a margin off its edges
+
+    spread_in = lufs(hit[:, None], rate) - lufs(swell[:, None], rate)
+    spread_out = lufs(out[n + edge : 2 * n - edge], got_rate) - lufs(
+        out[edge : n - edge], got_rate
+    )
+    assert spread_out == pytest.approx(spread_in, abs=0.7)
+    assert lufs(out, got_rate) == pytest.approx(-20.0, abs=0.7)
+    # gain_db is part of the level, so the limiter runs last whatever it is
+    quieter = replace(sting, gain_db=-6.0)
+    got_rate, chunks = decode_float_chunks(
+        prepare_sting(quieter, tmp_path / "q.mp3", target_lufs=-20.0)
+    )
+    assert lufs(np.concatenate(list(chunks)), got_rate) == pytest.approx(-26.0, abs=0.7)
+
+
+@needs_ffmpeg
 def test_non_looping_bed_that_has_run_out_before_a_spotlight_does_not_crash(tmp_path):
     """A 3 s bed that does not loop, a spotlit clip after 4 s: the region after
     the clip would seek past the asset's end. It is dropped, and the mix still

@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="_static/documentation_options.js?v=cfefb2bf"></script>
+    <script src="_static/documentation_options.js?v=6b9736a6"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -57,7 +57,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.82" />
+  <meta name="docsearch:version" content="0.0.83" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -534,7 +534,15 @@ full control:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">render_format</span><span class="p">(</span><span class="n">DEEP_DIVE</span><span class="p">,</span> <span class="n">script</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">speak</span><span class="o">=</span><span class="n">my_local_tts</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">voice</span></code> is the id braidio resolved for the line (the format’s narrator, the cast’s roles), which under the shipped formats is an ElevenLabs id: pass <code class="docutils literal notranslate"><span class="pre">voice_id=</span></code> / <code class="docutils literal notranslate"><span class="pre">cast=</span></code> in your backend’s vocabulary, or map ids inside <code class="docutils literal notranslate"><span class="pre">speak</span></code>. Inline <code class="docutils literal notranslate"><span class="pre">[audio</span> <span class="pre">tags]</span></code> are stripped before <code class="docutils literal notranslate"><span class="pre">speak</span></code> sees the text, speed and other ElevenLabs settings are ignored, and nothing is cached. The render’s settings record names the backend under <code class="docutils literal notranslate"><span class="pre">resolved.tts</span></code>. Only the one-call path takes <code class="docutils literal notranslate"><span class="pre">speak</span></code> today; the graph path (<code class="docutils literal notranslate"><span class="pre">weave_project</span></code>) still synthesizes through ElevenLabs (#132).</p>
+<p><code class="docutils literal notranslate"><span class="pre">voice</span></code> is the id braidio resolved for the line (the format’s narrator, the cast’s roles), which under the shipped formats is an ElevenLabs id: pass <code class="docutils literal notranslate"><span class="pre">voice_id=</span></code> / <code class="docutils literal notranslate"><span class="pre">cast=</span></code> in your backend’s vocabulary, or map ids inside <code class="docutils literal notranslate"><span class="pre">speak</span></code>. Inline <code class="docutils literal notranslate"><span class="pre">[audio</span> <span class="pre">tags]</span></code> are stripped before <code class="docutils literal notranslate"><span class="pre">speak</span></code> sees the text, speed and other ElevenLabs settings are ignored, and nothing is cached. The render’s settings record names the backend under <code class="docutils literal notranslate"><span class="pre">resolved.tts</span></code>.</p>
+<p>The graph path (<code class="docutils literal notranslate"><span class="pre">weave_project</span></code>) cannot persist a callable, so it takes a backend by <strong>name</strong>: register it once, then select it in the config, on either path.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">braidio.tts</span><span class="w"> </span><span class="kn">import</span> <span class="n">register_tts</span>
+
+<span class="n">register_tts</span><span class="p">(</span><span class="s2">"kokoro"</span><span class="p">,</span> <span class="n">my_local_tts</span><span class="p">,</span> <span class="n">usd_per_1k_chars</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>  <span class="c1"># None: unpriced</span>
+<span class="n">weave_project</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">script</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">WeaveConfig</span><span class="p">(</span><span class="n">tts</span><span class="o">=</span><span class="s2">"kokoro"</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>The name is recorded in the weave-config and the dialogue cast and folded into the render cache keys, so switching backends re-synthesizes the spoken parts (the free nodes that also read the weave-config re-run too, served from cache), and an ElevenLabs project (no <code class="docutils literal notranslate"><span class="pre">tts</span></code>) keeps its graph and keys byte for byte. An explicit <code class="docutils literal notranslate"><span class="pre">config=</span></code> replaces a format’s <code class="docutils literal notranslate"><span class="pre">weave</span></code> entirely, so to keep a format’s knobs write <code class="docutils literal notranslate"><span class="pre">fmt.weave.with_(tts=&quot;kokoro&quot;)</span></code>. The key is the name: register a different name for a different voice, since re-registering one keeps the renders cached under it.</p>
 </section>
 </section>
 <section id="what-it-deliberately-does-not-do">
@@ -674,7 +682,7 @@ everything else.</p>
 </section>
 </section>
 
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-27 19:53 UTC from <a href="https://github.com/reeleehq/braidio/commit/697f7077061bc007eb3209fddc4b7906597ec7ed">697f707</a> (main) · braidio 0.0.82 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-27 20:51 UTC from <a href="https://github.com/reeleehq/braidio/commit/b06cca943acfcf29078edb96f1ed66ecaa801c57">b06cca9</a> (main) · braidio 0.0.83 · <a href="about-this-build.html">about this build</a></p>
 
                 </article>
               

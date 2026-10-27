@@ -16,6 +16,7 @@ braidio.cost
 
    .. autosummary::
    
+      backend_cost_usd
       billable_chars
       estimate_cost
       tts_cost_usd

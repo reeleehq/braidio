@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=cfefb2bf"></script>
+    <script src="../_static/documentation_options.js?v=6b9736a6"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.82" />
+  <meta name="docsearch:version" content="0.0.83" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -453,16 +453,19 @@ recomputed if the rate changes.</p>
 <p class="rubric">Functions</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.cost.billable_chars" title="braidio.cost.billable_chars"><code class="xref py py-obj docutils literal notranslate"><span class="pre">billable_chars</span></code></a>(text)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.cost.backend_cost_usd" title="braidio.cost.backend_cost_usd"><code class="xref py py-obj docutils literal notranslate"><span class="pre">backend_cost_usd</span></code></a>(text, *, tts[, model_id])</p></td>
+<td><p>Estimated USD for <code class="docutils literal notranslate"><span class="pre">text</span></code> on the voice backend that speaks it.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.cost.billable_chars" title="braidio.cost.billable_chars"><code class="xref py py-obj docutils literal notranslate"><span class="pre">billable_chars</span></code></a>(text)</p></td>
 <td><p>Characters ElevenLabs bills for <code class="docutils literal notranslate"><span class="pre">text</span></code> (the whole submitted string).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.cost.estimate_cost" title="braidio.cost.estimate_cost"><code class="xref py py-obj docutils literal notranslate"><span class="pre">estimate_cost</span></code></a>(source, *[, model_id])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.cost.estimate_cost" title="braidio.cost.estimate_cost"><code class="xref py py-obj docutils literal notranslate"><span class="pre">estimate_cost</span></code></a>(source, *[, model_id])</p></td>
 <td><p>Estimate ElevenLabs spend for a <a class="reference internal" href="braidio.html#braidio.Script" title="braidio.Script"><code class="xref py py-class docutils literal notranslate"><span class="pre">braidio.Script</span></code></a> or a raw string.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.cost.tts_cost_usd" title="braidio.cost.tts_cost_usd"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tts_cost_usd</span></code></a>(text, *[, model_id])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.cost.tts_cost_usd" title="braidio.cost.tts_cost_usd"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tts_cost_usd</span></code></a>(text, *[, model_id])</p></td>
 <td><p>Estimated USD to synthesize <code class="docutils literal notranslate"><span class="pre">text</span></code>; <code class="docutils literal notranslate"><span class="pre">0.0</span></code> for empty, <code class="docutils literal notranslate"><span class="pre">None</span></code> if unpriced.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.cost.usd_per_1k_chars" title="braidio.cost.usd_per_1k_chars"><code class="xref py py-obj docutils literal notranslate"><span class="pre">usd_per_1k_chars</span></code></a>([model_id])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.cost.usd_per_1k_chars" title="braidio.cost.usd_per_1k_chars"><code class="xref py py-obj docutils literal notranslate"><span class="pre">usd_per_1k_chars</span></code></a>([model_id])</p></td>
 <td><p>Resolved USD-per-1000-characters rate (most specific source first).</p></td>
 </tr>
 </tbody>
@@ -536,6 +539,27 @@ ElevenLabs per-model rates are confirmed (e.g. <code class="docutils literal not
 <dd><p>Env var overriding the USD-per-1000-characters rate (global default for models
 not in <a class="reference internal" href="#braidio.cost.MODEL_USD_PER_1K_CHARS" title="braidio.cost.MODEL_USD_PER_1K_CHARS"><code class="xref py py-data docutils literal notranslate"><span class="pre">MODEL_USD_PER_1K_CHARS</span></code></a>). Set it to your ElevenLabs plan’s real
 rate for exact ledgers; set it to <code class="docutils literal notranslate"><span class="pre">none</span></code> to mark spend as <em>unpriced</em>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="braidio.cost.backend_cost_usd">
+<span class="sig-prename descclassname"><span class="pre">braidio.cost.</span></span><span class="sig-name descname"><span class="pre">backend_cost_usd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">tts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/cost.html#backend_cost_usd"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.cost.backend_cost_usd" title="Link to this definition">#</a></dt>
+<dd><p>Estimated USD for <code class="docutils literal notranslate"><span class="pre">text</span></code> on the voice backend that speaks it.</p>
+<p><code class="docutils literal notranslate"><span class="pre">tts=None</span></code> is ElevenLabs (<a class="reference internal" href="#braidio.cost.tts_cost_usd" title="braidio.cost.tts_cost_usd"><code class="xref py py-func docutils literal notranslate"><span class="pre">tts_cost_usd()</span></code></a>); a registered backend
+(<a class="reference internal" href="braidio.tts.html#braidio.tts.register_tts" title="braidio.tts.register_tts"><code class="xref py py-func docutils literal notranslate"><span class="pre">braidio.tts.register_tts()</span></code></a>) prices at its own rate. A name that is
+not registered (a runner serving cached renders need not register it)
+is unpriced, <code class="docutils literal notranslate"><span class="pre">None</span></code>, never an error and never <code class="docutils literal notranslate"><span class="pre">0.0</span></code>.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">backend_cost_usd</span><span class="p">(</span><span class="s2">""</span><span class="p">,</span> <span class="n">tts</span><span class="o">=</span><span class="s2">"anything"</span><span class="p">)</span>
+<span class="go">0.0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">backend_cost_usd</span><span class="p">(</span><span class="s2">"hi"</span><span class="p">,</span> <span class="n">tts</span><span class="o">=</span><span class="s2">"not-registered"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>]</span></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -669,6 +693,7 @@ number — a bad rate must never silently become a dishonest negative/NaN spend.
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.cost.DEFAULT_USD_PER_1K_CHARS"><code class="docutils literal notranslate"><span class="pre">DEFAULT_USD_PER_1K_CHARS</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.cost.MODEL_USD_PER_1K_CHARS"><code class="docutils literal notranslate"><span class="pre">MODEL_USD_PER_1K_CHARS</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.cost.RATE_ENV_VAR"><code class="docutils literal notranslate"><span class="pre">RATE_ENV_VAR</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.cost.backend_cost_usd"><code class="docutils literal notranslate"><span class="pre">backend_cost_usd()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.cost.billable_chars"><code class="docutils literal notranslate"><span class="pre">billable_chars()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.cost.estimate_cost"><code class="docutils literal notranslate"><span class="pre">estimate_cost()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.cost.tts_cost_usd"><code class="docutils literal notranslate"><span class="pre">tts_cost_usd()</span></code></a></li>

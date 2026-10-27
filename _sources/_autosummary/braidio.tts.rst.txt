@@ -11,6 +11,7 @@ braidio.tts
       DEFAULT_MODEL_ID
       DEFAULT_TTS
       Speak
+      TTS_BACKENDS
    
    .. rubric:: Functions
 
@@ -18,7 +19,16 @@ braidio.tts
    
       narrate
       narrator_from_speak
+      register_tts
       resolve_voice_id
       text_to_dialogue
+      tts_backend
       tts_name
+      unregister_tts
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      TTSBackend
    

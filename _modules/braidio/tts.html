@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=cfefb2bf"></script>
+    <script src="../../_static/documentation_options.js?v=6b9736a6"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.82" />
+  <meta name="docsearch:version" content="0.0.83" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -735,9 +735,12 @@ window.runMermaid = runMermaid;</script>
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Mapping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">types</span><span class="w"> </span><span class="kn">import</span> <span class="n">MappingProxyType</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">mixing</span><span class="w"> </span><span class="kn">import</span> <span class="n">text_to_speech</span>
@@ -848,6 +851,96 @@ window.runMermaid = runMermaid;</script>
     <span class="n">name</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">speak</span><span class="p">,</span> <span class="s2">"__qualname__"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">speak</span><span class="p">)</span><span class="o">.</span><span class="vm">__qualname__</span>
     <span class="n">module</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">speak</span><span class="p">,</span> <span class="s2">"__module__"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">speak</span><span class="p">)</span><span class="o">.</span><span class="vm">__module__</span>
     <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">module</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span></div>
+
+
+
+<div class="viewcode-block" id="TTSBackend">
+<a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.TTSBackend">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">TTSBackend</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A named voice backend: its ``speak`` and what it costs.</span>
+
+<span class="sd">    ``usd_per_1k_chars`` is the backend's rate: ``0.0`` for a local model,</span>
+<span class="sd">    ``None`` (default) when unknown, which a cost report then reads as</span>
+<span class="sd">    *unpriced* rather than free (the same rule as :mod:`braidio.cost`).</span>
+<span class="sd">    """</span>
+
+    <span class="n">speak</span><span class="p">:</span> <span class="n">Speak</span>
+    <span class="n">usd_per_1k_chars</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">rate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">usd_per_1k_chars</span>
+        <span class="k">if</span> <span class="n">rate</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">rate</span><span class="p">)</span> <span class="ow">and</span> <span class="n">rate</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"usd_per_1k_chars must be a finite rate &gt;= 0, or None (unpriced); got </span><span class="si">{</span><span class="n">rate</span><span class="si">!r}</span><span class="s2">"</span>
+            <span class="p">)</span>
+
+<div class="viewcode-block" id="TTSBackend.cost_usd">
+<a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.TTSBackend.cost_usd">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cost_usd</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The spend for ``text`` at this backend's rate (``None``: unpriced)."""</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">usd_per_1k_chars</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">/</span> <span class="mi">1000</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">usd_per_1k_chars</span></div>
+</div>
+
+
+
+<span class="n">_TTS_BACKENDS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">TTSBackend</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="c1">#: The registered voice backends by name, read-only (:func:`register_tts`,</span>
+<span class="c1">#: :func:`unregister_tts`). A name, not a callable, is what a</span>
+<span class="c1">#: :class:`~braidio.weave_config.WeaveConfig` records (``tts=``), so the graph</span>
+<span class="c1">#: can persist it, fold it into a cache key, and resolve it at render time.</span>
+<span class="c1">#: Re-registering a name keeps the renders already cached under it: the key is</span>
+<span class="c1">#: the name, so register a *different* name for a different voice.</span>
+<span class="n">TTS_BACKENDS</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">TTSBackend</span><span class="p">]</span> <span class="o">=</span> <span class="n">MappingProxyType</span><span class="p">(</span><span class="n">_TTS_BACKENDS</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="register_tts">
+<a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.register_tts">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">register_tts</span><span class="p">(</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">speak</span><span class="p">:</span> <span class="n">Speak</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">usd_per_1k_chars</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TTSBackend</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Register ``speak`` as the voice backend ``name`` (replacing any before).</span>
+
+<span class="sd">    ``name`` is what ``WeaveConfig(tts=name)`` selects, on either render path.</span>
+<span class="sd">    :data:`DEFAULT_TTS` is ElevenLabs itself and cannot be taken.</span>
+
+<span class="sd">    &gt;&gt;&gt; b = register_tts("doc-tone", lambda text, *, voice: (b"", "wav"), usd_per_1k_chars=0.0)</span>
+<span class="sd">    &gt;&gt;&gt; tts_backend("doc-tone") is b, b.cost_usd("hello")</span>
+<span class="sd">    (True, 0.0)</span>
+<span class="sd">    &gt;&gt;&gt; unregister_tts("doc-tone") is b</span>
+<span class="sd">    True</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span> <span class="ow">or</span> <span class="n">name</span> <span class="o">==</span> <span class="n">DEFAULT_TTS</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> is not a registrable voice-backend name"</span><span class="p">)</span>
+    <span class="n">backend</span> <span class="o">=</span> <span class="n">TTSBackend</span><span class="p">(</span><span class="n">speak</span><span class="o">=</span><span class="n">speak</span><span class="p">,</span> <span class="n">usd_per_1k_chars</span><span class="o">=</span><span class="n">usd_per_1k_chars</span><span class="p">)</span>
+    <span class="n">_TTS_BACKENDS</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">backend</span>
+    <span class="k">return</span> <span class="n">backend</span></div>
+
+
+
+<div class="viewcode-block" id="unregister_tts">
+<a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.unregister_tts">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">unregister_tts</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TTSBackend</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Remove the backend registered as ``name``; returns it, or ``None``."""</span>
+    <span class="k">return</span> <span class="n">_TTS_BACKENDS</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="tts_backend">
+<a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.tts_backend">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">tts_backend</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TTSBackend</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The backend registered as ``name``; ``KeyError`` naming the registered ones."""</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_TTS_BACKENDS</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+        <span class="n">known</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">_TTS_BACKENDS</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"none"</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"no voice backend </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> is registered (registered: </span><span class="si">{</span><span class="n">known</span><span class="si">}</span><span class="s2">); "</span>
+            <span class="s2">"register one with braidio.tts.register_tts(name, speak)"</span>
+        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>
 
 
 

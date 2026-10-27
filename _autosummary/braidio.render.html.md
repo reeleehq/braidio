@@ -103,7 +103,9 @@ and a dialogue beat is spoken turn by turn (only ElevenLabs has the one-pass
 Text-to-Dialogue path). Formats, pacing and weaving are unchanged. It is
 handed the voice ids this render resolves (the format’s, the cast’s), so
 pass `voice_id=` / `cast=` in its vocabulary, or map them inside it.
-`None` (default) is the ElevenLabs path, exactly as before.
+`None` (default) is the ElevenLabs path, exactly as before, unless
+`config.tts` names a registered backend ([`braidio.tts.register_tts()`](braidio.tts.html.md#braidio.tts.register_tts)),
+which is how the graph path selects one too; an explicit `speak` wins.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path) | [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`object`](https://docs.python.org/3/builtins/functions.html#object)]

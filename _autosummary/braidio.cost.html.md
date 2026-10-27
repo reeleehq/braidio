@@ -35,11 +35,12 @@ recomputed if the rate changes.
 
 ### Functions
 
-| [`billable_chars`](#braidio.cost.billable_chars)(text)                  | Characters ElevenLabs bills for `text` (the whole submitted string).                                                            |
-|----------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
-| [`estimate_cost`](#braidio.cost.estimate_cost)(source, \*[, model_id]) | Estimate ElevenLabs spend for a [`braidio.Script`](braidio.html.md#braidio.Script) or a raw string. |
-| [`tts_cost_usd`](#braidio.cost.tts_cost_usd)(text, \*[, model_id])    | Estimated USD to synthesize `text`; `0.0` for empty, `None` if unpriced.                                                        |
-| [`usd_per_1k_chars`](#braidio.cost.usd_per_1k_chars)([model_id])          | Resolved USD-per-1000-characters rate (most specific source first).                                                             |
+| [`backend_cost_usd`](#braidio.cost.backend_cost_usd)(text, \*, tts[, model_id])   | Estimated USD for `text` on the voice backend that speaks it.                                                                   |
+|------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| [`billable_chars`](#braidio.cost.billable_chars)(text)                          | Characters ElevenLabs bills for `text` (the whole submitted string).                                                            |
+| [`estimate_cost`](#braidio.cost.estimate_cost)(source, \*[, model_id])         | Estimate ElevenLabs spend for a [`braidio.Script`](braidio.html.md#braidio.Script) or a raw string. |
+| [`tts_cost_usd`](#braidio.cost.tts_cost_usd)(text, \*[, model_id])            | Estimated USD to synthesize `text`; `0.0` for empty, `None` if unpriced.                                                        |
+| [`usd_per_1k_chars`](#braidio.cost.usd_per_1k_chars)([model_id])                  | Resolved USD-per-1000-characters rate (most specific source first).                                                             |
 
 ### Classes
 
@@ -92,6 +93,25 @@ ElevenLabs per-model rates are confirmed (e.g. `eleven_v3` dialogue vs
 Env var overriding the USD-per-1000-characters rate (global default for models
 not in [`MODEL_USD_PER_1K_CHARS`](#braidio.cost.MODEL_USD_PER_1K_CHARS)). Set it to your ElevenLabs plan’s real
 rate for exact ledgers; set it to `none` to mark spend as *unpriced*.
+
+### braidio.cost.backend_cost_usd(text, , tts, model_id=None)
+
+Estimated USD for `text` on the voice backend that speaks it.
+
+`tts=None` is ElevenLabs ([`tts_cost_usd()`](#braidio.cost.tts_cost_usd)); a registered backend
+([`braidio.tts.register_tts()`](braidio.tts.html.md#braidio.tts.register_tts)) prices at its own rate. A name that is
+not registered (a runner serving cached renders need not register it)
+is unpriced, `None`, never an error and never `0.0`.
+
+```pycon
+>>> backend_cost_usd("", tts="anything")
+0.0
+>>> backend_cost_usd("hi", tts="not-registered") is None
+True
+```
+
+* **Return type:**
+  [`Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]
 
 ### braidio.cost.billable_chars(text)
 

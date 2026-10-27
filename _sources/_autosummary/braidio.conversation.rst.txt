@@ -8,6 +8,7 @@ braidio.conversation
 
    .. autosummary::
    
+      concat_with_gaps
       render_dialogue
       render_turns_sequential
    

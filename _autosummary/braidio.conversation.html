@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=cfefb2bf"></script>
+    <script src="../_static/documentation_options.js?v=6b9736a6"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.82" />
+  <meta name="docsearch:version" content="0.0.83" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -428,10 +428,13 @@ disfluency (backchannels, interruptions, fragments) — the model won’t invent
 <p class="rubric">Functions</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.conversation.render_dialogue" title="braidio.conversation.render_dialogue"><code class="xref py py-obj docutils literal notranslate"><span class="pre">render_dialogue</span></code></a>(turns[, cast, api_key, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.conversation.concat_with_gaps" title="braidio.conversation.concat_with_gaps"><code class="xref py py-obj docutils literal notranslate"><span class="pre">concat_with_gaps</span></code></a>(parts, out, *, gap_s[, ...])</p></td>
+<td><p>Concatenate audio parts with <code class="docutils literal notranslate"><span class="pre">gap_s</span></code> seconds of silence between them.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.conversation.render_dialogue" title="braidio.conversation.render_dialogue"><code class="xref py py-obj docutils literal notranslate"><span class="pre">render_dialogue</span></code></a>(turns[, cast, api_key, ...])</p></td>
 <td><p>One-pass render of <code class="docutils literal notranslate"><span class="pre">turns</span></code> (<code class="docutils literal notranslate"><span class="pre">[(role,</span> <span class="pre">text),</span> <span class="pre">…]</span></code>) via Text-to-Dialogue.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.conversation.render_turns_sequential" title="braidio.conversation.render_turns_sequential"><code class="xref py py-obj docutils literal notranslate"><span class="pre">render_turns_sequential</span></code></a>(turns[, cast, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.conversation.render_turns_sequential" title="braidio.conversation.render_turns_sequential"><code class="xref py py-obj docutils literal notranslate"><span class="pre">render_turns_sequential</span></code></a>(turns[, cast, ...])</p></td>
 <td><p>Per-line baseline: synthesize each turn alone (its role's voice) and concatenate with <code class="docutils literal notranslate"><span class="pre">gap_s</span></code> gaps.</p></td>
 </tr>
 </tbody>
@@ -456,6 +459,17 @@ down-to-earth, M) — snappier than the “relaxed” voices. <code class="docut
 is the research sweet spot for a lively but coherent read (never 1.0/Robust,
 which mutes v3 tags; ~0.1 is too unstable). See braidio#1 + the pacing doc.</p>
 <dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="braidio.conversation.concat_with_gaps">
+<span class="sig-prename descclassname"><span class="pre">braidio.conversation.</span></span><span class="sig-name descname"><span class="pre">concat_with_gaps</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">gap_s</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">44100</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/conversation.html#concat_with_gaps"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.conversation.concat_with_gaps" title="Link to this definition">#</a></dt>
+<dd><p>Concatenate audio parts with <code class="docutils literal notranslate"><span class="pre">gap_s</span></code> seconds of silence between them.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span></p>
+</dd>
 </dl>
 </dd></dl>
 
@@ -550,6 +564,7 @@ since only ElevenLabs has the one-pass path.</p>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.conversation.ConversationCast"><code class="docutils literal notranslate"><span class="pre">ConversationCast</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.conversation.concat_with_gaps"><code class="docutils literal notranslate"><span class="pre">concat_with_gaps()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.conversation.render_dialogue"><code class="docutils literal notranslate"><span class="pre">render_dialogue()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.conversation.render_turns_sequential"><code class="docutils literal notranslate"><span class="pre">render_turns_sequential()</span></code></a></li>
 </ul>

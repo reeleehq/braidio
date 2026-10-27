@@ -157,7 +157,8 @@ The graph path (`weave_project`) cannot persist a callable, so it takes a backen
 
 ```python
 from braidio.tts import register_tts
-register_tts("kokoro", my_local_tts, usd_per_1k_chars=0.0)   # None: unpriced
+
+register_tts("kokoro", my_local_tts, usd_per_1k_chars=0.0)  # None: unpriced
 weave_project(project, script, config=WeaveConfig(tts="kokoro"))
 ```
 

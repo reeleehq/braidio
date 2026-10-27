@@ -23,7 +23,7 @@ from __future__ import annotations
 import json
 import shutil
 import uuid
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from falaw import Plan
@@ -180,6 +180,50 @@ def _beat_turns(beat, config: dict, *, model_id: str, settings: dict) -> list:
     )
 
 
+@dataclass(frozen=True)
+class _RenderInputs:
+    """Everything one narration render is decided by, read once from its parents."""
+
+    text: str
+    voice_id: str
+    model_id: str
+    settings: dict
+    turns: list
+    tts: str | None  # a registered voice backend, else ElevenLabs (braidio#132)
+
+    def cache_key(self, transform) -> str:
+        return _narration_cache_key(
+            transform,
+            self.text,
+            self.voice_id,
+            self.model_id,
+            self.settings,
+            self.turns,
+            tts=self.tts,
+        )
+
+
+def _render_inputs(beat, va, cfg) -> _RenderInputs:
+    """The render's inputs from its beat, voice assignment and weave-config.
+
+    ``plan`` and ``execute`` both read them here, so the cache key ``plan``
+    records and the audio ``execute`` synthesizes cannot drift apart
+    (braidio#120 item 4: they used to recompute voice, settings and turns
+    each on their own).
+    """
+    config = cfg.body.get("config", {})
+    model_id = config.get("model_id", DEFAULT_MODEL_ID)
+    settings = _beat_settings(beat, config)
+    return _RenderInputs(
+        text=beat.body.get("text", ""),
+        voice_id=va.body.get("voice_id") or DEFAULT_VOICE_ID,
+        model_id=model_id,
+        settings=settings,
+        turns=_beat_turns(beat, config, model_id=model_id, settings=settings),
+        tts=config.get("tts"),
+    )
+
+
 @register_transform(NAME)
 class NarrationRenderTTS(BaseTransform):
     """Narrative beat (+ voice-assignment + weave-config) → ``narration-render/v1``."""
@@ -194,21 +238,7 @@ class NarrationRenderTTS(BaseTransform):
         beat = inputs.primary[0]
         cfg = singleton(project, TIER_WEAVE_CONFIG)
         va = child_at_tier(project, TIER_VOICE_ASSIGNMENT, beat.id)
-
-        config = cfg.body.get("config", {})
-        voice_id = va.body.get("voice_id") or DEFAULT_VOICE_ID
-        model_id = config.get("model_id", DEFAULT_MODEL_ID)
-        settings = _beat_settings(beat, config)
-        turns = _beat_turns(beat, config, model_id=model_id, settings=settings)
-        cache_key = _narration_cache_key(
-            self,
-            beat.body.get("text", ""),
-            voice_id,
-            model_id,
-            settings,
-            turns,
-            tts=config.get("tts"),
-        )
+        cache_key = _render_inputs(beat, va, cfg).cache_key(self)
 
         full = TransformInputs(
             primary=(beat,),
@@ -240,14 +270,11 @@ class NarrationRenderTTS(BaseTransform):
         beat = require_tier(parents, TIER_NARRATIVE_BEAT)
         va = require_tier(parents, TIER_VOICE_ASSIGNMENT)
         cfg = require_tier(parents, TIER_WEAVE_CONFIG)
-        config = cfg.body.get("config", {})
-        text = beat.body.get("text", "")
-        model_id = config.get("model_id", DEFAULT_MODEL_ID)
-        tts = config.get("tts")  # a registered backend, else ElevenLabs (#132)
+        r = _render_inputs(beat, va, cfg)
         # ElevenLabs bills per character — the only real spend here. A rate ESTIMATE
         # (== live-call spend; may over-report on a lower-level mixing-cache hit that
         # braidio can't yet detect — thorwhalen/braidio#8).
-        cost = backend_cost_usd(text, tts=tts, model_id=model_id)
+        cost = backend_cost_usd(r.text, tts=r.tts, model_id=r.model_id)
 
         if use_cache and not force:
             # Idempotent re-run: the same render over the same, still-fresh
@@ -277,22 +304,19 @@ class NarrationRenderTTS(BaseTransform):
         out_path.parent.mkdir(parents=True, exist_ok=True)
         # was_cached: mixing served this from its on-disk cache (no ElevenLabs call
         # = $0 real spend) even though our graph cache missed — braidio#8.
-        voice_id = va.body.get("voice_id") or DEFAULT_VOICE_ID
-        settings = _beat_settings(beat, config)
         # The caller's key, if the driver handed one in (nw's `secrets=` seam;
         # thorwhalen/braidio#58) — else None, the process env. Never persisted:
         # not in the node, not in the cache_key.
         api_key = elevenlabs_key(secrets)
-        turns = _beat_turns(beat, config, model_id=model_id, settings=settings)
         out_path, was_cached = _speak_beat(
-            text,
+            r.text,
             out_path,
-            tts=tts,
-            turns=turns,
+            tts=r.tts,
+            turns=r.turns,
             api_key=api_key,
-            voice_id=voice_id,
-            model_id=model_id,
-            settings=settings,
+            voice_id=r.voice_id,
+            model_id=r.model_id,
+            settings=r.settings,
         )
         duration = safe_duration(out_path)
         artifact = audio_artifact(

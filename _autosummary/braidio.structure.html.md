@@ -117,9 +117,11 @@ Render `seconds` of stereo silence — a scene break with no sting to play.
 
 Render `sting` to a ready-to-place part: trimmed, faded, levelled, padded.
 
-The result is already at production level (`target_lufs` then
-`sting.gain_db`), so the caller places it as-is rather than normalizing
-it again. Returns `out_path`.
+The result is already at production level (`target_lufs + sting.gain_db`),
+so the caller places it as-is rather than normalizing it again. The level is
+one measured gain with a true-peak limit applied last, so the ceiling holds
+whatever `gain_db` is ([`braidio.leveling.level_part()`](braidio.leveling.html.md#braidio.leveling.level_part), as every
+spoken part gets), not a gain ridden through the sting. Returns `out_path`.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)

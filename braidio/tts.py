@@ -21,6 +21,7 @@ import functools
 import os
 import re
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 from mixing import text_to_speech
@@ -126,6 +127,64 @@ def tts_name(speak: Speak | None) -> str:
     name = getattr(speak, "__qualname__", None) or type(speak).__qualname__
     module = getattr(speak, "__module__", None) or type(speak).__module__
     return f"{module}:{name}"
+
+
+@dataclass(frozen=True)
+class TTSBackend:
+    """A named voice backend: its ``speak`` and what it costs.
+
+    ``usd_per_1k_chars`` is the backend's rate: ``0.0`` for a local model,
+    ``None`` (default) when unknown, which a cost report then reads as
+    *unpriced* rather than free (the same rule as :mod:`braidio.cost`).
+    """
+
+    speak: Speak
+    usd_per_1k_chars: float | None = None
+
+    def cost_usd(self, text: str) -> float | None:
+        """The spend for ``text`` at this backend's rate (``None``: unpriced)."""
+        if self.usd_per_1k_chars is None:
+            return None
+        return len(text) / 1000 * self.usd_per_1k_chars
+
+
+#: The registered voice backends by name (:func:`register_tts`). A name, not a
+#: callable, is what a :class:`~braidio.weave_config.WeaveConfig` records
+#: (``tts=``), so the graph can persist it, fold it into a cache key, and
+#: resolve it again at render time.
+TTS_BACKENDS: dict[str, TTSBackend] = {}
+
+
+def register_tts(
+    name: str, speak: Speak, *, usd_per_1k_chars: float | None = None
+) -> TTSBackend:
+    """Register ``speak`` as the voice backend ``name`` (replacing any before).
+
+    ``name`` is what ``WeaveConfig(tts=name)`` selects, on either render path.
+    :data:`DEFAULT_TTS` is ElevenLabs itself and cannot be taken.
+
+    >>> b = register_tts("doc-tone", lambda text, *, voice: (b"", "wav"), usd_per_1k_chars=0.0)
+    >>> tts_backend("doc-tone") is b, b.cost_usd("hello")
+    (True, 0.0)
+    >>> _ = TTS_BACKENDS.pop("doc-tone")
+    """
+    if not name or name == DEFAULT_TTS:
+        raise ValueError(f"{name!r} is not a registrable voice-backend name")
+    backend = TTSBackend(speak=speak, usd_per_1k_chars=usd_per_1k_chars)
+    TTS_BACKENDS[name] = backend
+    return backend
+
+
+def tts_backend(name: str) -> TTSBackend:
+    """The backend registered as ``name``; ``KeyError`` naming the registered ones."""
+    try:
+        return TTS_BACKENDS[name]
+    except KeyError:
+        known = sorted(TTS_BACKENDS) or "none"
+        raise KeyError(
+            f"no voice backend {name!r} is registered (registered: {known}); "
+            "register one with braidio.tts.register_tts(name, speak)"
+        ) from None
 
 
 def resolve_voice_id(voice_id: str | None = None) -> str:

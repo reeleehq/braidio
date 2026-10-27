@@ -41,7 +41,12 @@ from braidio.bodies._render_nodes import (
 from braidio.cost import tts_cost_usd
 from braidio.delivery import model_supports_speed
 from braidio.render import narrate_turns, plan_beat_turns
-from braidio.tts import DEFAULT_MODEL_ID, DEFAULT_VOICE_ID
+from braidio.tts import (
+    DEFAULT_MODEL_ID,
+    DEFAULT_VOICE_ID,
+    narrator_from_speak,
+    tts_backend,
+)
 from braidio.weave_config import WeaveConfig
 from braidio.transforms._common import (
     TIER_NARRATIVE_BEAT,
@@ -67,7 +72,7 @@ NAME = "narration_render.tts"
 
 
 def _narration_cache_key(
-    transform, text: str, voice_id: str, model_id: str, settings, turns=()
+    transform, text: str, voice_id: str, model_id: str, settings, turns=(), *, tts=None
 ) -> str:
     """The output identity for one TTS render — nw's shared derivation.
 
@@ -80,7 +85,9 @@ def _narration_cache_key(
 
     ``turns`` is the paced plan (:func:`_beat_turns`): what is synthesized when
     the config paces narration. Unpaced, it is empty and adds nothing, so an
-    unpaced project keeps its keys.
+    unpaced project keeps its keys. ``tts`` (a registered backend name,
+    braidio#132) is folded in only when set, by the same rule: an ElevenLabs
+    project keeps its keys, and switching backends changes every one.
     """
     from nw.transforms import cache_key as transform_cache_key
 
@@ -93,7 +100,67 @@ def _narration_cache_key(
     ]
     if turns:
         parts.append(json.dumps([asdict(t) for t in turns], sort_keys=True))
+    if tts:
+        parts.append(f"tts={tts}")
     return transform_cache_key(transform, *parts)
+
+
+def _beat_cost(text: str, *, model_id: str, tts: str | None) -> float | None:
+    """The estimated spend for ``text``: ElevenLabs' rate, or the registered
+    backend's (``None``: unpriced)."""
+    if tts:
+        return tts_backend(tts).cost_usd(text)
+    return tts_cost_usd(text, model_id=model_id)
+
+
+def _speak_beat(
+    text: str,
+    out_path: Path,
+    *,
+    tts: str | None,
+    turns,
+    api_key,
+    voice_id: str,
+    model_id: str,
+    settings,
+) -> tuple[Path, bool]:
+    """Synthesize one beat → ``(audio path, was_cached)``.
+
+    ElevenLabs through ``braidio.narrate`` (``was_cached``: mixing served it
+    from disk), or the registered backend ``tts`` through
+    :func:`braidio.tts.narrator_from_speak` (never cached; its file carries
+    the format it reported). Paced ``turns`` are one call each, concatenated
+    into ``out_path``.
+    """
+    import braidio  # runtime attr access so tests can monkeypatch narrate
+
+    cached: list[bool] = []
+    if tts:
+        synthesize = narrator_from_speak(tts_backend(tts).speak)
+    else:
+
+        def synthesize(turn_text, turn_path, **kwargs):
+            path, hit = braidio.narrate(
+                turn_text, turn_path, return_cache_status=True, **kwargs
+            )
+            cached.append(hit)
+            return path
+
+    kwargs = dict(api_key=api_key, voice_id=voice_id, model_id=model_id)
+    if turns:  # paced: one call per turn, real silence between (braidio#118)
+        paced = narrate_turns(
+            turns,
+            stem=out_path.with_suffix(""),
+            voice_settings=settings,
+            narrate_fn=synthesize,
+            **kwargs,
+        )
+        shutil.move(paced, out_path)
+        for leftover in out_path.parent.glob(f"{out_path.stem}-turn*"):
+            leftover.unlink()  # per-turn parts and gaps: only the mix is a node
+        return out_path, bool(cached) and all(cached)
+    path = synthesize(text, out_path, voice_settings=settings, **kwargs)
+    return Path(path), bool(cached) and all(cached)
 
 
 def _beat_settings(beat, config: dict) -> dict:
@@ -140,7 +207,13 @@ class NarrationRenderTTS(BaseTransform):
         settings = _beat_settings(beat, config)
         turns = _beat_turns(beat, config, model_id=model_id, settings=settings)
         cache_key = _narration_cache_key(
-            self, beat.body.get("text", ""), voice_id, model_id, settings, turns
+            self,
+            beat.body.get("text", ""),
+            voice_id,
+            model_id,
+            settings,
+            turns,
+            tts=config.get("tts"),
         )
 
         full = TransformInputs(
@@ -167,8 +240,6 @@ class NarrationRenderTTS(BaseTransform):
         force: bool = False,
         secrets=None,
     ) -> TransformResult:
-        import braidio  # runtime attr access so tests can monkeypatch narrate
-
         skel = skeleton[0]
         cache_key = skel.body["cache_key"]
         parents = resolve_parents(skel, graph_index(project))
@@ -178,10 +249,11 @@ class NarrationRenderTTS(BaseTransform):
         config = cfg.body.get("config", {})
         text = beat.body.get("text", "")
         model_id = config.get("model_id", DEFAULT_MODEL_ID)
+        tts = config.get("tts")  # a registered backend, else ElevenLabs (#132)
         # ElevenLabs bills per character — the only real spend here. A rate ESTIMATE
         # (== live-call spend; may over-report on a lower-level mixing-cache hit that
         # braidio can't yet detect — thorwhalen/braidio#8).
-        cost = tts_cost_usd(text, model_id=model_id)
+        cost = _beat_cost(text, model_id=model_id, tts=tts)
 
         if use_cache and not force:
             # Idempotent re-run: the same render over the same, still-fresh
@@ -218,39 +290,16 @@ class NarrationRenderTTS(BaseTransform):
         # not in the node, not in the cache_key.
         api_key = elevenlabs_key(secrets)
         turns = _beat_turns(beat, config, model_id=model_id, settings=settings)
-        if turns:  # paced: one call per turn, real silence between (braidio#118)
-            cached: list[bool] = []
-
-            def synthesize(turn_text, turn_path, **kwargs):
-                path, hit = braidio.narrate(
-                    turn_text, turn_path, return_cache_status=True, **kwargs
-                )
-                cached.append(hit)
-                return path
-
-            paced = narrate_turns(
-                turns,
-                stem=out_path.with_suffix(""),
-                api_key=api_key,
-                voice_id=voice_id,
-                model_id=model_id,
-                voice_settings=settings,
-                narrate_fn=synthesize,
-            )
-            shutil.move(paced, out_path)
-            for leftover in out_path.parent.glob(f"{skel.id}-turn*"):
-                leftover.unlink()  # per-turn parts and gaps: only the mix is a node
-            was_cached = all(cached)
-        else:
-            _, was_cached = braidio.narrate(
-                text,
-                out_path,
-                api_key=api_key,
-                voice_id=voice_id,
-                model_id=model_id,
-                voice_settings=settings,
-                return_cache_status=True,
-            )
+        out_path, was_cached = _speak_beat(
+            text,
+            out_path,
+            tts=tts,
+            turns=turns,
+            api_key=api_key,
+            voice_id=voice_id,
+            model_id=model_id,
+            settings=settings,
+        )
         duration = safe_duration(out_path)
         artifact = audio_artifact(
             out_path,

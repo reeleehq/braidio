@@ -42,7 +42,7 @@ from braidio.leveling import DEFAULT_TARGET_LUFS, level_part
 from braidio.script import Script
 from braidio.sources import SegmentSource
 from braidio.structure import DEFAULT_STRUCTURE, prepare_pause, prepare_sting
-from braidio.tts import Speak, narrate, narrator_from_speak, tts_name
+from braidio.tts import Speak, narrate, narrator_from_speak, tts_backend, tts_name
 from braidio.weave import TimelineItem, extract_padded, weave_timeline
 from braidio.weave_config import WeaveConfig, speaker_key
 
@@ -289,9 +289,15 @@ def render_production(
     Text-to-Dialogue path). Formats, pacing and weaving are unchanged. It is
     handed the voice ids this render resolves (the format's, the cast's), so
     pass ``voice_id=`` / ``cast=`` in its vocabulary, or map them inside it.
-    ``None`` (default) is the ElevenLabs path, exactly as before.
+    ``None`` (default) is the ElevenLabs path, exactly as before, unless
+    ``config.tts`` names a registered backend (:func:`braidio.tts.register_tts`),
+    which is how the graph path selects one too; an explicit ``speak`` wins.
     """
-    # the voice backend: ElevenLabs unless the caller supplied another one
+    # the voice backend: an explicit `speak`, else the config's registered one,
+    # else ElevenLabs
+    backend_name = None
+    if speak is None and config is not None and config.tts:
+        backend_name, speak = config.tts, tts_backend(config.tts).speak
     synthesize = narrate if speak is None else narrator_from_speak(speak)
     publishable = rights.publishable_clip_rights if rights else PUBLISHABLE_CLIP_RIGHTS
     plan = plan_production(script, profile, publishable_clip_rights=publishable)
@@ -545,7 +551,7 @@ def render_production(
                 delivery=delivery,
                 profile=profile,
                 normalize=normalize,
-                tts=tts_name(speak),
+                tts=backend_name or tts_name(speak),
             ),
         )
         return out, tl

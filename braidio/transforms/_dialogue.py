@@ -32,6 +32,7 @@ A caller's ElevenLabs key reaches the synthesis exactly as it does in
 from __future__ import annotations
 
 import json
+import shutil
 import uuid
 
 from falaw import Plan
@@ -47,6 +48,7 @@ from braidio.bodies._render_nodes import (
 )
 from braidio.conversation import ConversationCast
 from braidio.cost import tts_cost_usd
+from braidio.tts import narrator_from_speak, tts_backend
 from braidio.transforms._common import (
     TIER_DIALOGUE_BEAT,
     TIER_DIALOGUE_CAST,
@@ -88,24 +90,30 @@ def _billable_text(turns) -> str:
     return "".join(text for _role, text in turns)
 
 
-def _dialogue_cache_key(transform, turns, cast: ConversationCast) -> str:
+def _dialogue_cache_key(
+    transform, turns, cast: ConversationCast, *, tts: str | None = None
+) -> str:
     """The output identity for one dialogue take — nw's shared derivation.
 
     Hashes everything that reaches the audio: the turns (role + text, in
     order), the role → voice map, the model and its settings. Same
     ``nw.transforms.cache_key`` as the narration and extraction transforms,
-    with a ``"dialogue"`` tag so the three can never collide (nw#54).
+    with a ``"dialogue"`` tag so the three can never collide (nw#54). A
+    registered voice backend ``tts`` (braidio#132) is folded in only when set,
+    so an ElevenLabs project keeps its keys.
     """
     from nw.transforms import cache_key as transform_cache_key
 
-    return transform_cache_key(
-        transform,
+    parts = [
         "dialogue",
         json.dumps(list(turns), ensure_ascii=False),
         json.dumps(dict(cast.roles), sort_keys=True),
         cast.model_id,
         json.dumps(cast.settings or {}, sort_keys=True),
-    )
+    ]
+    if tts:
+        parts.append(f"tts={tts}")
+    return transform_cache_key(transform, *parts)
 
 
 @register_transform(NAME)
@@ -121,7 +129,9 @@ class DialogueRenderTTS(BaseTransform):
     ) -> tuple[Plan, tuple[Annotation, ...]]:
         beat = inputs.primary[0]
         cast_node = singleton(project, TIER_DIALOGUE_CAST)
-        cache_key = _dialogue_cache_key(self, _turns(beat), _cast(cast_node))
+        cache_key = _dialogue_cache_key(
+            self, _turns(beat), _cast(cast_node), tts=cast_node.body.get("tts")
+        )
 
         full = TransformInputs(
             primary=(beat,), context={DIALOGUE_CAST_V1: (cast_node,)}
@@ -152,11 +162,18 @@ class DialogueRenderTTS(BaseTransform):
         cache_key = skel.body["cache_key"]
         parents = resolve_parents(skel, graph_index(project))
         beat = require_tier(parents, TIER_DIALOGUE_BEAT)
-        cast = _cast(require_tier(parents, TIER_DIALOGUE_CAST))
+        cast_node = require_tier(parents, TIER_DIALOGUE_CAST)
+        cast, tts = _cast(cast_node), cast_node.body.get("tts")
         turns = _turns(beat)
         # ElevenLabs bills per character of the submitted turns — the only real
-        # spend here. A rate ESTIMATE (== live-call spend; see braidio#8).
-        cost = tts_cost_usd(_billable_text(turns), model_id=cast.model_id)
+        # spend here. A rate ESTIMATE (== live-call spend; see braidio#8). A
+        # registered backend reports its own rate, or none (unpriced).
+        billable = _billable_text(turns)
+        cost = (
+            tts_backend(tts).cost_usd(billable)
+            if tts
+            else tts_cost_usd(billable, model_id=cast.model_id)
+        )
 
         if use_cache and not force:
             # Same two-step as narration_render: the fresh equivalent node if
@@ -184,16 +201,29 @@ class DialogueRenderTTS(BaseTransform):
         out_path.parent.mkdir(parents=True, exist_ok=True)
         # was_cached: the take came from the on-disk dialogue cache (no
         # ElevenLabs call = $0 real spend) even though our graph cache missed.
-        _, was_cached = braidio.render_dialogue(
-            turns,
-            cast,
-            # The caller's key, if the driver handed one in (nw's `secrets=`
-            # seam; thorwhalen/braidio#58) — else None, the process env. Never
-            # persisted: not in the node, not in the cache_key.
-            api_key=elevenlabs_key(secrets),
-            out_path=out_path,
-            return_cache_status=True,
-        )
+        if tts:
+            # another backend has no one-pass dialogue: turn by turn, never
+            # cached (the fast path's fallback, braidio#123)
+            braidio.render_turns_sequential(
+                turns,
+                cast,
+                out_path=out_path,
+                work_dir=out_path.with_suffix(""),
+                narrate_fn=narrator_from_speak(tts_backend(tts).speak),
+            )
+            shutil.rmtree(out_path.with_suffix(""), ignore_errors=True)
+            was_cached = False
+        else:
+            _, was_cached = braidio.render_dialogue(
+                turns,
+                cast,
+                # The caller's key, if the driver handed one in (nw's `secrets=`
+                # seam; thorwhalen/braidio#58) — else None, the process env.
+                # Never persisted: not in the node, not in the cache_key.
+                api_key=elevenlabs_key(secrets),
+                out_path=out_path,
+                return_cache_status=True,
+            )
         duration = safe_duration(out_path)
         artifact = audio_artifact(
             out_path,

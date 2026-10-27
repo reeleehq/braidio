@@ -151,6 +151,12 @@ class DialogueCastBodyV1(BaseModel):
     settings: Optional[dict[str, Any]] = Field(
         None, description="Model settings passed to Text-to-Dialogue (stability…)."
     )
+    # Additive (default None, and omitted from the stored body when unset, so a
+    # project voiced by ElevenLabs keeps the exact cast node it had): the
+    # registered voice backend the turns are spoken with (braidio#132).
+    tts: Optional[str] = Field(
+        None, description="Registered voice backend (braidio.tts); None: ElevenLabs."
+    )
 
 
 class SourceMediaBodyV1(BaseModel):

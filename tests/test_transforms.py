@@ -664,27 +664,67 @@ def test_a_format_narrates_with_its_delivery_on_the_graph(
     assert seen and set(seen) == {braidio.DEEP_DIVE.narration_delivery.model_id}
 
 
+def _counting_narrate(monkeypatch):
+    """Count synthesis calls over the patched stub (the re-bill measure)."""
+    calls = []
+    real = braidio.narrate
+
+    def _narrate(text, out, **kw):
+        calls.append(kw["model_id"])
+        return real(text, out, **kw)
+
+    monkeypatch.setattr(braidio, "narrate", _narrate)
+    return calls
+
+
 def test_an_existing_project_keeps_the_model_it_recorded(
-    project, script_and_source, patched_synthesis
+    project, script_and_source, patched_synthesis, monkeypatch
 ):
-    """No surprise re-bill (braidio#135): a project whose weave-config predates
-    the delivery rule keeps its model and settings, so re-weaving it under a
-    format re-synthesizes nothing."""
+    """No surprise re-bill (braidio#135): a project woven before the delivery
+    rule keeps its model and settings when re-woven under a format."""
     import nw
 
+    calls = _counting_narrate(monkeypatch)
     script, source = script_and_source
     legacy = braidio.SOLO_EXPLAINER.weave.with_(
         narration_voice=braidio.SOLO_EXPLAINER.narration_voice
     )  # what the graph recorded before #120
     braidio.weave_project(project, script, source=source, config=legacy)
-    renders = {a.id for a in nw.annotations_at_tier(project.root, "narration-renders")}
+    synthesized = len(calls)
 
     braidio.weave_project(project, script, source=source, fmt=braidio.SOLO_EXPLAINER)
     (cfg,) = nw.annotations_at_tier(project.root, "weave-configs")
     assert cfg.body["config"] == legacy.to_dict()
-    assert {
-        a.id for a in nw.annotations_at_tier(project.root, "narration-renders")
-    } == renders
+    assert len(calls) == synthesized  # nothing re-synthesized
+
+
+def test_dropping_and_restoring_the_format_never_re_bills(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """Woven under a format, re-woven without it, then with it again: the
+    voice it was synthesized with is kept throughout (#138 review)."""
+    calls = _counting_narrate(monkeypatch)
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source, fmt=braidio.DEEP_DIVE)
+    first = list(calls)
+    assert set(first) == {braidio.DEEP_DIVE.narration_delivery.model_id}
+    braidio.weave_project(project, script, source=source)
+    braidio.weave_project(project, script, source=source, fmt=braidio.DEEP_DIVE)
+    assert calls == first
+
+
+def test_a_script_saved_before_its_first_weave_still_gets_the_delivery(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """reelee's flow: ingest with the format's bare weave, then weave with the
+    format. Nothing was rendered yet, so nothing is kept: the delivery applies."""
+    calls = _counting_narrate(monkeypatch)
+    script, source = script_and_source
+    braidio.transforms.ingest_script(
+        project, script, config=braidio.DEEP_DIVE.weave, source=source
+    )
+    braidio.weave_project(project, script, source=source, fmt=braidio.DEEP_DIVE)
+    assert calls and set(calls) == {braidio.DEEP_DIVE.narration_delivery.model_id}
 
 
 # --- re-ingest: identity, freshness, retry (braidio#49, braidio#51) ------------

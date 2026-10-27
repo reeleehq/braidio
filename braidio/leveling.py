@@ -33,6 +33,7 @@ DEFAULT_TRUE_PEAK_DB = -1.5
 OUTPUT_SAMPLE_RATE = 44100
 
 _PCM_FORMAT = "f32le"  # how float samples travel to the encoder
+_STDERR_TAIL_CHARS = 800  # how much of ffmpeg's complaint an error carries
 
 
 def peak_ceiling(true_peak_db: float) -> float:
@@ -48,7 +49,7 @@ def _decode(src: Path) -> tuple[np.ndarray, int]:
 
 
 def _encode(samples: np.ndarray, rate: int, dst: Path, *, sample_rate: int) -> None:
-    subprocess.run(
+    proc = subprocess.run(
         [
             ffmpeg_exe(),
             "-y",
@@ -65,9 +66,11 @@ def _encode(samples: np.ndarray, rate: int, dst: Path, *, sample_rate: int) -> N
             str(dst),
         ],
         input=np.ascontiguousarray(samples, dtype="<f4").tobytes(),
-        check=True,
         capture_output=True,
     )
+    if proc.returncode != 0:
+        tail = proc.stderr.decode(errors="replace").strip()[-_STDERR_TAIL_CHARS:]
+        raise RuntimeError(f"ffmpeg could not write {dst.name}: {tail}")
 
 
 def level_part(
@@ -85,6 +88,18 @@ def level_part(
     :func:`mixing.loudness.limit_peaks` at ``true_peak_db``. Gains are applied
     in float, so nothing clips before the limiter. ``dst`` is written at
     ``sample_rate``, in the format its suffix names.
+
+    Bounds worth knowing:
+
+    - The gain is capped at ``mixing.loudness.MAX_GAIN_DB`` (with a warning):
+      a part far below the target comes out quieter than it, rather than as
+      amplified noise (``loudnorm`` would have pulled it all the way up).
+    - The ceiling holds on the samples handed to the encoder; a lossy ``dst``
+      (mp3) can read a few tenths of a dB over it. A levelled part is an
+      intermediate: the final master limits again.
+    - The whole part is decoded into memory (float, plus the limiter's copy):
+      fine for spoken parts and clips of minutes, roughly 1 GB for 10 minutes
+      of 48 kHz stereo. A streaming file-level leveller belongs in ``mixing``.
     """
     src, dst = Path(src), Path(dst)
     dst.parent.mkdir(parents=True, exist_ok=True)

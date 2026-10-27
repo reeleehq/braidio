@@ -33,16 +33,13 @@ from braidio.rights import (
     RightsPolicy,
     plan_production,
 )
+from braidio.leveling import DEFAULT_TARGET_LUFS, level_part
 from braidio.script import Script
 from braidio.sources import SegmentSource
 from braidio.structure import DEFAULT_STRUCTURE, prepare_pause, prepare_sting
 from braidio.tts import narrate
 from braidio.weave import TimelineItem, extract_padded, weave_timeline
 from braidio.weave_config import WeaveConfig, speaker_key
-
-_DEFAULT_LUFS = -16.0
-_TRUE_PEAK = -1.5
-_LOUDNESS_RANGE = 11  # loudnorm LRA target for a spoken part
 
 
 def _require_ffmpeg() -> None:
@@ -215,27 +212,6 @@ def _end_tail(path: Path, *, fade_s: float, silence_s: float) -> None:
         pass  # not a real/probeable audio file — leave it untailed
 
 
-def _loudnorm(src: Path, dst: Path, *, target_lufs: float = _DEFAULT_LUFS) -> Path:
-    _require_ffmpeg()
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        [
-            "ffmpeg",
-            "-y",
-            "-i",
-            str(src),
-            "-af",
-            f"loudnorm=I={target_lufs}:TP={_TRUE_PEAK}:LRA={_LOUDNESS_RANGE}",
-            "-ar",
-            "44100",
-            str(dst),
-        ],
-        check=True,
-        capture_output=True,
-    )
-    return dst
-
-
 def render_production(
     script: Script,
     *,
@@ -303,7 +279,7 @@ def render_production(
     """
     publishable = rights.publishable_clip_rights if rights else PUBLISHABLE_CLIP_RIGHTS
     plan = plan_production(script, profile, publishable_clip_rights=publishable)
-    target_lufs = config.target_lufs if config is not None else _DEFAULT_LUFS
+    target_lufs = config.target_lufs if config is not None else DEFAULT_TARGET_LUFS
     duck_db = config.duck_db if config is not None else -15.0
     structure = structure if structure is not None else DEFAULT_STRUCTURE
 
@@ -439,7 +415,7 @@ def render_production(
                 min_len_s=clip_min_len,
             )
         parts.append(
-            _loudnorm(raw, work / f"part{i:02d}.mp3", target_lufs=target_lufs)
+            level_part(raw, work / f"part{i:02d}.mp3", target_lufs=target_lufs)
             if normalize
             else raw
         )

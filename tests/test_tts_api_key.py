@@ -80,7 +80,7 @@ def test_render_multivoice_threads_api_key(tmp_path, monkeypatch):
         return Path(out_path)
 
     monkeypatch.setattr(mv, "narrate", fake_narrate)
-    monkeypatch.setattr(mv, "_loudnorm", lambda src, dst, **kw: src)
+    monkeypatch.setattr(mv, "level_part", lambda src, dst, **kw: src)
     monkeypatch.setattr(
         mv, "concatenate_audio", lambda *a, output, **kw: Path(output).write_bytes(b"x")
     )
@@ -125,7 +125,7 @@ def _patch_render_boundaries(monkeypatch, tmp_path):
 
     monkeypatch.setattr(render_mod, "narrate", fake_narrate)
     monkeypatch.setattr(render_mod, "render_dialogue", fake_render_dialogue)
-    monkeypatch.setattr(render_mod, "_loudnorm", lambda src, dst, **kw: src)
+    monkeypatch.setattr(render_mod, "level_part", lambda src, dst, **kw: src)
     monkeypatch.setattr(
         render_mod,
         "concatenate_audio",

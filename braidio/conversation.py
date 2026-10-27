@@ -119,7 +119,7 @@ def render_dialogue(
     return (out, was_cached) if return_cache_status else out
 
 
-def _concat_with_gaps(
+def concat_with_gaps(
     parts: list[Path], out: Path, *, gap_s: float, sample_rate: int = 44100
 ) -> Path:
     """Concatenate audio parts with ``gap_s`` seconds of silence between them."""
@@ -194,4 +194,4 @@ def render_turns_sequential(
         )
         parts.append(raw)
     out = Path(out_path)
-    return _concat_with_gaps(parts, out, gap_s=gap_s)
+    return concat_with_gaps(parts, out, gap_s=gap_s)

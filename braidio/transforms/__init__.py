@@ -91,6 +91,7 @@ video_cut_reuses_existing = _video_cut.reuses_existing_cut
 
 __all__ = [
     "format_config",
+    "resolve_config",
     "ingest_script",
     "IngestedScript",
     "weave_project",
@@ -122,21 +123,59 @@ __all__ = [
 ]
 
 
+#: What a narration render was synthesized with: the config keys a re-weave
+#: must keep, or every one of those renders re-synthesizes (and re-bills).
+VOICE_KEYS = ("model_id", "voice_settings")
+
+
 def format_config(fmt=None, *, config=None, voice_id=None):
-    """The weave-config a production records: one rule for every writer.
+    """The weave-config a production asks for: one rule for every writer.
 
     ``config`` else the format's ``weave``, carrying the narration voice —
-    ``voice_id`` else ``fmt.narration_voice`` — when there is one. ``weave_project``
-    and ``save_script`` both resolve through here, so saving and then weaving a
-    format never rewrites the config node (and so never re-stales its renders).
+    ``voice_id`` else ``fmt.narration_voice`` — when there is one. A format's
+    ``weave`` holds the editing knobs and its ``narration_delivery`` what the
+    narrator speaks with, so the format's config takes the delivery's model and
+    settings: what the fast path renders with (braidio#120). An explicit
+    ``config`` is used as given. Pure: :func:`resolve_config` is what applies
+    it to a project.
     """
     if config is None and fmt is not None:
-        config = fmt.weave
+        delivery = fmt.narration_delivery
+        config = fmt.weave.with_(
+            model_id=delivery.model_id, voice_settings=dict(delivery.voice_settings)
+        )
     if voice_id is None and fmt is not None:
         voice_id = fmt.narration_voice
     if voice_id is not None:
         config = (config or WeaveConfig()).with_(narration_voice=voice_id)
     return config
+
+
+def resolve_config(project, fmt=None, *, config=None, voice_id=None):
+    """The weave-config to ingest into ``project``: :func:`format_config`, minus
+    any change to what its narration was already synthesized with.
+
+    Once a project has narration renders, a re-weave keeps the model and
+    settings (:data:`VOICE_KEYS`) its weave-config records, with or without a
+    format, unless the caller passes ``config=`` explicitly: changing them
+    would re-synthesize, and re-bill, every narration beat (braidio#135,
+    option 2). So the model and settings are fixed by a project's first
+    render; ``config=`` is how to change them. Before any render (a script
+    saved, not yet woven) there is nothing to re-bill, and the format's
+    delivery applies. ``weave_project`` and ``save_script`` both resolve
+    through here, so saving and then weaving never rewrites the config node.
+    """
+    import nw
+
+    resolved = format_config(fmt, config=config, voice_id=voice_id)
+    if config is not None or not nw.annotations_at_tier(
+        project.root, "narration-renders"
+    ):
+        return resolved
+    nodes = nw.annotations_at_tier(project.root, "weave-configs")
+    recorded = dict(nodes[0].body.get("config", {})) if nodes else {}
+    kept = {key: recorded[key] for key in VOICE_KEYS if key in recorded}
+    return (resolved or WeaveConfig()).with_(**kept)
 
 
 def weave_project(
@@ -168,10 +207,14 @@ def weave_project(
     ``fmt`` (a :class:`~braidio.formats.Format`) supplies the format's declared
     defaults — its ``weave`` config, its ``structure`` and its dialogue
     ``cast`` — for whichever of ``config`` / ``structure`` / ``cast`` the
-    caller left out; an explicit argument always wins. ``bed`` is the
-    app-supplied music bed (:class:`~braidio.music.MusicBed`). With no format,
-    no structure and no bed, this is the plain weave it always was
-    (thorwhalen/braidio#39).
+    caller left out; an explicit argument always wins. Its config carries the
+    format's ``narration_delivery`` model and settings, as the fast path renders
+    them, until the project has narration renders: from then on a re-weave
+    keeps the model and settings it was synthesized with, so it never re-bills
+    by surprise, and ``config=`` is how to change them (:func:`resolve_config`,
+    braidio#120). ``bed`` is the app-supplied music bed
+    (:class:`~braidio.music.MusicBed`). With no format, no structure and no
+    bed, this is the plain weave it always was (thorwhalen/braidio#39).
 
     ``cast`` (a :class:`~braidio.conversation.ConversationCast`) is what the
     script's :class:`~braidio.script.Dialogue` beats are voiced with, resolved
@@ -218,7 +261,7 @@ def weave_project(
     """
     import nw
 
-    config = format_config(fmt, config=config, voice_id=voice_id)
+    config = resolve_config(project, fmt, config=config, voice_id=voice_id)
     if fmt is not None:
         structure = structure if structure is not None else fmt.structure
         cast = cast if cast is not None else fmt.cast

@@ -634,11 +634,97 @@ def test_weave_project_applies_a_format_and_its_declared_structure(
     }
     assert structure.body["sting_asset_id"] is None  # no asset supplied
     (cfg,) = nw.annotations_at_tier(project.root, "weave-configs")
-    # the format's narration voice rides in the config now (braidio#115)
+    # the format's narration voice rides in the config (braidio#115), and so do
+    # its delivery's model and settings, which is what the fast path speaks with
+    # (braidio#120: the graph used to record the weave's v2 default instead)
+    delivery = braidio.SOLO_EXPLAINER.narration_delivery
     expected = braidio.SOLO_EXPLAINER.weave.with_(
-        narration_voice=braidio.SOLO_EXPLAINER.narration_voice
+        narration_voice=braidio.SOLO_EXPLAINER.narration_voice,
+        model_id=delivery.model_id,
+        voice_settings=dict(delivery.voice_settings),
     )
     assert cfg.body["config"] == expected.to_dict()
+
+
+def test_a_format_narrates_with_its_delivery_on_the_graph(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """Fast/graph parity (braidio#120): the model a format's narrator speaks
+    with is its ``narration_delivery``'s on both paths."""
+    seen = []
+    real = braidio.narrate
+
+    def _narrate(text, out, **kw):
+        seen.append(kw["model_id"])
+        return real(text, out, **kw)
+
+    monkeypatch.setattr(braidio, "narrate", _narrate)
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source, fmt=braidio.DEEP_DIVE)
+    assert seen and set(seen) == {braidio.DEEP_DIVE.narration_delivery.model_id}
+
+
+def _counting_narrate(monkeypatch):
+    """Count synthesis calls over the patched stub (the re-bill measure)."""
+    calls = []
+    real = braidio.narrate
+
+    def _narrate(text, out, **kw):
+        calls.append(kw["model_id"])
+        return real(text, out, **kw)
+
+    monkeypatch.setattr(braidio, "narrate", _narrate)
+    return calls
+
+
+def test_an_existing_project_keeps_the_model_it_recorded(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """No surprise re-bill (braidio#135): a project woven before the delivery
+    rule keeps its model and settings when re-woven under a format."""
+    import nw
+
+    calls = _counting_narrate(monkeypatch)
+    script, source = script_and_source
+    legacy = braidio.SOLO_EXPLAINER.weave.with_(
+        narration_voice=braidio.SOLO_EXPLAINER.narration_voice
+    )  # what the graph recorded before #120
+    braidio.weave_project(project, script, source=source, config=legacy)
+    synthesized = len(calls)
+
+    braidio.weave_project(project, script, source=source, fmt=braidio.SOLO_EXPLAINER)
+    (cfg,) = nw.annotations_at_tier(project.root, "weave-configs")
+    assert cfg.body["config"] == legacy.to_dict()
+    assert len(calls) == synthesized  # nothing re-synthesized
+
+
+def test_dropping_and_restoring_the_format_never_re_bills(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """Woven under a format, re-woven without it, then with it again: the
+    voice it was synthesized with is kept throughout (#138 review)."""
+    calls = _counting_narrate(monkeypatch)
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source, fmt=braidio.DEEP_DIVE)
+    first = list(calls)
+    assert set(first) == {braidio.DEEP_DIVE.narration_delivery.model_id}
+    braidio.weave_project(project, script, source=source)
+    braidio.weave_project(project, script, source=source, fmt=braidio.DEEP_DIVE)
+    assert calls == first
+
+
+def test_a_script_saved_before_its_first_weave_still_gets_the_delivery(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """reelee's flow: ingest with the format's bare weave, then weave with the
+    format. Nothing was rendered yet, so nothing is kept: the delivery applies."""
+    calls = _counting_narrate(monkeypatch)
+    script, source = script_and_source
+    braidio.transforms.ingest_script(
+        project, script, config=braidio.DEEP_DIVE.weave, source=source
+    )
+    braidio.weave_project(project, script, source=source, fmt=braidio.DEEP_DIVE)
+    assert calls and set(calls) == {braidio.DEEP_DIVE.narration_delivery.model_id}
 
 
 # --- re-ingest: identity, freshness, retry (braidio#49, braidio#51) ------------

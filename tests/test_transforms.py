@@ -1196,3 +1196,56 @@ def test_an_episode_woven_before_the_declaration_is_reused_not_re_rendered(
     assert [a.id for a in nw.annotations_at_tier(project.root, "episode-renders")] == [
         before.id
     ]
+
+
+# --- genre_status: the commentary status a host's project_status serves (braidio#125)
+
+
+def test_genre_status_follows_the_project_from_empty_to_woven(
+    project, script_and_source, patched_synthesis
+):
+    import nw
+
+    from braidio.project import NEXT_STEP_DONE, NEXT_STEP_SAVE_SCRIPT, NEXT_STEP_WEAVE
+
+    def op(status):
+        return status["next_step"]["op"], status["next_step"]["why"]
+
+    fresh = project.genre_status()
+    assert fresh["episode_count"] == 0 and fresh["latest_episode"] is None
+    assert op(fresh) == NEXT_STEP_SAVE_SCRIPT
+    assert fresh["narration_beats"] == fresh["clips"] == 0
+
+    script, source = script_and_source
+    braidio.transforms.ingest_script(project, script, source=source)
+    saved = project.genre_status()
+    assert (saved["narration_beats"], saved["clips"]) == (2, 1)
+    assert op(saved) == NEXT_STEP_WEAVE
+
+    first = braidio.weave_project(project, script, source=source)
+    changed = braidio.Script(
+        title=script.title,
+        id_slug=script.id_slug,
+        beats=[*script.beats[:2], braidio.Narration(text="A different ending.")],
+    )
+    second = braidio.weave_project(project, changed, source=source)
+    # an in-place rewrite moves the older episode to the end of the store's
+    # order: "latest" must come from generation time, not from that order
+    with nw.open_project_stores(project.root) as stores:
+        for store in stores:
+            if store.remove(first.id) is not None:
+                break
+    project.graph.add_annotation(first)  # same node, same generation time
+    woven = project.genre_status()
+    # a re-weave adds an episode: the status counts them and names the newest
+    assert woven["episode_count"] == 2
+    assert woven["latest_episode"] == {
+        "episode_id": str(second.id),
+        "profile": "personal",
+        "duration_s": 2.0,
+    }
+    assert op(woven) == NEXT_STEP_DONE
+    # what a host serves: nw's guard passes it through unchanged (JSON, small,
+    # and no string naming the project root — the episode's file:// url is left out)
+    assert nw.genre_status_of(project) == woven
+    assert str(project.root) not in repr(woven)

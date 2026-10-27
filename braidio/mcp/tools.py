@@ -323,23 +323,16 @@ def list_projects() -> dict:
 
 
 def project_status(project_id: str) -> dict:
-    """A project's status: its finished episode renders (url + duration), if any.
-
-    Each episode row carries ``episode_id`` — the id ``resolve`` accepts and a
-    download claim is minted against. The body's own ``artifact_id`` is the
-    lacing CONTENT hash: an identity for provenance, not a retrieval key
-    (braidio#32 — the tool used to return only the body, so the one id a
-    caller could see was the one no download tool accepted).
+    """A project's status: beat/render counts, the next step, and its finished
+    episodes (url + duration). Each episode's ``episode_id`` is the id ``resolve``
+    accepts; the body's ``artifact_id`` is a content hash, not a download key.
     """
     _require_nw("project_status")
-    import nw
-
     proj = _workspace().open_project(project_id)
-    episodes = [
-        {"episode_id": str(a.id), **to_json(a.body)}
-        for a in nw.annotations_at_tier(proj.root, "episode-renders")
-    ]
-    return {"project_id": project_id, "episodes": episodes}
+    # The genre's status (what a host's one project_status door serves) plus every
+    # episode's full body, url included: this caller owns the workspace.
+    episodes = [{"episode_id": str(a.id), **to_json(a.body)} for a in proj.episodes()]
+    return {"project_id": project_id, **proj.genre_status(), "episodes": episodes}
 
 
 #: Content types whose extracted text has lost its markdown structure, so

@@ -22,45 +22,35 @@ from braidio import bodies as _bodies  # noqa: F401  (import registers schemas)
 from braidio.kinds import WeaveKind
 
 
-#: What :meth:`Project.genre_status` counts: its key -> the graph tier counted.
-STATUS_COUNTS = {
-    "narration_beats": "narrative-beats",
-    "dialogue_beats": "dialogue-beats",
-    "clips": "audio-clips",
-    "scene_breaks": "scene-breaks",
-    "narration_renders": "narration-renders",
-    "dialogue_renders": "dialogue-renders",
-    "segment_extractions": "segment-extractions",
-}
-
-#: The counts that mean "a script has been saved".
-_SCRIPT_COUNTS = ("narration_beats", "dialogue_beats", "clips")
-
-#: The tier holding a project's finished episodes.
-EPISODE_TIER = "episode-renders"
-
-#: The next step, by how far the project has got (tool names as the MCP surface
-#: exposes them).
-NEXT_STEP_SAVE_SCRIPT = "save a script (save_script)"
-NEXT_STEP_WEAVE = "render the episode (weave_project)"
-NEXT_STEP_DONE = "download an episode (resolve its episode_id)"
+#: The next step, by how far the project has got: ``(op, why)``, ``op`` in
+#: braidio's own vocabulary (a host maps it to its tool name, prefix and all).
+NEXT_STEP_SAVE_SCRIPT = ("save_script", "there is no script yet")
+NEXT_STEP_WEAVE = ("weave_project", "the script has not been rendered yet")
+NEXT_STEP_DONE = (
+    "weave_project",
+    "an episode is made — download it by its episode_id, or weave again after "
+    "changing the script",
+)
 
 
-def episode_rows(root) -> list[dict]:
-    """The finished episodes of the project at ``root``, path-free.
+def _tiers():
+    """The tier names, from the one table the transforms write by (lazy: the
+    transforms package is heavy and this module is imported with ``braidio``)."""
+    from braidio.transforms import _common
 
-    One row per ``episode-renders`` node: ``episode_id`` (the id a download
-    resolves), ``profile`` and ``duration_s``. The body's ``url`` (a ``file://``
-    path) and ``timeline`` (large) are deliberately left out.
-    """
-    return [
-        {
-            "episode_id": str(a.id),
-            "profile": a.body.get("profile"),
-            "duration_s": round(float(a.body.get("duration_s") or 0.0), 2),
-        }
-        for a in nw.annotations_at_tier(root, EPISODE_TIER)
-    ]
+    return _common
+
+
+def _episode_row(annotation) -> dict:
+    """One finished episode, path-free: the body's ``file://`` url and its
+    (large) timeline are left out."""
+    body = annotation.body
+    duration = body.get("duration_s")
+    return {
+        "episode_id": str(annotation.id),
+        "profile": body.get("profile"),
+        "duration_s": None if duration is None else round(float(duration), 2),
+    }
 
 
 class Project(nw.Project):
@@ -68,33 +58,57 @@ class Project(nw.Project):
 
     KIND: WeaveKind = WeaveKind.COMMENTARY_WEAVE
 
+    def episodes(self) -> list:
+        """The project's finished episodes (``episode-renders`` nodes), oldest first.
+
+        A re-weave adds an episode and keeps the earlier ones, so the last is
+        the current one.
+        """
+        tiers = _tiers()
+        return sorted(
+            nw.annotations_at_tier(self.root, tiers.TIER_EPISODE_RENDER),
+            key=lambda a: a.provenance.generated_at_time.to_seconds(),
+        )
+
     def genre_status(self) -> dict:
         """Where this production stands, for a host's one ``project_status`` door
         (``nw.Project.genre_status``, nw#133; braidio#125).
 
-        Counts of what the graph holds (:data:`STATUS_COUNTS`), the finished
-        episodes (:func:`episode_rows`) and the next step. Cheap indexed tier
-        reads only — no freshness walk, no file probe — and never a path, so a
-        polled endpoint can serve it as is.
+        Counted, in muvid's shape: the script's beats by kind, how many episodes
+        were rendered, the latest one (path-free), and the next step as
+        ``{"op", "why"}``. Indexed tier reads only — no freshness walk, no file
+        probe — and no per-item list, so it stays small however often the
+        project is re-woven, and never names a path.
 
         >>> import tempfile
         >>> with tempfile.TemporaryDirectory() as d:
         ...     status = create_project_at(d, "ep").genre_status()
-        >>> status["episodes"], status["next_step"]
-        ([], 'save a script (save_script)')
+        >>> status["episode_count"], status["next_step"]["op"]
+        (0, 'save_script')
         """
+        tiers = _tiers()
         counts = {
             key: len(nw.annotations_at_tier(self.root, tier))
-            for key, tier in STATUS_COUNTS.items()
+            for key, tier in (
+                ("narration_beats", tiers.TIER_NARRATIVE_BEAT),
+                ("dialogue_beats", tiers.TIER_DIALOGUE_BEAT),
+                ("clips", tiers.TIER_AUDIO_CLIP),
+                ("scene_breaks", tiers.TIER_SCENE_BREAK),
+            )
         }
-        episodes = episode_rows(self.root)
+        episodes = self.episodes()
         if episodes:
-            next_step = NEXT_STEP_DONE
-        elif any(counts[key] for key in _SCRIPT_COUNTS):
-            next_step = NEXT_STEP_WEAVE
+            op, why = NEXT_STEP_DONE
+        elif any(counts.values()):
+            op, why = NEXT_STEP_WEAVE
         else:
-            next_step = NEXT_STEP_SAVE_SCRIPT
-        return {**counts, "episodes": episodes, "next_step": next_step}
+            op, why = NEXT_STEP_SAVE_SCRIPT
+        return {
+            **counts,
+            "episode_count": len(episodes),
+            "latest_episode": _episode_row(episodes[-1]) if episodes else None,
+            "next_step": {"op": op, "why": why},
+        }
 
 
 def create_project_at(

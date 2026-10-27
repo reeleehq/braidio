@@ -1208,23 +1208,36 @@ def test_genre_status_follows_the_project_from_empty_to_woven(
 
     from braidio.project import NEXT_STEP_DONE, NEXT_STEP_SAVE_SCRIPT, NEXT_STEP_WEAVE
 
+    def op(status):
+        return status["next_step"]["op"], status["next_step"]["why"]
+
     fresh = project.genre_status()
-    assert fresh["episodes"] == [] and fresh["next_step"] == NEXT_STEP_SAVE_SCRIPT
-    assert not any(v for k, v in fresh.items() if k not in ("episodes", "next_step"))
+    assert fresh["episode_count"] == 0 and fresh["latest_episode"] is None
+    assert op(fresh) == NEXT_STEP_SAVE_SCRIPT
+    assert fresh["narration_beats"] == fresh["clips"] == 0
 
     script, source = script_and_source
     braidio.transforms.ingest_script(project, script, source=source)
     saved = project.genre_status()
     assert (saved["narration_beats"], saved["clips"]) == (2, 1)
-    assert saved["narration_renders"] == 0 and saved["next_step"] == NEXT_STEP_WEAVE
+    assert op(saved) == NEXT_STEP_WEAVE
 
-    episode = braidio.weave_project(project, script, source=source)
+    braidio.weave_project(project, script, source=source)
+    changed = braidio.Script(
+        title=script.title,
+        id_slug=script.id_slug,
+        beats=[*script.beats[:2], braidio.Narration(text="A different ending.")],
+    )
+    second = braidio.weave_project(project, changed, source=source)
     woven = project.genre_status()
-    assert woven["narration_renders"] == 2 and woven["segment_extractions"] == 1
-    assert woven["episodes"] == [
-        {"episode_id": str(episode.id), "profile": "personal", "duration_s": 2.0}
-    ]
-    assert woven["next_step"] == NEXT_STEP_DONE
+    # a re-weave adds an episode: the status counts them and names the newest
+    assert woven["episode_count"] == 2
+    assert woven["latest_episode"] == {
+        "episode_id": str(second.id),
+        "profile": "personal",
+        "duration_s": 2.0,
+    }
+    assert op(woven) == NEXT_STEP_DONE
     # what a host serves: nw's guard passes it through unchanged (JSON, small,
     # and no string naming the project root — the episode's file:// url is left out)
     assert nw.genre_status_of(project) == woven

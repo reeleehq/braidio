@@ -687,15 +687,44 @@ def test_create_and_list_projects():
 
 
 @_NW
-def test_project_status_serves_the_genre_status_plus_full_episodes():
-    from braidio.project import NEXT_STEP_SAVE_SCRIPT
+def test_project_status_serves_the_genre_status_plus_full_episodes(
+    monkeypatch, tmp_path
+):
+    from braidio.mcp.tools import _workspace
 
     server = _local_server(ledger={})
     _call(server, "create_project", {"project_id": "demo", "title": "Demo"})
+    empty = _call(server, "project_status", {"project_id": "demo"}).structured_content
+    assert empty["next_step"]["op"] == "save_script" and empty["episodes"] == []
+
+    # weave one episode with the audio boundaries stubbed (no synthesis, no ffmpeg)
+    def _write(out, tag=b"A"):
+        Path(out).parent.mkdir(parents=True, exist_ok=True)
+        Path(out).write_bytes(tag)
+        return Path(out)
+
+    monkeypatch.setattr(
+        braidio,
+        "narrate",
+        lambda text, out, *, return_cache_status=False, **kw: (
+            (_write(out), False) if return_cache_status else _write(out)
+        ),
+    )
+    monkeypatch.setattr(braidio, "weave_timeline", lambda items, out, **kw: _write(out))
+    monkeypatch.setattr(braidio, "duration_s", lambda path: 3.0)
+    proj = Workspace.for_email(OWNER).open_project("demo")
+    script = braidio.Script(
+        title="Demo", id_slug="demo", beats=[braidio.Narration(text="Hello.")]
+    )
+    episode = braidio.weave_project(proj, script)
+
     out = _call(server, "project_status", {"project_id": "demo"}).structured_content
-    assert out["project_id"] == "demo"
-    assert out["next_step"] == NEXT_STEP_SAVE_SCRIPT
-    assert out["narration_beats"] == 0 and out["episodes"] == []
+    assert out["project_id"] == "demo" and out["episode_count"] == 1
+    assert out["latest_episode"]["episode_id"] == str(episode.id)
+    # the tool, unlike the path-free genre status, returns each full body
+    (row,) = out["episodes"]
+    assert row["episode_id"] == str(episode.id)
+    assert row["url"].startswith("file://")
 
 
 @_NW

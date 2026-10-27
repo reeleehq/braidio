@@ -328,17 +328,10 @@ def project_status(project_id: str) -> dict:
     accepts; the body's ``artifact_id`` is a content hash, not a download key.
     """
     _require_nw("project_status")
-    import nw
-
-    from braidio.project import EPISODE_TIER
-
     proj = _workspace().open_project(project_id)
-    # The genre's status (what a host's one project_status door serves) plus the
-    # full episode bodies, url included: this caller owns the workspace.
-    episodes = [
-        {"episode_id": str(a.id), **to_json(a.body)}
-        for a in nw.annotations_at_tier(proj.root, EPISODE_TIER)
-    ]
+    # The genre's status (what a host's one project_status door serves) plus every
+    # episode's full body, url included: this caller owns the workspace.
+    episodes = [{"episode_id": str(a.id), **to_json(a.body)} for a in proj.episodes()]
     return {"project_id": project_id, **proj.genre_status(), "episodes": episodes}
 
 

@@ -391,7 +391,7 @@ def test_a_sting_is_levelled_with_one_gain_and_keeps_its_dynamics(tmp_path):
     pulled the two together (under 3 s it fell back to one linear gain)."""
     import numpy as np
     from mixing.decode import decode_float_chunks
-    from mixing.loudness import integrated_lufs
+    from mixing.loudness import integrated_lufs as lufs
     from scipy.io import wavfile
 
     from braidio.structure import prepare_sting
@@ -411,15 +411,18 @@ def test_a_sting_is_levelled_with_one_gain_and_keeps_its_dynamics(tmp_path):
     out = np.concatenate(list(chunks))
     n, edge = got_rate * each_s, got_rate // 10  # one half, and a margin off its edges
 
-    def lufs(x, fs):
-        return integrated_lufs(x, fs)
-
     spread_in = lufs(hit[:, None], rate) - lufs(swell[:, None], rate)
     spread_out = lufs(out[n + edge : 2 * n - edge], got_rate) - lufs(
         out[edge : n - edge], got_rate
     )
     assert spread_out == pytest.approx(spread_in, abs=0.7)
     assert lufs(out, got_rate) == pytest.approx(-20.0, abs=0.7)
+    # gain_db is part of the level, so the limiter runs last whatever it is
+    quieter = replace(sting, gain_db=-6.0)
+    got_rate, chunks = decode_float_chunks(
+        prepare_sting(quieter, tmp_path / "q.mp3", target_lufs=-20.0)
+    )
+    assert lufs(np.concatenate(list(chunks)), got_rate) == pytest.approx(-26.0, abs=0.7)
 
 
 @needs_ffmpeg

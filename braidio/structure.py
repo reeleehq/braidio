@@ -31,6 +31,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+from braidio.leveling import DEFAULT_TRUE_PEAK_DB, level_part
 from braidio.script import SCENE_MARKERS, SceneBreak, SegmentBeat
 
 # A sting is levelled to the production target, then sat this far under the
@@ -41,8 +42,6 @@ _DEFAULT_STING_FADE_OUT_S = 0.5
 _DEFAULT_STING_GAP_AFTER_S = 0.3
 # Silence at a break that has no sting to play: the boundary as white space.
 _DEFAULT_BREAK_PAUSE_S = 0.8
-# Levelling for a sting part (matches the renderer's true-peak ceiling).
-_STING_TRUE_PEAK = -1.5
 
 
 @dataclass(frozen=True)
@@ -137,14 +136,13 @@ def prepare_sting(
 ) -> Path:
     """Render ``sting`` to a ready-to-place part: trimmed, faded, levelled, padded.
 
-    The result is already at production level (``target_lufs`` then
-    ``sting.gain_db``), so the caller places it as-is rather than normalizing
-    it again. The level is one measured gain with a true-peak limit
-    (:func:`braidio.leveling.level_part`, as every spoken part gets), not a
-    gain ridden through the sting. Returns ``out_path``.
+    The result is already at production level (``target_lufs + sting.gain_db``),
+    so the caller places it as-is rather than normalizing it again. The level is
+    one measured gain with a true-peak limit applied last, so the ceiling holds
+    whatever ``gain_db`` is (:func:`braidio.leveling.level_part`, as every
+    spoken part gets), not a gain ridden through the sting. Returns ``out_path``.
     """
     _require_ffmpeg()
-    from braidio.leveling import level_part
     from braidio.weave import duration_s
 
     length = min(duration_s(sting.asset_path), sting.max_len_s)
@@ -152,9 +150,9 @@ def prepare_sting(
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    def _ffmpeg(src: Path, af: str, dst: Path) -> Path:
+    def _ffmpeg(src: Path, af: str, dst: Path, *extra: str) -> Path:
         subprocess.run(
-            ["ffmpeg", "-y", "-i", str(src), "-af", af, str(dst)],
+            ["ffmpeg", "-y", "-i", str(src), "-af", af, *extra, str(dst)],
             check=True,
             capture_output=True,
         )
@@ -166,19 +164,21 @@ def prepare_sting(
             Path(sting.asset_path),
             f"atrim=end={length:.3f},afade=t=out:st={fo_start:.3f}:d={sting.fade_out_s}",
             work / "shaped.wav",
+            "-c:a",
+            "pcm_f32le",  # float: no rounding before the gain
         )
         leveled = level_part(
             shaped,
             work / "leveled.wav",
-            target_lufs=target_lufs,
-            true_peak_db=_STING_TRUE_PEAK,
+            target_lufs=target_lufs + sting.gain_db,
+            true_peak_db=DEFAULT_TRUE_PEAK_DB,
             sample_rate=sample_rate,
         )
         # The pad is a filter, not an output `-t`, and comes after the level:
         # the breathing room must render, and silence must not be measured.
         _ffmpeg(
             leveled,
-            f"volume={sting.gain_db}dB,apad=pad_dur={sting.gap_after_s},"
+            f"apad=pad_dur={sting.gap_after_s},"
             f"aformat=sample_rates={sample_rate}:channel_layouts=stereo",
             out,
         )

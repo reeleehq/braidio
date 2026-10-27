@@ -1222,13 +1222,20 @@ def test_genre_status_follows_the_project_from_empty_to_woven(
     assert (saved["narration_beats"], saved["clips"]) == (2, 1)
     assert op(saved) == NEXT_STEP_WEAVE
 
-    braidio.weave_project(project, script, source=source)
+    first = braidio.weave_project(project, script, source=source)
     changed = braidio.Script(
         title=script.title,
         id_slug=script.id_slug,
         beats=[*script.beats[:2], braidio.Narration(text="A different ending.")],
     )
     second = braidio.weave_project(project, changed, source=source)
+    # an in-place rewrite moves the older episode to the end of the store's
+    # order: "latest" must come from generation time, not from that order
+    with nw.open_project_stores(project.root) as stores:
+        for store in stores:
+            if store.remove(first.id) is not None:
+                break
+    project.graph.add_annotation(first)  # same node, same generation time
     woven = project.genre_status()
     # a re-weave adds an episode: the status counts them and names the newest
     assert woven["episode_count"] == 2

@@ -67,7 +67,8 @@ class Project(nw.Project):
         tiers = _tiers()
         return sorted(
             nw.annotations_at_tier(self.root, tiers.TIER_EPISODE_RENDER),
-            key=lambda a: a.provenance.generated_at_time.to_seconds(),
+            # generation time, then id: nw's own order (ties: legacy tick-0 stamps)
+            key=lambda a: (a.provenance.generated_at_time.to_seconds(), str(a.id)),
         )
 
     def genre_status(self) -> dict:

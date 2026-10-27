@@ -18,13 +18,13 @@ from __future__ import annotations
 
 import random
 import re
-import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 from mixing import concatenate_audio
 
+from braidio.leveling import DEFAULT_TARGET_LUFS, level_part
 from braidio.tts import narrate
 
 _MARKUP_RE = re.compile(r"<[^>]*>|\[[^\]]*\]")
@@ -122,30 +122,6 @@ def group_turns(
     return turns
 
 
-def _loudnorm(
-    src: Path, dst: Path, *, target_lufs: float = -16.0, true_peak: float = -1.5
-) -> Path:
-    if shutil.which("ffmpeg") is None:
-        raise RuntimeError("ffmpeg not found on PATH.")
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        [
-            "ffmpeg",
-            "-y",
-            "-i",
-            str(src),
-            "-af",
-            f"loudnorm=I={target_lufs}:TP={true_peak}:LRA=11",
-            "-ar",
-            "44100",
-            str(dst),
-        ],
-        check=True,
-        capture_output=True,
-    )
-    return dst
-
-
 def render_multivoice(
     segments: list[str],
     pool: list[Voice],
@@ -163,7 +139,7 @@ def render_multivoice(
     speed_jitter: float = 0.04,
     crossfade_s: float = 0.1,
     gap_s: float = 0.0,
-    target_lufs: float = -16.0,
+    target_lufs: float = DEFAULT_TARGET_LUFS,
 ) -> list[tuple[Voice, str]]:
     """Render ``segments`` cycling ``pool`` → ``out_path``.
 
@@ -198,7 +174,9 @@ def render_multivoice(
             model_id=model_id,
             voice_settings={**settings, "speed": speed},
         )
-        parts.append(_loudnorm(raw, work / f"norm{i:03d}.mp3", target_lufs=target_lufs))
+        parts.append(
+            level_part(raw, work / f"norm{i:03d}.mp3", target_lufs=target_lufs)
+        )
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)
     if gap_s > 0:

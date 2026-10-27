@@ -92,7 +92,9 @@ def test_weave_project_speaks_through_the_registered_backend(tmp_path, backends)
         "Is that so?",
         "It is.",
     ]
-    assert braidio.duration_s(episode.body["url"].removeprefix("file://")) > 0.5
+    from braidio.transforms._common import url_to_path
+
+    assert braidio.duration_s(url_to_path(episode.body["url"])) > 0.5
     # the name is persisted where freshness can see it
     (cast,) = nw.annotations_at_tier(project.root, "dialogue-casts")
     assert cast.body["tts"] == "tone"
@@ -218,7 +220,7 @@ def test_a_cached_render_is_served_without_the_backend_registered(tmp_path, back
 
 def test_a_paced_beat_keeps_its_backends_format_and_leaves_no_parts(tmp_path, backends):
     """One paced turn is that turn's own file: it must not be renamed .mp3."""
-    from urllib.parse import urlparse
+    from braidio.transforms._common import url_to_path
 
     config = braidio.WeaveConfig(tts="tone", segmentation_unit="sentence", min_turn=1)
     project = braidio.Project.init(tmp_path / "p", title="p")
@@ -226,7 +228,7 @@ def test_a_paced_beat_keeps_its_backends_format_and_leaves_no_parts(tmp_path, ba
         project, _one_line("Only one sentence here."), config=config
     )
     node = result.annotations[0]
-    path = Path(urlparse(node.body["url"]).path)
+    path = url_to_path(node.body["url"])
     assert path.read_bytes()[:4] == b"RIFF" and path.suffix == ".wav"
     assert sorted(p.name for p in path.parent.iterdir()) == [path.name]
 

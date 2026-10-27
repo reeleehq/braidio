@@ -1494,8 +1494,8 @@ def _fake_bounded(monkeypatch, tmp_path, *, raises=None):
         calls.append({"url": url, **kw})
         if raises is not None:
             raise raises
-        work = tmp_path / "per-call"
-        work.mkdir()
+        work = Path(kw["download_dir"]) / "per-call"
+        work.mkdir(parents=True)
         mp3 = work / "grabbed.mp3"
         mp3.write_bytes(b"ID3\x03fake-mp3-bytes")
         return AudioDownload(
@@ -1530,8 +1530,11 @@ def test_download_audio_stores_asset_without_network(monkeypatch, tmp_path):
     assert call["max_bytes"] == tools._AUDIO_MAX_BYTES
     assert call["max_duration_s"] == tools._AUDIO_MAX_DURATION_S
     assert dict(call["extra_opts"]) == {}  # no credentials provisioned here
-    # the per-call directory yb handed over is gone once the store owns the bytes
-    assert not (tmp_path / "per-call").exists()
+    # the per-call directory yb handed over is gone once the store owns the bytes,
+    # and only it: the shared download directory other calls use stays
+    downloads = Path(call["download_dir"])
+    assert downloads.is_dir() and not (downloads / "per-call").exists()
+    assert call["cookies_file"] is False  # no cookie source but braidio's own
 
 
 def test_download_audio_limit_refusal_is_a_tool_error(monkeypatch, tmp_path):
@@ -1548,7 +1551,7 @@ def test_download_audio_limit_refusal_is_a_tool_error(monkeypatch, tmp_path):
 def test_download_audio_removes_the_download_when_ingest_fails(monkeypatch, tmp_path):
     from braidio.mcp import tools
 
-    _fake_bounded(monkeypatch, tmp_path)
+    calls = _fake_bounded(monkeypatch, tmp_path)
 
     class _Boom(RuntimeError):
         pass
@@ -1563,7 +1566,8 @@ def test_download_audio_removes_the_download_when_ingest_fails(monkeypatch, tmp_
     monkeypatch.setattr(tools.Workspace, "content_store", lambda self: _store())
     with pytest.raises(Exception, match="disk full"):
         _call(_local_server(), "download_audio", {"url": "https://example.com/song"})
-    assert not (tmp_path / "per-call").exists()
+    downloads = Path(calls[0]["download_dir"])
+    assert downloads.is_dir() and not (downloads / "per-call").exists()
 
 
 def test_download_audio_registered_free():
@@ -1633,21 +1637,11 @@ def test_register_tools_prefixes_and_excludes():
 
 
 def test_download_audio_passes_configured_cookies_to_ytdlp(monkeypatch, tmp_path):
-    """braidio#23: credentials must reach BOTH yt-dlp calls, without widening a bound.
-
-    The bot gate fires during metadata extraction, so cookies on the download call
-    alone would still fail — and braidio's own cap must survive the merge of the
-    deployment's options. Runs the real ``yb`` policy; only its yt-dlp calls are faked.
-    """
+    """braidio#23: the deployment's credentials reach yb, which hands them to both
+    yt-dlp calls under its pinned caps (yb's own tests pin that half)."""
     import time
 
-    import yb.download.bounded as bounded
-
-    import braidio.mcp._docs as _docs
     from braidio.mcp import _media
-    from braidio.mcp.tools import _AUDIO_MAX_BYTES
-
-    monkeypatch.setattr(_docs, "_validate_target", lambda url: None)
 
     jar = tmp_path / "cookies.txt"
     jar.write_text(
@@ -1655,58 +1649,51 @@ def test_download_audio_passes_configured_cookies_to_ytdlp(monkeypatch, tmp_path
         f".youtube.com\tTRUE\t/\tTRUE\t{int(time.time() + 86400)}\tLOGIN_INFO\tv\n"
     )
     monkeypatch.setenv(_media.COOKIES_FILE_ENV_VAR, str(jar))
-    seen = {}
-
-    def _info(url, opts, *, extra_opts=None, **kw):
-        seen["info"] = dict(extra_opts or {})
-        return {"title": "S", "duration": 10}
-
-    def _download(url, *, download_dir, extra_opts=None, **kw):
-        seen["download"] = dict(extra_opts or {})
-        mp3 = download_dir / "grabbed.mp3"
-        mp3.write_bytes(b"ID3\x03fake-mp3-bytes")
-        return type("_Res", (), {"path": str(mp3), "info": {"title": "S"}})()
-
-    monkeypatch.setattr(bounded, "_extract_info", _info)
-    monkeypatch.setattr(bounded, "download_youtube_video", _download)
+    calls = _fake_bounded(monkeypatch, tmp_path)
 
     _call(_local_server(), "download_audio", {"url": "https://example.com/s"})
 
-    assert seen["info"]["cookiefile"] == str(jar)
-    assert seen["download"]["cookiefile"] == str(jar)
-    # the cap is pinned after the deployment's options, so it stands
-    assert seen["download"]["max_filesize"] == _AUDIO_MAX_BYTES
+    assert dict(calls[0]["extra_opts"]) == {"cookiefile": str(jar)}
 
 
-def test_download_audio_surfaces_bot_gate_as_auth_error(monkeypatch):
-    """A bot gate becomes an error naming its own fix, not a raw yt-dlp string."""
-    import yb.download.bounded as bounded
+def test_download_audio_refuses_an_unreadable_cookie_jar_before_the_network(
+    monkeypatch, tmp_path
+):
     from fastmcp.exceptions import ToolError
 
-    import braidio.mcp._docs as _docs
     from braidio.mcp import _media
 
-    monkeypatch.setattr(_docs, "_validate_target", lambda url: None)
+    monkeypatch.setenv(_media.COOKIES_FILE_ENV_VAR, str(tmp_path / "missing.txt"))
+    calls = _fake_bounded(monkeypatch, tmp_path)
+    with pytest.raises(ToolError, match="missing or unreadable"):
+        _call(_local_server(), "download_audio", {"url": "https://example.com/s"})
+    assert calls == []  # refused before yb (and the network) was reached
+
+
+def test_download_audio_surfaces_bot_gate_as_auth_error(monkeypatch, tmp_path):
+    """A bot gate becomes an error naming its own fix, not a raw yt-dlp string."""
+    from fastmcp.exceptions import ToolError
+
+    from braidio.mcp import _media
+
     for var in (
         _media.COOKIES_FILE_ENV_VAR,
         _media.COOKIES_FROM_BROWSER_ENV_VAR,
         _media.EXTRACTOR_ARGS_ENV_VAR,
     ):
         monkeypatch.delenv(var, raising=False)
-
-    def _gated(url, *a, **kw):
-        raise RuntimeError(
-            "ERROR: [youtube] x: Sign in to confirm you're not a bot. "
-            "Use --cookies-from-browser or --cookies for the authentication."
-        )
-
-    monkeypatch.setattr(bounded, "_extract_info", _gated)
-
-    with pytest.raises(ToolError) as excinfo:
-        _call(_local_server(), "download_audio", {"url": "https://example.com/s"})
-    message = str(excinfo.value)
-    assert _media.COOKIES_FILE_ENV_VAR in message
-    assert "--cookies-from-browser" not in message  # no raw yt-dlp string leaks
+    gate = (
+        "ERROR: [youtube] x: Sign in to confirm you're not a bot. "
+        "Use --cookies-from-browser or --cookies for the authentication."
+    )
+    # a ValueError too: yt-dlp can let one through, and it must still be classified
+    for exc_type in (RuntimeError, ValueError):
+        _fake_bounded(monkeypatch, tmp_path, raises=exc_type(gate))
+        with pytest.raises(ToolError) as excinfo:
+            _call(_local_server(), "download_audio", {"url": "https://example.com/s"})
+        message = str(excinfo.value)
+        assert _media.COOKIES_FILE_ENV_VAR in message
+        assert "--cookies-from-browser" not in message  # no raw yt-dlp string leaks
 
 
 def test_ingest_document_as_beats_returns_a_loadable_script():

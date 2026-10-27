@@ -589,10 +589,9 @@ def download_audio(url: str, name: str | None = None) -> dict:
             max_duration_s=_AUDIO_MAX_DURATION_S,
             validate_target=_docs._validate_target,
             extra_opts=creds.opts,
+            cookies_file=False,  # braidio's credentials are the only cookie source
         )
-    except ValueError as exc:  # a refused target or an exceeded cap (AudioLimitError)
-        raise ToolError(str(exc)) from exc
-    except Exception as exc:  # noqa: BLE001 — yt-dlp raises many extractor error types
+    except Exception as exc:  # noqa: BLE001 — a refusal, a cap, or any yt-dlp error
         raise _media.as_tool_error(
             exc, fallback="audio download failed", credentials=creds
         ) from exc

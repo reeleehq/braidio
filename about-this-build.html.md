@@ -2,20 +2,18 @@
 
 # About this build
 
-This documentation was built on **2026-10-27 21:00 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/1530257cf7bde73fa551b35aa4e0df91030b7b3b"><code>1530257</code></a> on branch <code>main</code>, for **braidio 0.0.86** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-30 13:16 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/1995d805b467303d9ae1bbe1c972a45d8668a806"><code>1995d80</code></a> on branch <code>main</code>, for **braidio 0.0.87** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.0.86) is ahead of the latest release on PyPI (0.0.85): these docs describe unreleased code.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/1530257cf7bde73fa551b35aa4e0df91030b7b3b"><code>1530257cf7bde73fa551b35aa4e0df91030b7b3b</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/1995d805b467303d9ae1bbe1c972a45d8668a806"><code>1995d805b467303d9ae1bbe1c972a45d8668a806</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | <code>0.0.86</code>                                                                                                                                     |
+| Tags at this commit | <code>0.0.87</code>                                                                                                                                     |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -24,9 +22,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/40582204142">40582204142</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41061282716">41061282716</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>3da3b025637a3e1154a0fa5c06e176027069fc65</code> (in the history of the built commit) |
+| Event commit | <code>ee7c222af76161806ad0710a96379a554dcac017</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -51,13 +49,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.85/">0.0.85</a>, older than the documented version (0.0.86).
+Latest release: <a href="https://pypi.org/project/braidio/0.0.87/">0.0.87</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 1530257cf7bde73fa551b35aa4e0df91030b7b3b
+git checkout 1995d805b467303d9ae1bbe1c972a45d8668a806
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

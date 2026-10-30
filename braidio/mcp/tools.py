@@ -313,7 +313,6 @@ def create_project(project_id: str, title: str = "") -> dict:
     return {
         "project_id": project_id,
         "title": title or project_id,
-        "root": str(proj.root),
     }
 
 

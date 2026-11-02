@@ -16,6 +16,12 @@ Declared:
   ``weave_to_episode.default`` takes this schema as an input, so only
   ``episode-render/v1`` gains the edge. The sting and bed bytes are hashed but not
   registered in any artifact store: the edge names content, not a stored blob.
+- ``take-override/v1`` → ``artifact_id``. One writer
+  (``_takes.replace_take``), which stores ``Artifact.from_path(recording).asset_id``,
+  and the body schema itself refuses anything but 64 lowercase hex. Only
+  ``narration_render.tts`` takes this schema as an input, so a narration render
+  spoken by an uploaded recording names the recording's bytes in its provenance
+  (braidio#86).
 
 Deliberately NOT declared (each is a decision, not an omission):
 
@@ -38,11 +44,12 @@ from __future__ import annotations
 
 from nw.transforms import asset_fields, register_asset_refs
 
-from braidio.bodies import PRODUCTION_STRUCTURE_V1
+from braidio.bodies import PRODUCTION_STRUCTURE_V1, TAKE_OVERRIDE_V1
 
 #: ``{body_schema_uri: dotted field paths}`` — the SSOT for what braidio declares.
 ASSET_REF_FIELDS: dict[str, tuple[str, ...]] = {
     PRODUCTION_STRUCTURE_V1: ("sting_asset_id", "bed_asset_id"),
+    TAKE_OVERRIDE_V1: ("artifact_id",),
 }
 
 

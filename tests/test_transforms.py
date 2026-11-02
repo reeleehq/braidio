@@ -1665,3 +1665,437 @@ def test_genre_status_names_the_episode_a_revert_returned(
     status = project.genre_status()
     assert status["episode_count"] == 2
     assert status["latest_episode"]["episode_id"] == str(first.id)
+
+
+# --- replace one narration take, then re-weave (braidio#86) ----------------------
+#
+# A recording is a take-override authoring node, never an edited render: the
+# narration transform reads it at plan time and completes an ``upload:``-keyed
+# render from it. The review that shaped this (PR #168) probed the in-place
+# design and refuted it; its probes are P1-P3 / M1 / M2 below.
+
+_RECORDING_STEM = "my_take"
+_RECORDING_S = 5.0
+_SYNTH_S = 2.0
+
+
+def _record(tmp_path, name=f"{_RECORDING_STEM}.wav", data=b"A PERSON SAYING IT"):
+    path = tmp_path / name
+    path.write_bytes(data)
+    return path
+
+
+@pytest.fixture
+def take_durations(monkeypatch, patched_synthesis):
+    """A person's recording (and its copy under ``data/takes``) is 5 s; every
+    other part 2 s. After ``patched_synthesis``, whose 2 s probe it overrides."""
+
+    def probe(p):
+        p = Path(p)
+        is_recording = p.name.startswith(_RECORDING_STEM) or "takes" in p.parts
+        return _RECORDING_S if is_recording else _SYNTH_S
+
+    monkeypatch.setattr(braidio, "duration_s", probe)
+
+
+@pytest.fixture
+def spoken(monkeypatch, patched_synthesis):
+    """The texts ``narrate`` is asked to synthesize, from here on."""
+    said = []
+    real_narrate = braidio.narrate
+    monkeypatch.setattr(
+        braidio,
+        "narrate",
+        lambda text, out, **kw: said.append(text) or real_narrate(text, out, **kw),
+    )
+    return said
+
+
+def _members(episode):
+    return [str(m) for m in episode.body["ordered_member_ids"]]
+
+
+def _render(project, render_id):
+    return next(
+        a
+        for a in _tier_nodes(project, "narration-renders")
+        if str(a.id) == str(render_id)
+    )
+
+
+def _project_files(project):
+    return {
+        (str(p), p.stat().st_size) for p in Path(project.root).rglob("*") if p.is_file()
+    }
+
+
+def test_preview_take_says_what_moves_and_writes_nothing(
+    project, script_and_source, patched_synthesis, take_durations, tmp_path
+):
+    import nw
+
+    script, source = script_and_source
+    episode = braidio.weave_project(project, script, source=source)
+    before = {a.id for a in nw.iter_all_annotations(project.root)}
+    files_before = _project_files(project)
+
+    preview = braidio.transforms.preview_take(project, 0, _record(tmp_path))
+
+    members = _members(episode)
+    assert preview.render_id == members[0]
+    assert preview.episode_id == str(episode.id)
+    assert preview.shifted_member_ids == tuple(members[1:])
+    assert (preview.old_duration_s, preview.new_duration_s) == (_SYNTH_S, _RECORDING_S)
+    assert preview.delta_s == _RECORDING_S - _SYNTH_S
+    assert {a.id for a in nw.iter_all_annotations(project.root)} == before
+    assert _project_files(project) == files_before  # no node, and no file either
+
+
+def test_replace_take_writes_one_override_and_edits_no_render(
+    project, script_and_source, patched_synthesis, take_durations, tmp_path
+):
+    from braidio.transforms._common import url_to_path
+    from braidio.transforms._takes import text_digest
+
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source)
+    renders_before = {a.id: a.body for a in _tier_nodes(project, "narration-renders")}
+
+    override = braidio.transforms.replace_take(project, 0, _record(tmp_path))
+
+    assert override.tier == braidio.transforms.TIER_TAKE_OVERRIDE
+    assert override.body["beat_id"] == "0000"
+    assert override.body["duration_s"] == _RECORDING_S
+    assert override.body["text_digest"] == text_digest(script.beats[0].text)
+    stored = url_to_path(override.body["url"])
+    assert stored.parent == Path(project.root, "data", "takes").resolve()
+    assert stored.name == f"{override.body['artifact_id']}.wav"  # named by content
+    assert stored.read_bytes() == b"A PERSON SAYING IT"
+    assert override.provenance.was_generated_by == "braidio:replace_take"
+    assert {
+        a.id: a.body for a in _tier_nodes(project, "narration-renders")
+    } == renders_before
+
+
+def test_a_replaced_take_is_heard_on_reweave_with_no_synthesis(
+    project, script_and_source, take_durations, spoken, tmp_path, monkeypatch
+):
+    """The re-weave plans an ``upload:`` render from the override: no narrate
+    call, $0, the episode re-woven over the recording; the TTS take stays as
+    history, and the override survives the script's re-ingest untouched."""
+    from braidio.transforms._common import annotation_parents, url_to_path
+
+    script, source = script_and_source
+    first = braidio.weave_project(project, script, source=source)
+    old_take = _members(first)[0]
+    override = braidio.transforms.replace_take(project, 0, _record(tmp_path))
+    spoken.clear()
+
+    woven = []
+    monkeypatch.setattr(
+        braidio,
+        "weave_timeline",
+        lambda items, out, **kw: woven.extend(items) or _write_bytes(out),
+    )
+    receipt = braidio.weave_project(project, script, source=source, return_receipt=True)
+
+    assert spoken == []  # nothing re-synthesized
+    assert receipt.cost_usd_actual == 0.0
+    assert not receipt.has_unknown_costs
+    assert receipt.episode.id != first.id  # the mix was re-woven
+    heard = _render(project, _members(receipt.episode)[0])
+    assert str(heard.id) != old_take  # a different render now, not an edited one
+    assert heard.body["source"] == "upload"
+    assert heard.body["cache_key"] == f"upload:{override.body['artifact_id']}"
+    assert heard.body["duration_s"] == _RECORDING_S
+    assert override.id in annotation_parents(heard)
+    assert override.body["artifact_id"] in heard.provenance.was_derived_from
+    assert Path(woven[0].path) == url_to_path(override.body["url"])
+    assert _render(project, old_take).body["source"] == "tts"  # history, intact
+    assert [a.id for a in _tier_nodes(project, "take-overrides")] == [override.id]
+    # and the weave is idempotent over it
+    assert braidio.weave_project(project, script, source=source).id == (
+        receipt.episode.id
+    )
+
+
+def test_a_second_replace_rewrites_the_one_override_under_its_id(
+    project, script_and_source, patched_synthesis, take_durations, tmp_path
+):
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source)
+    first = braidio.transforms.replace_take(project, 0, _record(tmp_path))
+    again = braidio.transforms.replace_take(project, 0, _record(tmp_path))
+    assert again == first  # the same recording: not rewritten, not re-dated
+
+    other = _record(tmp_path, f"{_RECORDING_STEM}2.mp3", b"SAID AGAIN, BETTER")
+    second = braidio.transforms.replace_take(project, "0000", other)
+
+    assert second.id == first.id
+    assert second.body["artifact_id"] != first.body["artifact_id"]
+    assert [a.id for a in _tier_nodes(project, "take-overrides")] == [first.id]
+    episode = braidio.weave_project(project, script, source=source)
+    heard = _render(project, _members(episode)[0])
+    assert heard.body["artifact_id"] == second.body["artifact_id"]
+
+
+def test_the_take_replaced_is_the_one_the_mix_plays_not_the_newest_in_history(
+    project, script_and_source, patched_synthesis, take_durations, tmp_path
+):
+    """Review P1: the newest render derived from a beat need not be the one the
+    mix plays. Here the mix plays the first TTS take again (fresh, reused after
+    a restore) while the newest render of the beat is the upload's; the
+    preview compares against the take heard, and the next upload is heard."""
+    script, source = script_and_source
+    first = braidio.weave_project(project, script, source=source)
+    braidio.transforms.replace_take(project, 0, _record(tmp_path))
+    uploaded = braidio.weave_project(project, script, source=source)
+    braidio.transforms.restore_take(project, 0)
+    restored = braidio.weave_project(project, script, source=source)
+    assert _members(restored)[0] == _members(first)[0]
+    newest = _tier_nodes(project, "narration-renders")[-1]
+    assert str(newest.id) == _members(uploaded)[0] != _members(restored)[0]
+
+    other = _record(tmp_path, f"{_RECORDING_STEM}2.wav", b"SAID AGAIN")
+    preview = braidio.transforms.preview_take(project, 0, other)
+    assert preview.render_id == _members(restored)[0]
+    assert preview.episode_id == str(restored.id)
+    assert preview.old_duration_s == _SYNTH_S  # the TTS take heard, not the upload
+
+    braidio.transforms.replace_take(project, 0, other)
+    episode = braidio.weave_project(project, script, source=source)
+    assert _render(project, _members(episode)[0]).body["source"] == "upload"
+
+
+def test_a_config_round_trip_keeps_the_upload(
+    project, script_and_source, take_durations, spoken, tmp_path
+):
+    """Review P2: an older TTS render with the beat's key must never displace
+    the recording — the upload render's key depends on the recording alone."""
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source)
+    braidio.weave_project(
+        project, script, source=source, config=braidio.WeaveConfig(crossfade_s=0.5)
+    )
+    braidio.transforms.replace_take(project, 0, _record(tmp_path))
+    spoken.clear()
+    for crossfade in (0.7, 0.0):
+        episode = braidio.weave_project(
+            project,
+            script,
+            source=source,
+            config=braidio.WeaveConfig(crossfade_s=crossfade),
+        )
+        assert _render(project, _members(episode)[0]).body["source"] == "upload"
+    assert script.beats[0].text not in spoken
+
+
+def test_another_beat_with_the_same_words_never_gets_the_recording(
+    project, script_and_source, patched_synthesis, take_durations, tmp_path
+):
+    """Review P3: a render cache keyed on the text would hand the person's
+    recording to every beat that says the same thing."""
+    import dataclasses
+
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source)
+    override = braidio.transforms.replace_take(project, 0, _record(tmp_path))
+    more = dataclasses.replace(
+        script, beats=[*script.beats, braidio.Narration(text=script.beats[0].text)]
+    )
+    episode = braidio.weave_project(project, more, source=source)
+
+    first, last = (
+        _render(project, m) for m in (_members(episode)[0], _members(episode)[-1])
+    )
+    assert first.body["source"] == "upload"
+    assert last.body["source"] == "tts"
+    assert last.body["artifact_id"] != override.body["artifact_id"]
+    # the structural reason: the upload render's key can never be the words'
+    # key, so no render cache scan can match it, whichever node it returns
+    assert first.body["cache_key"] != last.body["cache_key"]
+
+
+def test_editing_the_words_drops_the_recording_and_restoring_them_brings_it_back(
+    project, script_and_source, take_durations, spoken, tmp_path
+):
+    import dataclasses
+
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source)
+    override = braidio.transforms.replace_take(project, 0, _record(tmp_path))
+    edited = dataclasses.replace(
+        script, beats=[braidio.Narration(text="A new opening."), *script.beats[1:]]
+    )
+    spoken.clear()
+
+    episode = braidio.weave_project(project, edited, source=source)
+    assert _render(project, _members(episode)[0]).body["source"] == "tts"
+    assert spoken == ["A new opening."]  # synthesized again: the person never said it
+    assert [a.id for a in _tier_nodes(project, "take-overrides")] == [override.id]
+
+    episode = braidio.weave_project(project, script, source=source)
+    assert _render(project, _members(episode)[0]).body["source"] == "upload"
+
+
+def test_restore_take_brings_back_the_synthesized_take_at_no_cost(
+    project, script_and_source, take_durations, spoken, tmp_path
+):
+    script, source = script_and_source
+    first = braidio.weave_project(project, script, source=source)
+    override = braidio.transforms.replace_take(project, 0, _record(tmp_path))
+    braidio.weave_project(project, script, source=source)
+    spoken.clear()
+
+    assert braidio.transforms.restore_take(project, 0).id == override.id
+    assert braidio.transforms.restore_take(project, 0) is None
+    receipt = braidio.weave_project(project, script, source=source, return_receipt=True)
+    assert spoken == [] and receipt.cost_usd_actual == 0.0
+    assert _members(receipt.episode)[0] == _members(first)[0]  # the fresh TTS take
+
+
+def test_a_recording_that_is_not_audio_is_refused(
+    project, script_and_source, patched_synthesis, tmp_path, monkeypatch
+):
+    """Review M1: an unprobeable file used to become a 0 s take."""
+    import shutil
+    import subprocess
+
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source)
+    files_before = _project_files(project)
+    notes = _record(tmp_path, "notes.txt", b"not audio at all")
+
+    if shutil.which("ffprobe"):  # the real probe, as a host would run it
+        from braidio.weave import duration_s as real_duration_s
+
+        monkeypatch.setattr(braidio, "duration_s", real_duration_s)
+    else:
+
+        def ffprobe_refuses(path):
+            raise subprocess.CalledProcessError(1, ["ffprobe", str(path)])
+
+        monkeypatch.setattr(braidio, "duration_s", ffprobe_refuses)
+    for verb in (braidio.transforms.preview_take, braidio.transforms.replace_take):
+        with pytest.raises(ValueError, match="notes.txt is not a playable audio"):
+            verb(project, 0, notes)
+
+    monkeypatch.setattr(braidio, "duration_s", lambda p: 0.0)
+    with pytest.raises(ValueError, match="holds no audio"):
+        braidio.transforms.replace_take(project, 0, _record(tmp_path))
+    assert _tier_nodes(project, "take-overrides") == []
+    assert _project_files(project) == files_before
+
+
+def test_a_take_of_an_imported_production_is_refused(
+    project, script_and_source, patched_synthesis, take_durations, tmp_path
+):
+    """Review M2: an imported mix is not the sum of its takes (braidio#86)."""
+    from braidio.importing import IMPORTED_CACHE_KEY_PREFIX
+
+    script, source = script_and_source
+    episode = braidio.weave_project(project, script, source=source)
+    take = _render(project, _members(episode)[0])
+    _rewrite_in_place(
+        project,
+        take,
+        body={**take.body, "cache_key": f"{IMPORTED_CACHE_KEY_PREFIX}demo:mix:0000"},
+    )
+    for verb in (braidio.transforms.preview_take, braidio.transforms.replace_take):
+        with pytest.raises(ValueError, match="imported production"):
+            verb(project, 0, _record(tmp_path))
+    assert _tier_nodes(project, "take-overrides") == []
+
+
+def test_replace_take_names_the_beats_it_knows(
+    project, script_and_source, patched_synthesis, tmp_path
+):
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source)
+    with pytest.raises(ValueError, match=r"no narration beat '0001'.*0000, 0002"):
+        braidio.transforms.replace_take(project, 1, _record(tmp_path))  # a segment
+
+
+def _write_bytes(out):
+    Path(out).parent.mkdir(parents=True, exist_ok=True)
+    Path(out).write_bytes(b"EPISODE")
+    return Path(out)
+
+
+def _tier_nodes(project, tier):
+    import nw
+
+    return nw.annotations_at_tier(project.root, tier)
+
+
+def test_reflowing_a_recorded_line_keeps_its_recording(
+    project, script_and_source, take_durations, spoken, tmp_path
+):
+    """The override is recorded against the beat's words, whitespace normalized:
+    a trailing space or a line break is not a new line to synthesize."""
+    import dataclasses
+
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source)
+    braidio.transforms.replace_take(project, 0, _record(tmp_path))
+    first = script.beats[0]
+    reflowed = dataclasses.replace(
+        script,
+        beats=[
+            braidio.Narration(text="  " + first.text.replace(" ", "\n", 1) + " "),
+            *script.beats[1:],
+        ],
+    )
+    spoken.clear()
+    episode = braidio.weave_project(project, reflowed, source=source)
+    assert spoken == []
+    assert _render(project, _members(episode)[0]).body["source"] == "upload"
+
+
+def test_an_upload_render_does_not_derive_from_the_weave_config(
+    project, script_and_source, take_durations, spoken, tmp_path
+):
+    """The recording's render depends on the beat, its voice-assignment and the
+    override, never on synthesis settings: a config change must not re-stale it."""
+    from braidio.transforms._common import annotation_parents
+
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source)
+    braidio.transforms.replace_take(project, 0, _record(tmp_path))
+    episode = braidio.weave_project(project, script, source=source)
+    heard = _render(project, _members(episode)[0])
+    (config,) = _tier_nodes(project, "weave-configs")
+    assert config.id not in annotation_parents(heard)
+
+
+def test_two_overrides_for_one_beat_stop_the_weave_with_the_way_out(
+    project, script_and_source, take_durations, spoken, tmp_path
+):
+    import uuid
+
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source)
+    override = braidio.transforms.replace_take(project, 0, _record(tmp_path))
+    project.graph.add_annotation(override.model_copy(update={"id": uuid.uuid4()}))
+    with pytest.raises(ValueError, match="at most one.*restore_take"):
+        braidio.weave_project(project, script, source=source)
+
+
+def test_a_replaced_take_is_pending_until_the_reweave_hears_it(
+    project, script_and_source, take_durations, spoken, tmp_path
+):
+    """``replace_take`` writes an authoring node, so nothing reads stale: the
+    project's status says a re-weave is due, and stops saying so once it ran."""
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source)
+    assert braidio.transforms.pending_takes(project) == ()
+
+    braidio.transforms.replace_take(project, 0, _record(tmp_path))
+    status = project.genre_status()
+    assert braidio.transforms.pending_takes(project) == ("0000",)
+    assert status["pending_takes"] == ["0000"]
+    assert "recorded take" in status["next_step"]["why"]
+
+    braidio.weave_project(project, script, source=source)
+    assert braidio.transforms.pending_takes(project) == ()
+    assert project.genre_status()["pending_takes"] == []

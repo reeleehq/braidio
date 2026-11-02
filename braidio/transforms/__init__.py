@@ -13,7 +13,9 @@ The chain (``sources → segments → weave``):
 - ``beat_to_voice_assignment.default`` — narrative beat (+ weave-config) →
   ``voice-assignment/v1`` (deterministic; no synthesis).
 - ``narration_render.tts`` — narrative beat (+ voice-assignment + config) →
-  ``narration-render/v1`` (ElevenLabs TTS; cached by an explicit ``cache_key``).
+  ``narration-render/v1`` (ElevenLabs TTS; cached by an explicit ``cache_key``),
+  or, for a beat with a ``take-override/v1`` (:func:`replace_take`), the
+  person's recording instead — no synthesis (braidio#86).
 - ``dialogue_render.tts`` — dialogue beat (+ the singleton dialogue-cast) →
   ``dialogue-render/v1`` (ElevenLabs Text-to-Dialogue, one pass per exchange;
   cached by an explicit ``cache_key``; thorwhalen/braidio#46).
@@ -50,6 +52,7 @@ from braidio.transforms._common import (
     TIER_NARRATIVE_BEAT,
     TIER_DIALOGUE_BEAT,
     TIER_SCENE_BREAK,
+    TIER_TAKE_OVERRIDE,
     TIER_AUDIO_CLIP,
     TIER_VOICE_ASSIGNMENT,
     TIER_NARRATION_RENDER,
@@ -80,6 +83,15 @@ from braidio.transforms._episode import (
     episode_script,
     episode_timeline,
     member_spans,
+)
+from braidio.transforms._takes import (
+    UPLOAD_CACHE_KEY_PREFIX,
+    TakePreview,
+    pending_takes,
+    preview_take,
+    replace_take,
+    restore_take,
+    take_override_for,
 )
 from braidio.transforms._video_panels import (
     Pick,
@@ -129,6 +141,13 @@ __all__ = [
     "member_spans",
     "MemberSpan",
     "episode_script",
+    "TakePreview",
+    "pending_takes",
+    "preview_take",
+    "replace_take",
+    "restore_take",
+    "take_override_for",
+    "UPLOAD_CACHE_KEY_PREFIX",
     "mint_seed",
     "panels_for_episode",
     "picks_from_panels",
@@ -157,6 +176,7 @@ __all__ = [
     "TIER_NARRATIVE_BEAT",
     "TIER_DIALOGUE_BEAT",
     "TIER_SCENE_BREAK",
+    "TIER_TAKE_OVERRIDE",
     "TIER_AUDIO_CLIP",
     "TIER_VOICE_ASSIGNMENT",
     "TIER_NARRATION_RENDER",

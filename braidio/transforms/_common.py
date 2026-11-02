@@ -32,6 +32,7 @@ TIER_SOURCE_MEDIA = "source-media"
 TIER_NARRATIVE_BEAT = "narrative-beats"
 TIER_DIALOGUE_BEAT = "dialogue-beats"
 TIER_SCENE_BREAK = "scene-breaks"
+TIER_TAKE_OVERRIDE = "take-overrides"
 TIER_AUDIO_CLIP = "audio-clips"
 TIER_VOICE_ASSIGNMENT = "voice-assignments"
 TIER_NARRATION_RENDER = "narration-renders"
@@ -91,7 +92,10 @@ SINGLETON_TIERS = frozenset(
 #: The tiers an ingest owns, in the order it writes them. A re-ingest reconciles
 #: exactly these — a node here whose identity the new plan no longer names is
 #: removed (its dependents then read ``upstream-missing``); the render tiers
-#: are never touched by ingest.
+#: are never touched by ingest. Nor is :data:`TIER_TAKE_OVERRIDE`: a person's
+#: recording is authored by ``replace_take``, not by the script, so a script
+#: re-ingest must leave it alone (braidio#86). Its identity is still its
+#: ``beat_id`` (:func:`node_identity`), one override per beat.
 AUTHORING_TIERS = (
     TIER_WEAVE_CONFIG,
     TIER_PRODUCTION_STRUCTURE,
@@ -128,6 +132,10 @@ RENDER_OUTPUT_KEYS = frozenset(
         "height",
         "fps",
         "captions_artifact_id",
+        # NOT a narration take's ``source``: whether a beat is spoken by a
+        # person's recording is decided by the plan (a take-override node,
+        # braidio#86), so it is part of the planned value, and a TTS skeleton
+        # can never be matched to an uploaded render or vice versa.
     }
 )
 

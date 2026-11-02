@@ -183,7 +183,7 @@ the full reasoning; these are the four a caller gets wrong.
 
 ## Body schemas are a federation contract
 
-`braidio/bodies/` registers 21 lacing body-schema URIs (7 domain, 10 render,
+`braidio/bodies/` registers 22 lacing body-schema URIs (7 domain, 11 render,
 4 video — see `braidio.bodies.SCHEMA_URIS`). These are **on the wire**: the nw pipeline
 persists them in project graphs, and both deployed MCP connectors read and
 write them live. Renaming a URI, or renaming, removing, retyping, or
@@ -211,7 +211,7 @@ the lacing `.annot` migration note says for the same reason: the failure shows
 up not at open but at the first place a body becomes a model, which is
 somewhere downstream and far from the change.
 
-`tests/test_body_schema_stability.py` pins all 17 URIs and every field's
+`tests/test_body_schema_stability.py` pins every URI and every field's
 serialized shape (name, JSON type, required/optional, default), and fails
 additive vs. breaking changes in separate tests with different advice. It is
 not derived from the models it protects — the pinned table is literal,

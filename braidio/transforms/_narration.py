@@ -6,6 +6,15 @@ the audio-affecting inputs; ``execute`` synthesizes via ``braidio.narrate``
 (ElevenLabs), unless an identical ``cache_key`` already has an artifact
 (compare-and-skip). It derives from ``[beat, voice-assignment, weave-config]``.
 
+A beat a person recorded is the exception (braidio#86): when the beat has a
+``take-override/v1`` made against its current text
+(:func:`braidio.transforms._takes.take_override_for`), the render derives from
+``[beat, voice-assignment, take-override]`` instead, its ``cache_key`` is
+``upload:<artifact_id>`` and ``source`` is ``"upload"``, and ``execute``
+completes it from the recording: no synthesis, no spend. The weave-config is
+not a parent then, because nothing it decides reaches a recording; the
+voice-assignment still is, because the episode reads the speaker from it.
+
 The skeleton's ``provenance.was_derived_from`` records exactly those inputs;
 ``execute`` re-resolves them from the graph (it receives no ``inputs``) and
 writes the completed node through ``project.graph`` so ``nw.stale_after``
@@ -36,6 +45,8 @@ from braidio.bodies._render_nodes import (
     WEAVE_CONFIG_V1,
     VOICE_ASSIGNMENT_V1,
     NARRATION_RENDER_V1,
+    NARRATION_SOURCE_UPLOAD,
+    TAKE_OVERRIDE_V1,
     NarrationRenderBodyV1,
 )
 from braidio.cost import backend_cost_usd
@@ -53,6 +64,7 @@ from braidio.transforms._common import (
     TIER_VOICE_ASSIGNMENT,
     TIER_WEAVE_CONFIG,
     TIER_NARRATION_RENDER,
+    TIER_TAKE_OVERRIDE,
     beat_ordinal,
     singleton,
     graph_index,
@@ -66,6 +78,7 @@ from braidio.transforms._common import (
     file_url,
     elevenlabs_key,
 )
+from braidio.transforms._takes import take_override_for, upload_cache_key
 
 from braidio.transforms._voice import current_voice_assignment
 
@@ -227,29 +240,45 @@ def _render_inputs(beat, va, cfg) -> _RenderInputs:
 
 @register_transform(NAME)
 class NarrationRenderTTS(BaseTransform):
-    """Narrative beat (+ voice-assignment + weave-config) → ``narration-render/v1``."""
+    """Narrative beat (+ voice-assignment + weave-config, or + its take-override)
+    → ``narration-render/v1``."""
 
     name = NAME
-    input_kinds = (NARRATIVE_BEAT_V1, VOICE_ASSIGNMENT_V1, WEAVE_CONFIG_V1)
+    input_kinds = (
+        NARRATIVE_BEAT_V1,
+        VOICE_ASSIGNMENT_V1,
+        WEAVE_CONFIG_V1,
+        TAKE_OVERRIDE_V1,
+    )
     output_kind = NARRATION_RENDER_V1
 
     def plan(
         self, project, inputs: TransformInputs, *, params=None
     ) -> tuple[Plan, tuple[Annotation, ...]]:
         beat = inputs.primary[0]
-        cfg = singleton(project, TIER_WEAVE_CONFIG)
         va = current_voice_assignment(project, beat)
-        cache_key = _render_inputs(beat, va, cfg).cache_key(self)
+        override = take_override_for(project, beat)
+        if override is not None:
+            # A person's recording speaks this beat: the key names those bytes
+            # and nothing a synthesis setting decides (braidio#86).
+            body = NarrationRenderBodyV1(
+                cache_key=upload_cache_key(override.body["artifact_id"]),
+                source=NARRATION_SOURCE_UPLOAD,
+            )
+            context = {VOICE_ASSIGNMENT_V1: (va,), TAKE_OVERRIDE_V1: (override,)}
+        else:
+            cfg = singleton(project, TIER_WEAVE_CONFIG)
+            body = NarrationRenderBodyV1(
+                cache_key=_render_inputs(beat, va, cfg).cache_key(self)
+            )
+            context = {VOICE_ASSIGNMENT_V1: (va,), WEAVE_CONFIG_V1: (cfg,)}
 
-        full = TransformInputs(
-            primary=(beat,),
-            context={VOICE_ASSIGNMENT_V1: (va,), WEAVE_CONFIG_V1: (cfg,)},
-        )
+        full = TransformInputs(primary=(beat,), context=context)
         skeleton = Annotation(
             id=uuid.uuid4(),
             tier=TIER_NARRATION_RENDER,
             reference=beat.reference,
-            body=NarrationRenderBodyV1(cache_key=cache_key).model_dump(),
+            body=body.model_dump(),
             body_schema_uri=NARRATION_RENDER_V1,
             provenance=derive_provenance(self, full, attributed_to="agent:braidio"),
         )
@@ -268,6 +297,11 @@ class NarrationRenderTTS(BaseTransform):
         skel = skeleton[0]
         cache_key = skel.body["cache_key"]
         parents = resolve_parents(skel, graph_index(project))
+        override = next((p for p in parents if p.tier == TIER_TAKE_OVERRIDE), None)
+        if override is not None:
+            return _speak_from_override(
+                project, skel, override, reuse=use_cache and not force
+            )
         beat = require_tier(parents, TIER_NARRATIVE_BEAT)
         va = require_tier(parents, TIER_VOICE_ASSIGNMENT)
         cfg = require_tier(parents, TIER_WEAVE_CONFIG)
@@ -351,3 +385,35 @@ class NarrationRenderTTS(BaseTransform):
             cache_hit_savings_usd=estimate if was_cached else 0.0,
             has_unknown_costs=cost is None,
         )
+
+
+def _speak_from_override(
+    project, skel: Annotation, override: Annotation, *, reuse: bool
+) -> TransformResult:
+    """Complete ``skel`` from a person's recording: no synthesis, nothing spent.
+
+    Never through ``cached_output``: the recording is this beat's alone, and
+    its node is the override, not some render that happens to share a key.
+    ``cache_hit_savings_usd`` stays ``0.0`` too: no synthesis was avoided by a
+    cache, a person chose not to have one.
+    """
+    existing = fresh_equivalent(project, skel) if reuse else None
+    if existing is None:
+        existing = skel.model_copy(
+            update={
+                "body": {
+                    **skel.body,
+                    "artifact_id": override.body["artifact_id"],
+                    "url": override.body["url"],
+                    "duration_s": float(override.body["duration_s"]),
+                }
+            }
+        )
+        project.graph.add_annotation(existing)
+    return TransformResult(
+        annotations=(existing,),
+        artifacts=(),
+        cost_usd_actual=0.0,
+        cache_hit_savings_usd=0.0,
+        has_unknown_costs=False,
+    )

@@ -26,11 +26,22 @@ from braidio.kinds import WeaveKind
 #: braidio's own vocabulary (a host maps it to its tool name, prefix and all).
 NEXT_STEP_SAVE_SCRIPT = ("save_script", "there is no script yet")
 NEXT_STEP_WEAVE = ("weave_project", "the script has not been rendered yet")
+NEXT_STEP_HEAR_TAKES = (
+    "weave_project",
+    "a recorded take is not in the mix yet — weave again to hear it",
+)
 NEXT_STEP_DONE = (
     "weave_project",
     "an episode is made — download it by its episode_id, or weave again after "
     "changing the script",
 )
+
+
+def _pending_takes(project) -> tuple:
+    """Beats whose recorded take the current mix does not play (braidio#86)."""
+    from braidio.transforms._takes import pending_takes
+
+    return pending_takes(project)
 
 
 def _tiers():
@@ -116,7 +127,10 @@ class Project(nw.Project):
         }
         episodes = self.episodes()
         current = self.current_episode(episodes=episodes)
-        if episodes:
+        pending = _pending_takes(self) if episodes else ()
+        if pending:
+            op, why = NEXT_STEP_HEAR_TAKES
+        elif episodes:
             op, why = NEXT_STEP_DONE
         elif any(counts.values()):
             op, why = NEXT_STEP_WEAVE
@@ -126,6 +140,7 @@ class Project(nw.Project):
             **counts,
             "episode_count": len(episodes),
             "latest_episode": _episode_row(current) if current else None,
+            "pending_takes": list(pending),
             "next_step": {"op": op, "why": why},
         }
 

@@ -26,6 +26,10 @@ NARRATION_RENDER_V1 = "annot://schema/narration-render/v1"
 DIALOGUE_RENDER_V1 = "annot://schema/dialogue-render/v1"
 SEGMENT_EXTRACTION_V1 = "annot://schema/segment-extraction/v1"
 EPISODE_RENDER_V1 = "annot://schema/episode-render/v1"
+TAKE_OVERRIDE_V1 = "annot://schema/take-override/v1"
+
+#: A lacing asset id: the lowercase hex SHA-256 of a file's bytes.
+_ASSET_ID_PATTERN = r"^[0-9a-f]{64}$"
 
 #: ``NarrationRenderBodyV1.source`` values: a synthesised take, or a recording
 #: a person uploaded in its place.
@@ -293,6 +297,42 @@ class EpisodeRenderBodyV1(BaseModel):
     )
 
 
+class TakeOverrideBodyV1(BaseModel):
+    """A person's recording, standing in for one narration beat's synthesized take.
+
+    An **authoring** decision, not a render: the beat's ``narration-render/v1``
+    is still produced by the narration transform, which reads this node and
+    completes the render from it instead of synthesizing (braidio#86). Keeping
+    the decision out of the render is what lets the render's ``cache_key``
+    honestly name the audio it holds (``upload:<artifact_id>``), so no render
+    cache can hand the recording to another beat, and no TTS node can
+    displace it.
+
+    One per beat (identity: ``beat_id``); a second replacement rewrites it
+    under the same id. ``text_digest`` is the SHA-256 of the beat text the
+    recording says: an override whose digest no longer matches the beat's
+    current text is ignored, so editing the words brings back synthesis.
+    """
+
+    model_config = {"frozen": True, "extra": "forbid"}
+
+    beat_id: str = Field(..., description="Zero-padded beat key (e.g. '0007').")
+    artifact_id: str = Field(
+        ...,
+        pattern=_ASSET_ID_PATTERN,
+        description="lacing Artifact asset_id (SHA-256) of the recording.",
+    )
+    url: str = Field(
+        ..., description="file:// URL of the project's copy of the recording."
+    )
+    duration_s: float = Field(..., gt=0, description="Recording length, seconds.")
+    text_digest: str = Field(
+        ...,
+        pattern=_ASSET_ID_PATTERN,
+        description="SHA-256 of the beat text the recording was made against.",
+    )
+
+
 RENDER_SCHEMAS: dict[str, type[BaseModel]] = {
     WEAVE_CONFIG_V1: WeaveConfigBodyV1,
     PRODUCTION_STRUCTURE_V1: ProductionStructureBodyV1,
@@ -304,6 +344,7 @@ RENDER_SCHEMAS: dict[str, type[BaseModel]] = {
     DIALOGUE_RENDER_V1: DialogueRenderBodyV1,
     SEGMENT_EXTRACTION_V1: SegmentExtractionBodyV1,
     EPISODE_RENDER_V1: EpisodeRenderBodyV1,
+    TAKE_OVERRIDE_V1: TakeOverrideBodyV1,
 }
 
 for _uri, _model in RENDER_SCHEMAS.items():

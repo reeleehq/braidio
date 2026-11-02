@@ -197,9 +197,9 @@ def fresh_equivalent(project, skeleton: Annotation) -> Annotation | None:
     (thorwhalen/braidio#51). Reuse is by *value*, never by id alone.
 
     This is what makes re-running the weave idempotent — a no-op re-run adds
-    no voice-assignment, no render, no episode. It is a full freshness walk
-    per call, honest about scale like nw's ``cached_output``: fine at project
-    size, and an index behind this signature is the fix if that changes.
+    no voice-assignment, no render, no episode. It reads :func:`fresh_ids`:
+    one full freshness walk per call, or one per write inside a
+    :func:`fresh_ids_pass` (braidio#171).
 
     Only the annotation half of ``was_derived_from`` is compared. Since nw#55 a
     declared input schema also contributes the artifact ids its body names
@@ -234,7 +234,8 @@ def fresh_ids(project) -> set:
     """The ids of every annotation nw's freshness walk verifies as fresh.
 
     One full walk of the graph, unless a :func:`fresh_ids_pass` is open, in
-    which case the walk is reused until :func:`forget_fresh_ids` (braidio#171).
+    which case the walk is reused until :func:`note_output` drops it
+    (braidio#171).
     """
     import nw
 
@@ -261,9 +262,12 @@ def fresh_ids_pass():
     Freshness changes only through a write, and adding a node changes no
     *other* node's freshness (it is a function of each node's own parents),
     so a pass that writes nothing needs one walk however many lookups it does.
-    The driver that writes calls :func:`forget_fresh_ids` after each write;
+    The driver reports each stage's output with :func:`note_output`, which
+    drops the walk when that output is a node it did not know (a write);
     ``weave_project`` does, so a no-op re-weave is one walk instead of about
-    two per beat (braidio#171). Nested passes share the outer one.
+    two per beat (braidio#171). Nested passes share the outer one. Two weaves
+    of ONE project at once were already racy (no per-project lock); a pass
+    widens the stale window from one lookup to the pass.
     """
     if _FRESH_PASS.get() is not None:
         yield
@@ -275,11 +279,23 @@ def fresh_ids_pass():
         _FRESH_PASS.reset(token)
 
 
-def forget_fresh_ids(project) -> None:
-    """Drop the open pass's walk of ``project``: the graph was just written."""
+def note_output(project, annotation) -> None:
+    """Tell the open pass a stage produced ``annotation``.
+
+    A node the held walk does not know as fresh was just written (a new or an
+    adopted render), so the walk is dropped and the next lookup walks again.
+    Nothing is walked here: with no walk held there is nothing to drop, which
+    keeps a first weave (no candidates, no lookups) free of walks it never
+    needed (braidio#171 review). Only correct for a driver whose stages return
+    the node they wrote, as every braidio transform does.
+    """
     cache = _FRESH_PASS.get()
-    if cache is not None:
-        cache.pop(str(Path(project.root).resolve()), None)
+    if cache is None:
+        return
+    key = str(Path(project.root).resolve())
+    held = cache.get(key)
+    if held is not None and annotation.id not in held:
+        del cache[key]
 
 
 def freshest(project, annotations):

@@ -44,9 +44,8 @@ from nw import TransformInputs
 
 from braidio.transforms._common import (
     ELEVENLABS_SECRET,
-    forget_fresh_ids,
-    fresh_ids,
     fresh_ids_pass,
+    note_output,
     TIER_WEAVE_CONFIG,
     TIER_PRODUCTION_STRUCTURE,
     TIER_RENDER_PROFILE,
@@ -385,8 +384,7 @@ def weave_project(
     def run(transform, *primary, secrets=None):
         results.append(_execute(transform, project, *primary, secrets=secrets))
         out = results[-1].annotations[0]
-        if out.id not in fresh_ids(project):  # a node was written: walk again
-            forget_fresh_ids(project)
+        note_output(project, out)  # a node the held walk did not know: walk again
         return out
 
     render_by_authoring_id = {}

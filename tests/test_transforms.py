@@ -1633,15 +1633,17 @@ def test_a_voice_flip_and_back_weaves_in_the_voice_the_voice_stage_chose(
 
     monkeypatch.setattr(braidio, "narrate", spy)
 
-    def opening_voice(voice):
+    def voices(voice):
+        """The voice of EVERY narration take in the mix (a clip has none)."""
         monkeypatch.setenv("BRAIDIO_TTS_VOICE", voice)
         episode = braidio.weave_project(project, script, source=source)
-        return voice_of_take[episode.body["ordered_member_ids"][0]]
+        members = [str(m) for m in episode.body["ordered_member_ids"]]
+        return {voice_of_take[m] for m in members if m in voice_of_take}
 
-    assert opening_voice("voiceA") == "voiceA"
-    assert opening_voice("voiceB") == "voiceB"
-    assert opening_voice("voiceA") == "voiceA"  # not the most recent fresh
-    assert opening_voice("voiceB") == "voiceB"  # not the oldest fresh
+    assert voices("voiceA") == {"voiceA"}
+    assert voices("voiceB") == {"voiceB"}
+    assert voices("voiceA") == {"voiceA"}  # not the most recent fresh
+    assert voices("voiceB") == {"voiceB"}  # not the oldest fresh
 
 
 def test_genre_status_names_the_episode_a_revert_returned(

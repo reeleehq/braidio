@@ -264,6 +264,56 @@ def _dialogue_cache_dir():
     return _cache.default_cache_dir("braidio-dialogue", env_key=DIALOGUE_CACHE_ENV_KEY)
 
 
+def _dialogue_inputs(turns) -> list[dict]:
+    """``(voice_id, text)`` pairs (or ``{"voice_id", "text"}``) → API inputs."""
+    inputs = []
+    for t in turns:
+        if isinstance(t, (tuple, list)):
+            inputs.append({"voice_id": t[0], "text": t[1]})
+        else:
+            inputs.append({"voice_id": t["voice_id"], "text": t["text"]})
+    return inputs
+
+
+def _dialogue_cache_key(
+    endpoint: str, inputs, *, model_id, output_format, settings, seed
+) -> str:
+    """The cache key of a dialogue call: every audio-affecting parameter, and
+    the endpoint (a timed take is a different value from a plain one). The
+    caller's API key is deliberately absent: it does not affect the audio."""
+    import json
+
+    from mixing import _cache
+
+    return _cache.sha256_key(
+        endpoint,
+        json.dumps(inputs, sort_keys=True, ensure_ascii=False),
+        model_id,
+        output_format,
+        json.dumps(settings or {}, sort_keys=True),
+        "" if seed is None else str(seed),
+    )
+
+
+def _dialogue_request(inputs, *, model_id, output_format, settings, seed) -> dict:
+    kwargs = {"inputs": inputs, "model_id": model_id, "output_format": output_format}
+    if settings is not None:
+        kwargs["settings"] = settings
+    if seed is not None:
+        kwargs["seed"] = seed
+    return kwargs
+
+
+def _elevenlabs_client(api_key: str | None):
+    from elevenlabs.client import ElevenLabs
+
+    return ElevenLabs(
+        api_key=api_key
+        or os.environ.get("ELEVENLABS_API_KEY")
+        or os.environ.get("ELEVEN_API_KEY")
+    )
+
+
 def text_to_dialogue(
     turns,
     *,
@@ -305,47 +355,154 @@ def text_to_dialogue(
 
     Returns: raw audio bytes in ``output_format``.
     """
-    import json
-
     from mixing import _cache
 
-    inputs = []
-    for t in turns:
-        if isinstance(t, (tuple, list)):
-            inputs.append({"voice_id": t[0], "text": t[1]})
-        else:
-            inputs.append({"voice_id": t["voice_id"], "text": t["text"]})
-
+    inputs = _dialogue_inputs(turns)
+    params = dict(
+        model_id=model_id, output_format=output_format, settings=settings, seed=seed
+    )
     cache_dir = _cache.resolve_cache_dir(cache, default_factory=_dialogue_cache_dir)
     key = None
     if cache_dir is not None:
-        key = _cache.sha256_key(
-            "text_to_dialogue",
-            json.dumps(inputs, sort_keys=True, ensure_ascii=False),
-            model_id,
-            output_format,
-            json.dumps(settings or {}, sort_keys=True),
-            "" if seed is None else str(seed),
-        )
+        key = _dialogue_cache_key("text_to_dialogue", inputs, **params)
         if not refresh:
             cached = _cache.read_cache(cache_dir, key, suffix=".audio")
             if cached is not None:
                 return (cached, True) if return_cache_status else cached
 
-    from elevenlabs.client import ElevenLabs
-
-    client = ElevenLabs(
-        api_key=api_key
-        or os.environ.get("ELEVENLABS_API_KEY")
-        or os.environ.get("ELEVEN_API_KEY")
+    client = _elevenlabs_client(api_key)
+    audio = b"".join(
+        client.text_to_dialogue.convert(**_dialogue_request(inputs, **params))
     )
-    kwargs = {"inputs": inputs, "model_id": model_id, "output_format": output_format}
-    if settings is not None:
-        kwargs["settings"] = settings
-    if seed is not None:
-        kwargs["seed"] = seed
-    audio = b"".join(client.text_to_dialogue.convert(**kwargs))
 
     if cache_dir is not None and key is not None:
         _cache.write_cache(cache_dir, key, audio, suffix=".audio")
     return (audio, False) if return_cache_status else audio
+
+
+@dataclass(frozen=True)
+class DialogueSegment:
+    """One span of a timed dialogue take: who spoke which input, and when.
+
+    ElevenLabs' ``VoiceSegment`` in braidio's vocabulary (seconds, from the
+    start of the take). One input (turn) may span several segments.
+    """
+
+    input_index: int
+    voice_id: str
+    start_s: float
+    end_s: float
+
+
+#: The cache entry suffix of a timed take: audio and timings in ONE value, so a
+#: cache hit can never pair one take's audio with another take's timings.
+_TIMED_DIALOGUE_SUFFIX = ".timed.json"
+_TIMED_DIALOGUE_ENDPOINT = "text_to_dialogue_with_timestamps"
+
+
+def _timed_payload(response) -> dict:
+    """What a timed take is cached as: its audio and voice segments, read off
+    the SDK response by attribute (its JSON dump uses wire aliases that vary)."""
+    return {
+        "audio_base_64": response.audio_base_64,
+        "voice_segments": [
+            {
+                "dialogue_input_index": s.dialogue_input_index,
+                "voice_id": s.voice_id,
+                "start_time_seconds": s.start_time_seconds,
+                "end_time_seconds": s.end_time_seconds,
+            }
+            for s in response.voice_segments or ()
+        ],
+    }
+
+
+def _timed_from_payload(payload: dict) -> tuple[bytes, tuple[DialogueSegment, ...]]:
+    import base64
+
+    segments = tuple(
+        DialogueSegment(
+            input_index=int(s["dialogue_input_index"]),
+            voice_id=s["voice_id"],
+            start_s=float(s["start_time_seconds"]),
+            end_s=float(s["end_time_seconds"]),
+        )
+        for s in payload.get("voice_segments") or ()
+    )
+    return base64.b64decode(payload["audio_base_64"]), segments
+
+
+def text_to_dialogue_with_timestamps(
+    turns,
+    *,
+    model_id: str = DIALOGUE_MODEL_ID,
+    output_format: str = "mp3_44100_128",
+    settings: dict | None = None,
+    seed: int | None = None,
+    api_key: str | None = None,
+    cache=True,
+    refresh: bool = False,
+    return_cache_status: bool = False,
+):
+    """:func:`text_to_dialogue`, plus *when* each input is spoken in the take.
+
+    One Text-to-Dialogue pass through ElevenLabs' ``convert_with_timestamps``
+    — the same cross-turn prosody as :func:`text_to_dialogue`, billed the same
+    (per character of the submitted text) — returning
+    ``(audio, segments)``: the take's bytes and its
+    :class:`DialogueSegment`\\ s, in the API's order.
+
+    Cached exactly like :func:`text_to_dialogue` (same parameters, same
+    ``cache``/``refresh`` semantics), under its own key, with the audio and
+    the timings stored as **one** entry: a cache hit returns both, with no API
+    call. The caller's ``api_key`` reaches the client and nothing else — it is
+    not part of the key and never written to the cache.
+
+    ``return_cache_status=True`` returns ``(audio, segments, was_cached)``.
+    """
+    import json
+
+    from mixing import _cache
+
+    inputs = _dialogue_inputs(turns)
+    params = dict(
+        model_id=model_id, output_format=output_format, settings=settings, seed=seed
+    )
+    cache_dir = _cache.resolve_cache_dir(cache, default_factory=_dialogue_cache_dir)
+    key = None
+    if cache_dir is not None:
+        key = _dialogue_cache_key(_TIMED_DIALOGUE_ENDPOINT, inputs, **params)
+        if not refresh:
+            cached = _cache.read_cache(
+                cache_dir, key, suffix=_TIMED_DIALOGUE_SUFFIX, loads=json.loads
+            )
+            if cached is not None:
+                audio, segments = _timed_from_payload(cached)
+                return (
+                    (audio, segments, True)
+                    if return_cache_status
+                    else (
+                        audio,
+                        segments,
+                    )
+                )
+
+    client = _elevenlabs_client(api_key)
+    convert = getattr(client.text_to_dialogue, "convert_with_timestamps", None)
+    if convert is None:
+        raise RuntimeError(
+            "this elevenlabs SDK has no text_to_dialogue.convert_with_timestamps, "
+            "so a dialogue take cannot be timed per line; upgrade elevenlabs"
+        )
+    payload = _timed_payload(convert(**_dialogue_request(inputs, **params)))
+
+    if cache_dir is not None and key is not None:
+        _cache.write_cache(
+            cache_dir,
+            key,
+            payload,
+            suffix=_TIMED_DIALOGUE_SUFFIX,
+            dumps=lambda v: json.dumps(v).encode(),
+        )
+    audio, segments = _timed_from_payload(payload)
+    return (audio, segments, False) if return_cache_status else (audio, segments)

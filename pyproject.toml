@@ -49,8 +49,10 @@ authors = [
 #   there) so a mixing-cache hit reports cost_usd_actual=$0 (braidio#8).
 # mixing>=0.0.85: weave_timeline masters with mixing.loudness.level_file (one
 #   measured gain + true-peak limit, streaming; mixing#130, braidio#130).
+# mixing>=0.0.87: braidio.dialogue_lines reads a take's duration and sample rate
+#   with mixing.probe.probe (added there; braidio#145).
 dependencies = [
-    "mixing[media]>=0.0.85",
+    "mixing[media]>=0.0.87",
     "elevenlabs",
 ]
 

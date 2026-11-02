@@ -100,12 +100,15 @@ from braidio.conversation import (  # noqa: F401
     DEFAULT_CAST,
     render_dialogue,
     render_turns_sequential,
+)
+from braidio.dialogue_lines import (  # noqa: F401
     render_dialogue_lines,
     rerender_line,
     line_cost,
     DialogueTake,
     DialogueLine,
     DialogueTimingError,
+    StaleTakeError,
 )
 from braidio.delivery import (  # noqa: F401
     Delivery,

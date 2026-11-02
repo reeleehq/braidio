@@ -20,8 +20,8 @@ import pytest
 from _audio import AUDIBLE_RMS, RATE, SILENT_RMS, decode, needs_ffmpeg, rms
 
 import braidio
-from braidio.conversation import (
-    ConversationCast,
+from braidio.conversation import ConversationCast
+from braidio.dialogue_lines import (
     DialogueTake,
     DialogueTimingError,
     line_cost,
@@ -42,6 +42,7 @@ HZ = {"voiceA": 330.0, "voiceB": 550.0}
 LEAD_S, GAP_S, TAIL_S = 0.10, 0.20, 0.15  # silence around and between turns
 S_PER_CHAR = 0.01  # a turn's spoken length: 10 ms per character (441 samples)
 MP3_SLACK_S = 0.03  # one mp3 frame (1152 samples) of encoder padding
+ROOM_DIV = 8  # room tone at 1/8 of a voice's level (amplitude 1000)
 
 
 def _samples(t: float) -> int:
@@ -64,11 +65,14 @@ def _tone(hz: float, n: int) -> array:
     )
 
 
-def _timed_take(inputs, *, drop=()):
+def _timed_take(inputs, *, drop=(), decay_s=0.0, room_hz=None):
     """What the fake API answers: audio + where each input is in it.
 
     Input 1 of a multi-input call is reported as TWO segments (a turn may span
-    several); ``drop`` omits the segments of those inputs."""
+    several); ``drop`` omits the segments of those inputs. ``decay_s``: each
+    voice keeps sounding that long past its reported segment end (speech
+    decays past the last aligned character), eating into the pause after it.
+    ``room_hz``: a quiet tone under the whole file, as room tone."""
     from elevenlabs.types import (
         AudioWithTimestampsAndVoiceSegmentsResponseModel,
         VoiceSegment,
@@ -77,10 +81,10 @@ def _timed_take(inputs, *, drop=()):
     pcm, segs, t = array("h", [0] * _samples(LEAD_S)), [], LEAD_S
     for i, inp in enumerate(inputs):
         if i:
-            pcm.extend([0] * _samples(GAP_S))
-            t += GAP_S
+            pcm.extend([0] * _samples(GAP_S - decay_s))
+            t += GAP_S - decay_s
         dur = len(inp["text"]) * S_PER_CHAR
-        pcm.extend(_tone(HZ[inp["voice_id"]], _samples(dur)))
+        pcm.extend(_tone(HZ[inp["voice_id"]], _samples(dur + decay_s)))
         cuts = [(t, t + dur / 2), (t + dur / 2, t + dur)] if i == 1 else [(t, t + dur)]
         if i not in drop:
             segs += [
@@ -94,8 +98,11 @@ def _timed_take(inputs, *, drop=()):
                 )
                 for a, b in cuts
             ]
-        t += dur
+        t += dur + decay_s
     pcm.extend([0] * _samples(TAIL_S))
+    if room_hz is not None:
+        room = _tone(room_hz, len(pcm))
+        pcm = array("h", (x + r // ROOM_DIV for x, r in zip(pcm, room)))
     return AudioWithTimestampsAndVoiceSegmentsResponseModel(
         audio_base_64=base64.b64encode(_wav(pcm)).decode(),
         voice_segments=segs,
@@ -140,12 +147,14 @@ def api(monkeypatch, tmp_path):
     from braidio.tts import DIALOGUE_CACHE_ENV_KEY
 
     monkeypatch.setenv(DIALOGUE_CACHE_ENV_KEY, str(tmp_path / "default-cache"))
-    rec = {"keys": [], "calls": [], "drop": (), "mp3": False}
+    rec = {"keys": [], "calls": [], "drop": (), "mp3": False, "fake": {}, "edit": None}
 
     class _Dialogue:
         def convert_with_timestamps(self, **kw):
             rec["calls"].append(kw)
-            take = _timed_take(kw["inputs"], drop=rec["drop"])
+            take = _timed_take(kw["inputs"], drop=rec["drop"], **rec["fake"])
+            if rec["edit"] is not None:  # a test's own twist on the answer
+                take = rec["edit"](kw, take)
             return _as_mp3(take) if rec["mp3"] else take
 
     class _Client:
@@ -361,3 +370,314 @@ def test_the_line_api_is_exported():
         "DialogueSegment",
     ):
         assert hasattr(braidio, name), name
+
+
+# --- review fixes (braidio#145): every test below failed on the first cut ---
+
+
+def _snr_db(got, ref) -> float:
+    err = math.sqrt(sum((x - y) ** 2 for x, y in zip(got, ref)) / len(ref))
+    sig = math.sqrt(sum(x * x for x in ref) / len(ref))
+    return math.inf if err == 0 else 20 * math.log10(sig / err)
+
+
+def _max_step(pcm, lo: int, hi: int) -> int:
+    return max(abs(pcm[k] - pcm[k - 1]) for k in range(lo, hi))
+
+
+@needs_ffmpeg
+def test_a_one_line_take_spanning_its_whole_file_rerenders(tmp_path, api):
+    """No piece of the take survives the cut: the splice is the new line alone."""
+
+    def whole_file(kw, take):
+        n = sum(len(i["text"]) for i in kw["inputs"]) * S_PER_CHAR
+        pcm = _tone(330.0, _samples(n))
+        seg = take.voice_segments[0].model_copy(
+            update={"start_time_seconds": 0.0, "end_time_seconds": n}
+        )
+        return take.model_copy(
+            update={
+                "audio_base_64": base64.b64encode(_wav(pcm)).decode(),
+                "voice_segments": [seg],
+            }
+        )
+
+    api["edit"] = whole_file
+    take = render_dialogue_lines(
+        [("A", "hi")], CAST, out_path=tmp_path / "one.wav", output_format=FMT
+    )
+    new = rerender_line(take, 0, text="hello", out_path=tmp_path / "two.wav")
+    after = decode(new.path)
+    assert new.lines[0].offset_s == 0.0
+    assert new.lines[0].duration_s == pytest.approx(0.05)
+    assert len(after) == _samples(0.05)
+    assert rms(after, 0.01, 0.04) > AUDIBLE_RMS
+
+
+@needs_ffmpeg
+def test_mp3_edits_do_not_compound_generational_loss(tmp_path, api):
+    """Six in-place edits of line 1: line 0 is as good after the sixth as after
+    the first, because every deliverable is encoded once from the master."""
+    api["mp3"] = True
+    take = render_dialogue_lines(
+        TURNS, CAST, out_path=tmp_path / "take.mp3", cache=False
+    )
+    lo, hi = _samples(take.lines[0].offset_s), _samples(take.lines[0].end_s)
+    ref = decode(take.path)[lo:hi]
+    snrs, cur = [], take
+    for k in range(6):
+        cur = rerender_line(cur, 1, text="Wait, really?" + "?" * (k % 2), cache=False)
+        snrs.append(_snr_db(decode(cur.path)[lo:hi], ref))
+    assert snrs[0] > 20
+    assert snrs[-1] >= snrs[0] - 0.5, snrs
+    assert cur.master.suffix == ".flac" and cur.master.is_file()
+
+
+@needs_ffmpeg
+def test_a_stale_take_is_refused_before_spending(tmp_path, api):
+    take = _render(tmp_path)
+    newer = rerender_line(take, 0, text="So: the bass line is the hook.")
+    calls = len(api["calls"])
+    with pytest.raises(braidio.StaleTakeError, match="changed"):
+        rerender_line(take, 2, text="Hear it.")  # the take before the edit
+    newer.master.unlink()
+    with pytest.raises(braidio.StaleTakeError, match="missing"):
+        rerender_line(newer, 2, text="Hear it.")
+    assert len(api["calls"]) == calls
+
+
+@needs_ffmpeg
+def test_the_new_lines_decay_is_kept_and_the_old_ones_is_gone(tmp_path, api):
+    """Voices decay past their last aligned character. Cutting in the pause,
+    not on the segment edge, keeps the new line's decay and drops the old's.
+    (The new text puts the new tone half a cycle out of phase with the old.)"""
+    decay = 0.03
+    api["fake"] = {"decay_s": decay}
+    take = _render(tmp_path)
+    new_text = "Wait. Really?!"
+    new = rerender_line(take, 1, text=new_text, out_path=tmp_path / "ed.wav")
+    after = decode(new.path)
+    lo = _samples(new.lines[1].offset_s)
+    n = _samples(len(new_text) * S_PER_CHAR + decay)
+    assert after[lo : lo + n] == _tone(HZ["voiceB"], n)  # decay included
+    gap_lo = new.lines[1].end_s + decay + 0.002
+    assert rms(after, gap_lo, new.lines[2].offset_s - 0.002) < SILENT_RMS
+
+
+@needs_ffmpeg
+def test_joins_through_room_tone_are_faded(tmp_path, api):
+    """A cut through room tone joins two unrelated waveforms; the fade at
+    each join keeps the step there to the order of the tone's own. (At 210 Hz
+    the take's room tone is far from zero at the first join, the line's is at
+    zero: a hard cut there steps by ~600.)"""
+    api["fake"] = {"room_hz": 210.0}
+    take = _render(tmp_path)
+    before = decode(take.path)
+    natural = _max_step(before, _samples(0.01), _samples(0.09))  # room tone only
+    new = rerender_line(take, 1, text="Wait. Really?!", out_path=tmp_path / "ed.wav")
+    after = decode(new.path)
+    lines = new.lines
+    for join in (
+        (lines[0].end_s + lines[1].offset_s) / 2,
+        (lines[1].end_s + lines[2].offset_s) / 2,
+    ):
+        k = _samples(join)
+        assert _max_step(after, k - 50, k + 50) <= 2 * natural, join
+
+
+@needs_ffmpeg
+def test_overlapping_turns_are_split_at_the_overlap_midpoint(tmp_path, api):
+    def overlap(kw, take):
+        if len(kw["inputs"]) == 1:
+            return take
+        segs = list(take.voice_segments)
+        segs[0] = segs[0].model_copy(
+            update={"end_time_seconds": segs[1].start_time_seconds + 0.1}
+        )
+        return take.model_copy(update={"voice_segments": segs})
+
+    api["edit"] = overlap
+    take = _render(tmp_path)
+    (off1, _) = _expected_spans(TURNS)[1]
+    mid = (off1 + 0.1 + off1) / 2
+    assert take.lines[0].end_s == pytest.approx(mid)
+    assert take.lines[1].offset_s == pytest.approx(mid)
+    new = rerender_line(take, 0, text="So the bass.", out_path=tmp_path / "ed.wav")
+    assert new.lines[1].offset_s >= new.lines[0].end_s - 1e-9
+    after = decode(new.path)
+    ln = new.lines[1]
+    assert rms(after, ln.offset_s + 0.12, ln.offset_s + 0.16) > AUDIBLE_RMS
+
+
+def test_a_turn_timed_inside_another_is_refused(tmp_path, api):
+    def inside(kw, take):
+        segs = list(take.voice_segments)
+        a, b = segs[0], segs[1]
+        segs[0] = a.model_copy(update={"end_time_seconds": b.end_time_seconds + 0.5})
+        return take.model_copy(update={"voice_segments": segs})
+
+    api["edit"] = inside
+    with pytest.raises(DialogueTimingError, match="turn 1 is timed inside"):
+        _render(tmp_path)
+
+
+@needs_ffmpeg
+def test_empty_text_is_refused_before_spending(tmp_path, api):
+    with pytest.raises(ValueError, match=r"turn\(s\) \[1\]"):
+        render_dialogue_lines(
+            [("A", "hi"), ("B", "  ")], CAST, out_path=tmp_path / "x.wav"
+        )
+    assert api["calls"] == []
+    take = _render(tmp_path)
+    with pytest.raises(ValueError, match="no text"):
+        rerender_line(take, 1, text="")
+    assert len(api["calls"]) == 1
+
+
+@needs_ffmpeg
+def test_a_rerender_without_a_segment_for_the_line_raises(tmp_path, api):
+    take = _render(tmp_path)
+    before = decode(take.path)
+    api["drop"] = (0,)
+    with pytest.raises(DialogueTimingError, match="without a voice segment"):
+        rerender_line(take, 1, text="Wait. Really?")
+    assert decode(take.path) == before  # nothing was spliced
+    assert not [p for p in take.path.parent.iterdir() if p.name.startswith(".")]
+
+
+@needs_ffmpeg
+def test_from_dict_checks_the_stored_take(tmp_path, api):
+    d = _render(tmp_path).to_dict()
+    for broken, match in (
+        ({"turns": d["turns"][:1]}, "one line per turn"),
+        ({"cast": {**d["cast"], "roles": {"A": "voiceA"}}}, "no voice for role"),
+        ({"lines": [d["lines"][1], d["lines"][0], d["lines"][2]]}, "line 0 must"),
+        (
+            {
+                "lines": [
+                    d["lines"][0],
+                    {**d["lines"][1], "offset_s": 0.2},
+                    d["lines"][2],
+                ]
+            },
+            "starts before line 0 ends",
+        ),
+    ):
+        with pytest.raises(ValueError, match=match):
+            DialogueTake.from_dict({**d, **broken})
+
+
+@needs_ffmpeg
+def test_the_callers_key_is_not_in_the_timed_cache_key(tmp_path, api):
+    _render(tmp_path, api_key="key-one")
+    _, cached = _render(tmp_path, api_key="key-two", return_cache_status=True)
+    assert cached and len(api["calls"]) == 1
+
+
+@needs_ffmpeg
+def test_rerender_sends_the_seed_and_the_casts_model_and_settings(tmp_path, api):
+    cast = ConversationCast(
+        roles=CAST.roles, model_id="eleven_v3", settings={"stability": 0.3}
+    )
+    take = render_dialogue_lines(
+        TURNS, cast, out_path=tmp_path / "t.wav", output_format=FMT, seed=3
+    )
+    rerender_line(take, 1, text="Wait. Really?", seed=7)
+    first, line = api["calls"]
+    for call in (first, line):
+        assert call["model_id"] == "eleven_v3"
+        assert call["settings"] == {"stability": 0.3}
+    assert (first["seed"], line["seed"]) == (3, 7)
+
+
+@needs_ffmpeg
+def test_the_deliverable_is_encoded_at_the_formats_sample_rate(tmp_path, api):
+    """The fake answers at 44.1 kHz whatever is asked; an edit's deliverable
+    must still be at the rate ``output_format`` names."""
+    from mixing.probe import probe
+
+    take = render_dialogue_lines(
+        TURNS, CAST, out_path=tmp_path / "t.wav", output_format="wav_22050"
+    )
+    new = rerender_line(take, 1, text="Wait. Really?")
+    assert probe(new.path, count_packets=False).sample_rate == 22050
+    after = decode(new.path)
+    for ln in new.lines:
+        mid = ln.offset_s + ln.duration_s / 2
+        assert rms(after, mid - 0.02, mid + 0.02) > AUDIBLE_RMS
+
+
+@needs_ffmpeg
+def test_rerender_refuses_an_unspliceable_take_before_spending(tmp_path, api):
+    from dataclasses import replace
+
+    take = replace(_render(tmp_path), output_format="pcm_44100")
+    with pytest.raises(ValueError, match="pcm_44100"):
+        rerender_line(take, 1, text="Wait. Really?")
+    assert len(api["calls"]) == 1
+
+
+@needs_ffmpeg
+def test_a_line_timed_past_its_audio_is_clamped_to_it(tmp_path, api):
+    """A segment end past the solo file is clamped: the line's recorded
+    duration is the audio it has, so the pause after it keeps its length."""
+
+    def overshoot(kw, take):
+        if len(kw["inputs"]) > 1:
+            return take
+        seg = take.voice_segments[0]
+        late = seg.model_copy(update={"end_time_seconds": seg.end_time_seconds + 1.0})
+        return take.model_copy(update={"voice_segments": [late]})
+
+    api["edit"] = overshoot
+    take = _render(tmp_path)
+    new_text = "Wait. Really?"
+    new = rerender_line(take, 1, text=new_text, out_path=tmp_path / "ed.wav")
+    # the solo is lead + voice + tail: what follows its start is voice + tail
+    assert new.lines[1].duration_s == pytest.approx(len(new_text) * S_PER_CHAR + TAIL_S)
+    after = decode(new.path)
+    assert len(after) / RATE == pytest.approx(new.lines[2].end_s + TAIL_S, abs=1e-4)
+
+
+@needs_ffmpeg
+def test_the_synthesize_seam_voices_the_line_without_the_client(tmp_path, api):
+    from braidio.tts import DialogueSegment
+
+    take = _render(tmp_path)
+    seen = {}
+    d = len("Hm.") * S_PER_CHAR
+
+    def synth(voice_id, text, **kw):
+        seen.update(kw, voice_id=voice_id, text=text)
+        pcm = array("h", [0] * _samples(LEAD_S))
+        pcm.extend(_tone(HZ[voice_id], _samples(d)))
+        pcm.extend([0] * _samples(TAIL_S))
+        return _wav(pcm), [DialogueSegment(0, voice_id, LEAD_S, LEAD_S + d)], False
+
+    new = rerender_line(take, 1, text="Hm.", seed=5, api_key="k", synthesize=synth)
+    assert len(api["keys"]) == 1  # only the take's own render built a client
+    assert (seen["voice_id"], seen["text"], seen["seed"], seen["api_key"]) == (
+        "voiceB",
+        "Hm.",
+        5,
+        "k",
+    )
+    assert seen["settings"] == CAST.settings and seen["model_id"] == CAST.model_id
+    assert new.lines[1].duration_s == pytest.approx(d)
+
+
+@needs_ffmpeg
+def test_a_last_line_timed_past_the_take_ends_with_the_take(tmp_path, api):
+    def late_end(kw, take):
+        segs = list(take.voice_segments)
+        segs[-1] = segs[-1].model_copy(
+            update={"end_time_seconds": segs[-1].end_time_seconds + TAIL_S + 0.05}
+        )
+        return take.model_copy(update={"voice_segments": segs})
+
+    api["edit"] = late_end
+    take = _render(tmp_path)
+    total = len(decode(take.path)) / RATE
+    assert take.lines[-1].end_s == pytest.approx(total)
+    new = rerender_line(take, 2, text="Listen again!", out_path=tmp_path / "ed.wav")
+    assert new.lines[-1].end_s <= len(decode(new.path)) / RATE + 1e-9

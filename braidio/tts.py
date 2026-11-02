@@ -478,14 +478,9 @@ def text_to_dialogue_with_timestamps(
             )
             if cached is not None:
                 audio, segments = _timed_from_payload(cached)
-                return (
-                    (audio, segments, True)
-                    if return_cache_status
-                    else (
-                        audio,
-                        segments,
-                    )
-                )
+                if return_cache_status:
+                    return audio, segments, True
+                return audio, segments
 
     client = _elevenlabs_client(api_key)
     convert = getattr(client.text_to_dialogue, "convert_with_timestamps", None)

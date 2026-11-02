@@ -1,4 +1,4 @@
-> built 2026-11-02 07:36 UTC from 02b9609 (main) · braidio 0.0.98. Details: build_info.json
+> built 2026-11-02 08:10 UTC from cf27694 (main) · braidio 0.0.99. Details: build_info.json
 
 # index.html.md
 
@@ -5142,18 +5142,20 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-02 07:36 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/02b9609235830cb4d4d86b22092f1d155728e09e"><code>02b9609</code></a> on branch <code>main</code>, for **braidio 0.0.98** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 08:10 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/cf27694c4c405c94c46bea24f13bf34dcf2fadf0"><code>cf27694</code></a> on branch <code>main</code>, for **braidio 0.0.99** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.99) is ahead of the latest release on PyPI (0.0.98): these docs describe unreleased code.
 
 ## Source
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/02b9609235830cb4d4d86b22092f1d155728e09e"><code>02b9609235830cb4d4d86b22092f1d155728e09e</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/cf27694c4c405c94c46bea24f13bf34dcf2fadf0"><code>cf27694c4c405c94c46bea24f13bf34dcf2fadf0</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | none                                                                                                                                                    |
+| Tags at this commit | <code>0.0.99</code>                                                                                                                                     |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -5162,9 +5164,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41406824093">41406824093</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41410463668">41410463668</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>432a021a31c2bb2ae77362c3cf0d1f5c7b7e076e</code> (in the history of the built commit) |
+| Event commit | <code>1db0a856958362d01b77b5515669c0f2ec815d69</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5189,13 +5191,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.98/">0.0.98</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/braidio/0.0.98/">0.0.98</a>, older than the documented version (0.0.99).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 02b9609235830cb4d4d86b22092f1d155728e09e
+git checkout cf27694c4c405c94c46bea24f13bf34dcf2fadf0
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

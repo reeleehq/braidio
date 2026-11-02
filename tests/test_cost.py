@@ -142,6 +142,32 @@ def test_estimate_dialogue_uses_dialogue_model_rate(monkeypatch):
     assert est.usd == pytest.approx(DEFAULT_USD_PER_1K_CHARS + 0.9)
 
 
+def test_estimate_prices_the_script_at_the_named_model(monkeypatch):
+    # braidio#143: a Script used to be priced at DEFAULT_MODEL_ID whatever
+    # model_id said. Distinct confirmed rates make the model visible in the sum.
+    monkeypatch.setattr(cost_module, "DIALOGUE_MODEL_ID", "test-dialogue-model")
+    monkeypatch.setitem(MODEL_USD_PER_1K_CHARS, DEFAULT_MODEL_ID, 0.1)
+    monkeypatch.setitem(MODEL_USD_PER_1K_CHARS, "test-narration-model", 0.5)
+    monkeypatch.setitem(MODEL_USD_PER_1K_CHARS, "test-dialogue-model", 0.9)
+    script = Script(
+        title="t",
+        id_slug="01",
+        beats=[Narration(text="n" * 1000), Dialogue(turns=(("A", "d" * 1000),))],
+    )
+    est = estimate_cost(script, model_id="test-narration-model")
+    # the narration at the named model; dialogue stays on its own model
+    assert est.usd == pytest.approx(0.5 + 0.9)
+    assert [ln.model_id for ln in est.lines] == [
+        "test-narration-model",
+        "test-dialogue-model",
+    ]
+    # no confirmed rate of its own: the general rate, never the default model's
+    unknown = estimate_cost(script, model_id="test-unrated-model")
+    assert unknown.usd == pytest.approx(DEFAULT_USD_PER_1K_CHARS + 0.9)
+    # no model named: the default model, as before
+    assert estimate_cost(script).usd == pytest.approx(0.1 + 0.9)
+
+
 def test_estimate_all_segments_is_free():
     script = Script(
         title="t",

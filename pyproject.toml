@@ -47,8 +47,10 @@ authors = [
 # Functional core deps. Also requires `ffmpeg`/`ffprobe` on PATH (system dep).
 # mixing>=0.0.28: narrate() calls text_to_speech(return_cache_status=...) (added
 #   there) so a mixing-cache hit reports cost_usd_actual=$0 (braidio#8).
+# mixing>=0.0.85: weave_timeline masters with mixing.loudness.level_file (one
+#   measured gain + true-peak limit, streaming; mixing#130, braidio#130).
 dependencies = [
-    "mixing[media]>=0.0.77",
+    "mixing[media]>=0.0.85",
     "elevenlabs",
 ]
 

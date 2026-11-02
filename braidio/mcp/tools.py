@@ -384,8 +384,10 @@ def ingest_document(
         raise ToolError(f"no project {project_id!r} — call create_project first")
     try:
         if uri:
-            data, ctype = _docs.fetch_uri(_docs.direct_file_url(uri))
-            if _docs.is_share_link(uri):  # a share host's page is never the document
+            direct_url, rewritten = _docs.resolve_file_link(uri)
+            data, ctype = _docs.fetch_uri(direct_url)
+            _docs.refuse_archive_document(data)
+            if rewritten:  # a rewritten link's page is the host's, not the document
                 _docs.refuse_page_or_archive(data, uri=uri, kind="document")
             src = uri
         elif text is not None:
@@ -492,7 +494,8 @@ def upload_asset(
 
     if uri:
         try:
-            data, ctype = _docs.fetch_uri(_docs.direct_file_url(uri))
+            direct_url, _ = _docs.resolve_file_link(uri)
+            data, ctype = _docs.fetch_uri(direct_url)
         except ValueError as exc:
             raise ToolError(str(exc)) from exc
         src = uri

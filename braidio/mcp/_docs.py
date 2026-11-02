@@ -13,11 +13,19 @@ for every refusal (what the tools turn into a ``ToolError``) and a content type.
 Extraction is content-type aware: HTML is stripped to text, PDF uses ``pypdf``
 (page-capped), everything else is decoded as UTF-8.
 
-Media uploads (``upload_asset``) use the same fetch, plus two guards:
-:func:`direct_file_url` turns a pasted share link into its download, and
-:func:`refuse_page_or_archive` keeps a web page or an archive out of the asset
-library. ``ingest_document`` resolves share links the same way, and refuses a
-page only when a share host answered with one (its sign-in or preview page).
+Both URI tools resolve a pasted share link first: :func:`resolve_file_link`
+returns the URL whose body is the file, and whether that URL is a *rewrite* of
+the one given (a Dropbox ``dl=0`` or Drive ``/view`` link turned into its
+download). Then each guards the bytes for what it expects:
+
+- ``upload_asset``: :func:`refuse_page_or_archive` keeps a web page or an
+  archive out of the asset library, always.
+- ``ingest_document``: an HTML body is refused only when the link was
+  rewritten, because then it is the host's sign-in or preview page; an
+  un-rewritten URL's HTML may be the document itself (a plain web page, a
+  Google Docs ``/pub`` or ``/export?format=html``). An archive is always
+  refused (:func:`refuse_archive_document`): ``docx``/``epub``/``odt`` are ZIPs
+  and :func:`extract_text` cannot read one.
 """
 
 from __future__ import annotations
@@ -127,13 +135,21 @@ def fetch_uri(uri: str, **fetch_options) -> tuple[bytes, str]:
 PAGE_OR_ARCHIVE_FAMILIES = frozenset({"html", "archive"})
 
 
-def direct_file_url(uri: str) -> str:
-    """The URL whose body is the file a pasted ``uri`` names.
+def resolve_file_link(uri: str) -> tuple[str, bool]:
+    """``(direct_url, rewritten)`` for a pasted ``uri``.
 
-    A Dropbox ``dl=0`` or Google Drive ``/view`` link is a web page about the
-    file; :func:`graze.share_links.resolve_share_url` turns it into the
-    download (a plain URL passes through). A folder link is refused: it is
-    many files, and what is asked for is one. ``ValueError`` names why.
+    ``direct_url`` is the URL whose body is the file: a Dropbox ``dl=0`` or
+    Google Drive ``/view`` link is a web page about the file, and
+    :func:`graze.share_links.resolve_share_url` turns it into the download (a
+    plain URL, or one that already names a download or export, passes through).
+    ``rewritten`` says whether it did: only then is an HTML body known to be the
+    host's page rather than the file. A folder link is refused: it is many
+    files, and what is asked for is one. ``ValueError`` names why.
+
+    >>> resolve_file_link('https://drive.google.com/file/d/1AbC/view')
+    ('https://drive.google.com/uc?export=download&id=1AbC', True)
+    >>> resolve_file_link('https://docs.google.com/document/d/1X/pub')
+    ('https://docs.google.com/document/d/1X/pub', False)
     """
     from graze.share_links import ShareLinkKind, resolve_share_url
 
@@ -147,18 +163,8 @@ def direct_file_url(uri: str) -> str:
         raise ValueError(
             f"{resolved.provider} link cannot be downloaded directly: {resolved.reason}"
         )
-    return resolved.direct_url
-
-
-def is_share_link(uri: str) -> bool:
-    """Whether ``uri`` is a file-host share link (Dropbox, Drive, OneDrive…)
-    rather than a plain URL (:func:`graze.share_links.resolve_share_url`)."""
-    from graze.share_links import resolve_share_url
-
-    return resolve_share_url(uri).provider not in _NOT_A_SHARE_HOST
-
-
-_NOT_A_SHARE_HOST = frozenset({"http", "unknown"})  # graze's non-provider slugs
+    # ``resolved.url`` is the input as resolved (whitespace-stripped)
+    return resolved.direct_url, resolved.direct_url != resolved.url
 
 
 def refuse_page_or_archive(
@@ -183,6 +189,22 @@ def refuse_page_or_archive(
             assert_content_kind(head, expect_kind=kind, url=uri)
         except ContentKindMismatch as err:
             raise ValueError(str(err)) from err
+
+
+def refuse_archive_document(data: bytes) -> None:
+    """``ValueError`` when ``data`` is an archive where a document was expected.
+
+    ``docx``, ``epub`` and ``odt`` are ZIPs, and :func:`extract_text` decodes
+    bytes as text, so an archive is never a readable document, whatever link
+    it came from.
+    """
+    from graze.content_kind import SNIFF_BYTES, sniff_content_family
+
+    if sniff_content_family(data[:SNIFF_BYTES]) == "archive":
+        raise ValueError(
+            "this is an archive, not a readable document: ZIP-based formats "
+            "(docx, epub, odt) are not supported; export it as PDF or plain text"
+        )
 
 
 def _pdf_text(data: bytes) -> str:

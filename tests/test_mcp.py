@@ -1889,9 +1889,51 @@ def test_ingest_document_refuses_a_share_host_s_sign_in_page(monkeypatch):
     server = _local_server(ledger={})
     _call(server, "create_project", {"project_id": "d", "title": "D"})
     share = "https://www.dropbox.com/scl/fi/abc/essay.pdf?rlkey=x&dl=0"
-    with pytest.raises(ToolError, match="anyone-with-the-link"):
+    with pytest.raises(ToolError, match="expected document bytes"):
         _call(server, "ingest_document", {"project_id": "d", "uri": share})
     plain = _call(
         server, "ingest_document", {"project_id": "d", "uri": "https://example.com/a"}
     ).structured_content
     assert "Sign in" in plain["text"]
+
+
+@pytest.mark.parametrize(
+    "uri",
+    [
+        "https://docs.google.com/document/d/1X/pub",
+        "https://docs.google.com/document/d/1X/export?format=html",
+    ],
+)
+def test_ingest_document_reads_a_google_docs_published_page(monkeypatch, uri):
+    """A Docs ``/pub`` or ``/export?format=html`` URL is not rewritten by the
+    share-link resolver, so its HTML is the document, not a host's page."""
+    from braidio.mcp import _docs
+
+    fetched = []
+    page = (b"<html><body><p>The published essay.</p></body></html>", "text/html")
+    monkeypatch.setattr(_docs, "fetch_uri", lambda u: fetched.append(u) or page)
+    server = _local_server(ledger={})
+    _call(server, "create_project", {"project_id": "d", "title": "D"})
+    out = _call(
+        server, "ingest_document", {"project_id": "d", "uri": uri}
+    ).structured_content
+    assert fetched == [uri]
+    assert out["text"] == "The published essay."
+
+
+def test_ingest_document_refuses_a_zip_based_document(monkeypatch):
+    """docx/epub/odt are ZIPs: never readable as text, from any URL."""
+    from fastmcp.exceptions import ToolError
+
+    from braidio.mcp import _docs
+
+    docx = (b"PK\x03\x04\x14\x00\x06\x00word/document.xml", "application/zip")
+    monkeypatch.setattr(_docs, "fetch_uri", lambda uri: docx)
+    server = _local_server(ledger={})
+    _call(server, "create_project", {"project_id": "d", "title": "D"})
+    with pytest.raises(ToolError, match=r"ZIP-based formats \(docx, epub, odt\)"):
+        _call(
+            server,
+            "ingest_document",
+            {"project_id": "d", "uri": "https://example.com/essay.docx"},
+        )

@@ -60,6 +60,14 @@ class Sting:
     fade_out_s: float = _DEFAULT_STING_FADE_OUT_S
     gap_after_s: float = _DEFAULT_STING_GAP_AFTER_S
 
+    def __post_init__(self) -> None:
+        # a zero-length sting would reach the leveller as an empty part and fail
+        # mid-render; refuse it where the production is declared (braidio#149)
+        if not self.max_len_s > 0:
+            raise ValueError(
+                f"Sting.max_len_s must be > 0 seconds, got {self.max_len_s!r}"
+            )
+
 
 @dataclass(frozen=True)
 class MusicStructure:

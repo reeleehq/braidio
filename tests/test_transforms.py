@@ -1567,3 +1567,50 @@ def test_a_failed_weave_carries_what_it_spent_on_its_exception(
         tts_cost_usd(first_line, model_id=DEFAULT_MODEL_ID)
     )
     assert receipt.has_unknown_costs
+
+
+def test_a_reweave_after_an_edit_and_its_revert_settles(
+    project, script_and_source, patched_synthesis
+):
+    """braidio#169: edit beat 0, re-weave, revert it, re-weave: a further
+    re-weave with nothing changed is a no-op, like any other."""
+    import dataclasses
+
+    import nw
+
+    script, source = script_and_source
+    edited = dataclasses.replace(
+        script, beats=[braidio.Narration(text="Edited opening."), *script.beats[1:]]
+    )
+    braidio.weave_project(project, script, source=source)
+    braidio.weave_project(project, edited, source=source)
+    reverted = braidio.weave_project(project, script, source=source)
+    before = {a.id for a in nw.iter_all_annotations(project.root)}
+
+    again = braidio.weave_project(project, script, source=source)
+
+    assert again.id == reverted.id
+    assert {a.id for a in nw.iter_all_annotations(project.root)} == before
+
+
+def test_a_revert_reuses_the_original_take_without_synthesis(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """The reverted text's original take is fresh again: reverting re-weaves
+    over it rather than synthesizing (or adopting) a new one."""
+    import dataclasses
+
+    script, source = script_and_source
+    edited = dataclasses.replace(
+        script, beats=[braidio.Narration(text="Edited opening."), *script.beats[1:]]
+    )
+    first = braidio.weave_project(project, script, source=source)
+    braidio.weave_project(project, edited, source=source)
+    spoken = []
+    real = braidio.narrate
+    monkeypatch.setattr(
+        braidio, "narrate", lambda t, o, **kw: spoken.append(t) or real(t, o, **kw)
+    )
+    reverted = braidio.weave_project(project, script, source=source)
+    assert spoken == []
+    assert reverted.body["ordered_member_ids"][0] == first.body["ordered_member_ids"][0]

@@ -202,8 +202,9 @@ def refuse_archive_document(data: bytes) -> None:
 
     if sniff_content_family(data[:SNIFF_BYTES]) == "archive":
         raise ValueError(
-            "this is an archive, not a readable document: ZIP-based formats "
-            "(docx, epub, odt) are not supported; export it as PDF or plain text"
+            "this is an archive (zip/gzip), not a readable document: archives and "
+            "ZIP-based formats (docx, epub, odt) are not supported; export it as "
+            "PDF or plain text"
         )
 
 

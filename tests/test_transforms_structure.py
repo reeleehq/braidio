@@ -81,8 +81,8 @@ def silent_narration(monkeypatch):
 def tone_narration(monkeypatch):
     """narrate() → a fixed length of *tone*.
 
-    ffmpeg's ``loudnorm`` aborts on a mix that is 100% digital silence, so any
-    render whose only other part is a pause needs audible talk on either side.
+    Audible talk on either side of a pause, so a render whose only other part
+    is that pause still has something to measure.
     """
 
     def fake_narrate(text, out, *, return_cache_status=False, **kw):

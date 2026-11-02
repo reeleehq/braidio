@@ -61,10 +61,9 @@ PRE_CHANGE_DEFAULTS = {
 def tone_narration(monkeypatch):
     """narrate() → a fixed length of *tone*. No TTS call, no spend.
 
-    Audible rather than silent because ffmpeg's ``loudnorm`` aborts on a mix
-    that is 100% digital silence — and a published cut that drops its only clip
-    is exactly such a mix (same reason ``tests/test_transforms_structure.py``
-    keeps a tone fixture).
+    Audible rather than silent so the render's assertions have talk to find
+    (a published cut that drops its only clip is otherwise all silence); same
+    as the tone fixture in ``tests/test_transforms_structure.py``.
     """
 
     def fake_narrate(text, out, *, return_cache_status=False, **kw):

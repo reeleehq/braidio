@@ -9,7 +9,8 @@ Two generic, Hamilton-agnostic primitives:
 - :func:`weave_timeline` — place ordered narration/clip parts on a timeline
   where each clip **overlaps its neighbours** by ``clip_edge_overlap_s`` and its
   faded padded edges duck under the speech, so **speech stays dominant**, then
-  mix (``amix`` sum) and loudness-normalize.
+  mix (``amix`` sum) and master it with one measured gain and a true-peak
+  limit (:func:`mixing.loudness.level_file`), so the mix keeps its dynamics.
 
 This is the audio counterpart of a video timeline; it consumes plain file paths
 + numbers, no Genius/lyrics knowledge (that resolution lives in
@@ -24,10 +25,14 @@ import json
 import random
 import shutil
 import subprocess
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-_LOUDNESS_RANGE = 11  # loudnorm LRA target for the mastered mix
+#: Encoder options of the mastered file (ignored by a lossless format).
+_MASTER_ENCODE_ARGS = ("-b:a", "192k")
+#: The unmastered mix is float, so a sum above full scale survives to the limiter.
+_UNMASTERED_CODEC = "pcm_f32le"
 
 #: Upper bound of the intelligible range for a speaker interruption: past it two
 #: voices talking over each other stop being understood (Hamilton#22).
@@ -377,6 +382,10 @@ def weave_timeline(
     ``overlap`` (a :class:`TurnOverlap`, e.g. ``WeaveConfig.turn_overlap()``)
     lays a change of speaker as an interruption and, with ``duck_db``, lowers
     the outgoing voice's talked-over tail (see :func:`layout_placed`).
+
+    The mix is mastered with one measured gain to ``target_lufs`` (LUFS) and a
+    true-peak limit at ``true_peak`` (dBTP), so it keeps its own dynamics: a
+    quiet passage stays quiet relative to its loud neighbours.
     """
     _require_ffmpeg()
     if not items:
@@ -467,27 +476,45 @@ def weave_timeline(
     mix = (
         "".join(labels) + f"amix=inputs={n_inputs}:normalize=0:dropout_transition=0[m]"
     )
-    norm = f"[m]loudnorm=I={target_lufs}:TP={true_peak}:LRA={_LOUDNESS_RANGE}[out]"
-    filtergraph = ";".join(filters + [mix, norm])
+    filtergraph = ";".join(filters + [mix])
 
-    subprocess.run(
-        [
-            "ffmpeg",
-            "-y",
-            *inputs,
-            "-filter_complex",
-            filtergraph,
-            "-map",
-            "[out]",
-            "-ar",
-            str(sample_rate),
-            "-ac",
-            "2",
-            "-b:a",
-            "192k",
-            str(out),
-        ],
-        check=True,
-        capture_output=True,
-    )
+    # Mix, then master: one measured gain to ``target_lufs`` and a true-peak limit
+    # at ``true_peak``. One-pass ``loudnorm`` would ride the gain through the mix
+    # and pull a quiet passage between two loud ones up (braidio#130). The
+    # intermediate is float on disk and ``level_file`` streams it, so memory does
+    # not grow with the episode. Imported here: the mix engine stays free of the
+    # mixing/TTS layers at import (tests/test_turn_overlap.py guards that).
+    from mixing.loudness import level_file
+
+    with tempfile.TemporaryDirectory(prefix="braidio-mix-") as work:
+        # named after ``out``: a GainCappedWarning names this file
+        unmastered = Path(work) / f"{out.stem}.wav"
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                *inputs,
+                "-filter_complex",
+                filtergraph,
+                "-map",
+                "[m]",
+                "-ar",
+                str(sample_rate),
+                "-ac",
+                "2",
+                "-c:a",
+                _UNMASTERED_CODEC,
+                str(unmastered),
+            ],
+            check=True,
+            capture_output=True,
+        )
+        level_file(
+            unmastered,
+            out,
+            target_lufs=target_lufs,
+            ceiling_db=true_peak,
+            sample_rate=sample_rate,
+            encode_args=_MASTER_ENCODE_ARGS,
+        )
     return out

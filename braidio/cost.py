@@ -30,8 +30,9 @@ from __future__ import annotations
 import math
 import os
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Iterable, Optional, Union
 
+from braidio.rights import DEFAULT_PROFILE, Profile, RenderPlan, plan_production
 from braidio.script import Script, Dialogue
 from braidio.tts import DEFAULT_MODEL_ID, DIALOGUE_MODEL_ID
 
@@ -172,6 +173,24 @@ class CostRollup:
     unpriced: bool
     lines: tuple[CostLine, ...] = ()
 
+    @classmethod
+    def from_lines(cls, lines: Iterable[CostLine]) -> CostRollup:
+        """The rollup of ``lines``: exact characters, honest dollars.
+
+        ``usd`` sums the priced lines; billable text with no rate makes it a
+        lower bound (``unpriced``), and only when nothing at all is priced does
+        it become ``None``. No billable text is a genuine ``0.0``.
+
+        >>> CostRollup.from_lines([]).usd
+        0.0
+        """
+        lines = tuple(lines)
+        characters = sum(ln.characters for ln in lines)
+        priced = [ln.usd for ln in lines if ln.usd is not None]
+        unpriced = any(ln.characters > 0 and ln.usd is None for ln in lines)
+        usd = round(sum(priced), 6) if priced else (None if unpriced else 0.0)
+        return cls(characters=characters, usd=usd, unpriced=unpriced, lines=lines)
+
     @property
     def summary(self) -> str:
         """One-line human summary (handy for a CLI/MCP preview)."""
@@ -180,23 +199,14 @@ class CostRollup:
         return f"{self.characters:,} chars → {dollars}{tail}"
 
 
-def plan_cost_lines(
-    plan,
+def _plan_lines(
+    plan: RenderPlan,
     *,
     model_id: Optional[str] = None,
     dialogue_model_id: Optional[str] = None,
     script: Optional[Script] = None,
 ) -> list[CostLine]:
-    """Billable lines of a :class:`~braidio.rights.RenderPlan`: what WILL be synthesized.
-
-    Narration is priced at ``model_id`` and dialogue at ``dialogue_model_id``:
-    the models the render actually submits (a delivery's, a cast's). Clips and
-    scene breaks are local work, free, and contribute no line. Pricing the plan
-    rather than the raw script is what makes a ``published`` cut honest: dropped
-    clips cost nothing and synthesized substitutes are billed. ``script`` (the
-    one planned) only lends a dialogue beat its label. ``None`` models resolve
-    to :data:`~braidio.tts.DEFAULT_MODEL_ID` / ``DIALOGUE_MODEL_ID`` at call time.
-    """
+    """The billable :class:`CostLine`\\ s of ``plan`` — :func:`price_plan`'s body."""
     model_id = model_id or DEFAULT_MODEL_ID
     dialogue_model_id = dialogue_model_id or DIALOGUE_MODEL_ID
     lines: list[CostLine] = []
@@ -227,23 +237,8 @@ def plan_cost_lines(
     return lines
 
 
-def rollup(lines) -> CostRollup:
-    """The :class:`CostRollup` of ``lines``: exact characters, honest dollars.
-
-    ``usd`` sums the priced lines; billable text with no rate makes it a lower
-    bound (``unpriced``), and only when nothing at all is priced does it become
-    ``None``. No billable text is a genuine ``0.0``.
-    """
-    lines = tuple(lines)
-    characters = sum(ln.characters for ln in lines)
-    priced = [ln.usd for ln in lines if ln.usd is not None]
-    unpriced = any(ln.characters > 0 and ln.usd is None for ln in lines)
-    usd = round(sum(priced), 6) if priced else (None if unpriced else 0.0)
-    return CostRollup(characters=characters, usd=usd, unpriced=unpriced, lines=lines)
-
-
 def price_plan(
-    plan,
+    plan: RenderPlan,
     *,
     model_id: Optional[str] = None,
     dialogue_model_id: Optional[str] = None,
@@ -253,10 +248,16 @@ def price_plan(
 
     :func:`estimate_cost` and every render's spend report are this function
     over :func:`braidio.plan_production`'s output, each with the models it
-    renders with (:func:`plan_cost_lines`).
+    renders with. Narration is priced at ``model_id`` and dialogue at
+    ``dialogue_model_id`` (``None`` = :data:`~braidio.tts.DEFAULT_MODEL_ID` /
+    ``DIALOGUE_MODEL_ID``, resolved at call time); clips and scene breaks are
+    local work, free, and contribute no line. Pricing the plan rather than the
+    raw script is what makes a ``published`` cut honest: dropped clips cost
+    nothing and synthesized substitutes are billed. ``script`` (the one
+    planned) only lends a dialogue line its label.
     """
-    return rollup(
-        plan_cost_lines(
+    return CostRollup.from_lines(
+        _plan_lines(
             plan, model_id=model_id, dialogue_model_id=dialogue_model_id, script=script
         )
     )
@@ -267,7 +268,7 @@ def estimate_cost(
     *,
     model_id: Optional[str] = None,
     dialogue_model_id: Optional[str] = None,
-    profile=None,
+    profile: Union[Profile, str, None] = None,
 ) -> CostRollup:
     """Estimate ElevenLabs spend for a :class:`braidio.Script` or a raw string.
 
@@ -281,8 +282,13 @@ def estimate_cost(
     what the default cast uses); each rate resolves like any other
     (:func:`usd_per_1k_chars`), so a model with no confirmed rate of its own
     gets the general rate, never another model's. A script is priced through
-    :func:`braidio.plan_production` under ``profile`` (default: the default
-    profile, which plays every beat), so the estimate is of what renders.
+    :func:`braidio.plan_production` under ``profile`` (a :class:`~braidio.Profile`
+    or its value, e.g. ``"published"``; default :data:`~braidio.rights.DEFAULT_PROFILE`,
+    which plays every beat), so the estimate is of what renders: under
+    ``"published"`` a dropped clip costs nothing and a ``published_text`` or
+    ``published_substitute`` is billed in its beat's place. A beat of a type
+    the planner does not know raises ``TypeError`` (from ``plan_production``)
+    rather than being skipped, so an estimate is never silently short.
 
     >>> from braidio import Script, Narration, SegmentBeat
     >>> s = Script(title="x", id_slug="01", beats=[
@@ -290,11 +296,9 @@ def estimate_cost(
     >>> estimate_cost(s).characters  # only the narration counts; the clip is free
     500
     """
-    from braidio.rights import DEFAULT_PROFILE, plan_production
-
     model_id = model_id or DEFAULT_MODEL_ID
     if isinstance(source, str):
-        return rollup(
+        return CostRollup.from_lines(
             [
                 CostLine(
                     label="text",
@@ -305,7 +309,11 @@ def estimate_cost(
                 )
             ]
         )
-    plan = plan_production(source, profile if profile is not None else DEFAULT_PROFILE)
+    # a str profile must become the enum: plan_production compares by identity
+    # (``is Profile.PUBLISHED``), so "published" would plan a half-published cut
+    plan = plan_production(
+        source, DEFAULT_PROFILE if profile is None else Profile(profile)
+    )
     return price_plan(
         plan, model_id=model_id, dialogue_model_id=dialogue_model_id, script=source
     )

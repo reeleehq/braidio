@@ -193,3 +193,53 @@ def test_estimate_summary_is_human_readable():
     est = estimate_cost("a" * 1000)
     assert "1,000 chars" in est.summary
     assert "$" in est.summary
+
+
+# --- the estimate is of what renders: profile + the models voiced with (#155) --
+
+
+@pytest.mark.parametrize("published", ["published", "PUBLISHED_ENUM"])
+def test_estimate_prices_the_published_cut_not_the_raw_script(published):
+    # A published estimate drops the unpublishable clip with no substitute,
+    # bills the substitute in place of the one that has one, and bills a
+    # narration's published_text instead of its text. The profile given as
+    # its string value must plan the SAME cut as the enum: plan_production
+    # compares by identity, so an uncoerced "published" would drop the clips
+    # yet keep the original narration (a half-published plan).
+    from braidio import Profile
+
+    profile = Profile.PUBLISHED if published == "PUBLISHED_ENUM" else published
+    script = Script(
+        title="t",
+        id_slug="01",
+        beats=[
+            Narration(text="n" * 100, published_text="p" * 10),
+            SegmentBeat(reference="clip:dropped"),
+            SegmentBeat(reference="clip:swapped", published_substitute="s" * 7),
+        ],
+    )
+    assert estimate_cost(script).characters == 100  # personal: clips are free
+    est = estimate_cost(script, profile=profile)
+    assert est.characters == 10 + 7
+    assert [ln.characters for ln in est.lines] == [10, 7]
+
+
+def test_estimate_prices_dialogue_at_the_named_dialogue_model(monkeypatch):
+    # The dialogue model is the cast's, not the narration's and not the
+    # module default: three distinct rates make each one visible in the sum.
+    monkeypatch.setitem(MODEL_USD_PER_1K_CHARS, "test-narration-model", 0.5)
+    monkeypatch.setitem(MODEL_USD_PER_1K_CHARS, "test-cast-model", 0.7)
+    monkeypatch.setitem(MODEL_USD_PER_1K_CHARS, DIALOGUE_MODEL_ID, 0.9)
+    script = Script(
+        title="t",
+        id_slug="01",
+        beats=[Narration(text="n" * 1000), Dialogue(turns=(("A", "d" * 1000),))],
+    )
+    est = estimate_cost(
+        script, model_id="test-narration-model", dialogue_model_id="test-cast-model"
+    )
+    assert est.usd == pytest.approx(0.5 + 0.7)
+    assert [ln.model_id for ln in est.lines] == [
+        "test-narration-model",
+        "test-cast-model",
+    ]

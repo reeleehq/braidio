@@ -31,7 +31,6 @@ from nw.media_catalog import (
     HostArtifactCatalog,
     hash_file,
 )
-from nw.media_catalog import _IS_DIGEST  # noqa: F401  (media_path validates ids)
 
 _REMEDY = (
     "pass register_artifacts=False to take the graph without the catalog deliberately"

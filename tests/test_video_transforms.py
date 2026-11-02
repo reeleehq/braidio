@@ -2440,3 +2440,33 @@ def test_a_deleted_cut_re_renders_even_when_its_blob_survives(
     again = _run(VIDEO_CUT_RENDER_TRANSFORM, project, *panels).annotations[0]
     assert len(patched_render) == 2  # rendered again, not served from the blob
     assert url_to_path(again.body["url"]).exists()
+
+
+def test_a_non_digest_id_misses_the_catalog_and_falls_through(project, stills):
+    """braidio#154: the catalog itself answers ``None`` for an id that is not a
+    content hash, so ``media_path`` needs no private pre-check: the recorded url
+    is read, and with none the error still names the catalog it looked in."""
+    from braidio.transforms._common import media_path, url_to_path
+
+    still = stills[0]
+    body = {**still.body, "artifact_id": "not-a-digest"}
+    assert media_path(project.root, body, what="still") == url_to_path(body["url"])
+    with pytest.raises(FileNotFoundError, match="catalog blob not-a-digest"):
+        media_path(project.root, {"artifact_id": "not-a-digest"}, what="still")
+
+
+@pytest.mark.parametrize("bad_id", ["../x", "/etc/passwd", "../../" + "a" * 64])
+def test_an_id_that_is_a_path_never_escapes_the_catalog(project, bad_id):
+    """``media_path`` validates ids only through ``blob_path``: a path-shaped id
+    must never become a filesystem path (``blobs_dir / "/abs"`` is ``/abs``)."""
+    from braidio.transforms._common import media_path
+
+    with pytest.raises(FileNotFoundError, match="catalog blob"):
+        media_path(project.root, {"artifact_id": bad_id}, what="still")
+
+
+def test_a_body_with_nothing_recorded_is_a_value_error(project):
+    from braidio.transforms._common import media_path
+
+    with pytest.raises(ValueError, match="nothing to read"):
+        media_path(project.root, {}, what="still")

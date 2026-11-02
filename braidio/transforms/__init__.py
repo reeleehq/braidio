@@ -273,7 +273,9 @@ def weave_project(
     stages spent: the exception is re-raised unchanged, carrying that partial
     receipt as ``exc.weave_receipt`` (``episode=None``, ``has_unknown_costs``
     set, since the failed stage may have billed), so a retry's savings are
-    not mistaken for the whole story.
+    not mistaken for the whole story. A failure before any stage ran (ingest,
+    which bills nothing) carries none: read it with
+    ``getattr(exc, "weave_receipt", None)``.
     """
     import nw
 
@@ -327,7 +329,7 @@ def weave_project(
             for kind, auth in ing.ordered
         )
         woven = run(episode, *members)
-    except Exception as exc:  # noqa: BLE001 — annotated and re-raised, never swallowed
+    except Exception as exc:  # annotated and re-raised, never swallowed
         exc.weave_receipt = WeaveReceipt.of(None, results, failed=True)
         raise
     return WeaveReceipt.of(woven, results) if return_receipt else woven

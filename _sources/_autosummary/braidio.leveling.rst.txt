@@ -17,5 +17,4 @@ braidio.leveling
    .. autosummary::
    
       level_part
-      peak_ceiling
    

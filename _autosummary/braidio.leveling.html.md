@@ -7,14 +7,9 @@ is woven, so a quiet clip sits beside a loud take. ffmpeg’s one-pass
 `loudnorm` would do that *dynamically*: it rides the gain through the part,
 flattening a voice’s own dynamics (a whisper, an emphasis) and pumping quiet
 passages. [`level_part()`](#braidio.leveling.level_part) instead measures the part once and applies one
-gain, then a true-peak limiter holds the ceiling. The measurement and the
-limiter are `mixing.loudness` (the fleet’s one loudness component);
-this module only decodes, applies and encodes.
-
-```pycon
->>> peak_ceiling(DEFAULT_TRUE_PEAK_DB)
-0.84...
-```
+gain, then a true-peak limiter holds the ceiling. All of that is
+`mixing.loudness.level_file()` (the fleet’s one loudness component,
+streaming); this module only names braidio’s defaults for a spoken part.
 
 ### Module Attributes
 
@@ -27,7 +22,6 @@ this module only decodes, applies and encodes.
 
 | [`level_part`](#braidio.leveling.level_part)(src, dst, \*[, target_lufs, ...])   | Write `src` to `dst` at `target_lufs` with one gain, true-peak limited.   |
 |-------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------|
-| [`peak_ceiling`](#braidio.leveling.peak_ceiling)(true_peak_db)                     | The linear ceiling (full scale 1.0) of a `true_peak_db` dBTP limit.       |
 
 ### braidio.leveling.DEFAULT_TARGET_LUFS *= -16.0*
 
@@ -46,30 +40,20 @@ parts of one rate whatever each source was.
 
 Write `src` to `dst` at `target_lufs` with one gain, true-peak limited.
 
-The gain is `mixing.loudness.level_group()` over the whole part (so the
-part keeps its own dynamics; silence gets none), the limiter
-`mixing.loudness.limit_peaks()` at `true_peak_db`. Gains are applied
-in float, so nothing clips before the limiter. `dst` is written at
-`sample_rate`, in the format its suffix names.
+`mixing.loudness.level_file()`: one gain measured over the whole part
+(so it keeps its own dynamics; silence gets none), applied in float, then
+a true-peak limiter at `true_peak_db`. `dst` is written at
+`sample_rate`, in the format its suffix names; the resample happens as
+the part is decoded, so the ceiling holds at the rate written.
 
 Bounds worth knowing:
 
 - The gain is capped at `mixing.loudness.MAX_GAIN_DB` (with a warning):
   a part far below the target comes out quieter than it, rather than as
   amplified noise (`loudnorm` would have pulled it all the way up).
-- The ceiling holds on the samples handed to the encoder; a lossy `dst`
-  (mp3) can read a few tenths of a dB over it. A levelled part is an
-  intermediate: the final master limits again.
-- The whole part is decoded into memory (float, plus the limiter’s copy):
-  fine for spoken parts and clips of minutes, roughly 1 GB for 10 minutes
-  of 48 kHz stereo. A streaming file-level leveller belongs in `mixing`.
+- A lossy `dst` (mp3) can read a few tenths of a dB over the ceiling. A
+  levelled part is an intermediate: the final master limits again.
+- Memory is bounded by the decode chunk, not the part’s length.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
-
-### braidio.leveling.peak_ceiling(true_peak_db)
-
-The linear ceiling (full scale 1.0) of a `true_peak_db` dBTP limit.
-
-* **Return type:**
-  [`float`](https://docs.python.org/3/builtins/functions.html#float)

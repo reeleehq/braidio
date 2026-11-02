@@ -2,18 +2,20 @@
 
 # About this build
 
-This documentation was built on **2026-11-02 05:49 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/6e8439a633b5bc64996e7f93026882d4ea94ea1e"><code>6e8439a</code></a> on branch <code>main</code>, for **braidio 0.0.93** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 06:03 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/5fcf9cfbb441b5f61f3d78d52481b88ba1483a34"><code>5fcf9cf</code></a> on branch <code>main</code>, for **braidio 0.0.94** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.94) is ahead of the latest release on PyPI (0.0.93): these docs describe unreleased code.
 
 ## Source
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/6e8439a633b5bc64996e7f93026882d4ea94ea1e"><code>6e8439a633b5bc64996e7f93026882d4ea94ea1e</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/5fcf9cfbb441b5f61f3d78d52481b88ba1483a34"><code>5fcf9cfbb441b5f61f3d78d52481b88ba1483a34</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | <code>0.0.93</code>                                                                                                                                     |
+| Tags at this commit | <code>0.0.94</code>                                                                                                                                     |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -22,9 +24,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41395638799">41395638799</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41397068475">41397068475</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>be66e19a12947d555978d60785828f206889704d</code> (in the history of the built commit) |
+| Event commit | <code>2e49acb0d25752b494150ab714ed068aeba92c91</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -49,13 +51,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.93/">0.0.93</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/braidio/0.0.93/">0.0.93</a>, older than the documented version (0.0.94).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 6e8439a633b5bc64996e7f93026882d4ea94ea1e
+git checkout 5fcf9cfbb441b5f61f3d78d52481b88ba1483a34
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

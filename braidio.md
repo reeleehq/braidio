@@ -1,4 +1,4 @@
-> built 2026-11-02 05:49 UTC from 6e8439a (main) · braidio 0.0.93. Details: build_info.json
+> built 2026-11-02 06:03 UTC from 5fcf9cf (main) · braidio 0.0.94. Details: build_info.json
 
 # index.html.md
 
@@ -2438,14 +2438,9 @@ is woven, so a quiet clip sits beside a loud take. ffmpeg’s one-pass
 `loudnorm` would do that *dynamically*: it rides the gain through the part,
 flattening a voice’s own dynamics (a whisper, an emphasis) and pumping quiet
 passages. [`level_part()`](_autosummary/braidio.leveling.html.md#braidio.leveling.level_part) instead measures the part once and applies one
-gain, then a true-peak limiter holds the ceiling. The measurement and the
-limiter are `mixing.loudness` (the fleet’s one loudness component);
-this module only decodes, applies and encodes.
-
-```pycon
->>> peak_ceiling(DEFAULT_TRUE_PEAK_DB)
-0.84...
-```
+gain, then a true-peak limiter holds the ceiling. All of that is
+`mixing.loudness.level_file()` (the fleet’s one loudness component,
+streaming); this module only names braidio’s defaults for a spoken part.
 
 ### Module Attributes
 
@@ -2458,7 +2453,6 @@ this module only decodes, applies and encodes.
 
 | [`level_part`](_autosummary/braidio.leveling.html.md#braidio.leveling.level_part)(src, dst, \*[, target_lufs, ...])   | Write `src` to `dst` at `target_lufs` with one gain, true-peak limited.   |
 |-------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------|
-| [`peak_ceiling`](_autosummary/braidio.leveling.html.md#braidio.leveling.peak_ceiling)(true_peak_db)                     | The linear ceiling (full scale 1.0) of a `true_peak_db` dBTP limit.       |
 
 ### braidio.leveling.DEFAULT_TARGET_LUFS *= -16.0*
 
@@ -2477,33 +2471,23 @@ parts of one rate whatever each source was.
 
 Write `src` to `dst` at `target_lufs` with one gain, true-peak limited.
 
-The gain is `mixing.loudness.level_group()` over the whole part (so the
-part keeps its own dynamics; silence gets none), the limiter
-`mixing.loudness.limit_peaks()` at `true_peak_db`. Gains are applied
-in float, so nothing clips before the limiter. `dst` is written at
-`sample_rate`, in the format its suffix names.
+`mixing.loudness.level_file()`: one gain measured over the whole part
+(so it keeps its own dynamics; silence gets none), applied in float, then
+a true-peak limiter at `true_peak_db`. `dst` is written at
+`sample_rate`, in the format its suffix names; the resample happens as
+the part is decoded, so the ceiling holds at the rate written.
 
 Bounds worth knowing:
 
 - The gain is capped at `mixing.loudness.MAX_GAIN_DB` (with a warning):
   a part far below the target comes out quieter than it, rather than as
   amplified noise (`loudnorm` would have pulled it all the way up).
-- The ceiling holds on the samples handed to the encoder; a lossy `dst`
-  (mp3) can read a few tenths of a dB over it. A levelled part is an
-  intermediate: the final master limits again.
-- The whole part is decoded into memory (float, plus the limiter’s copy):
-  fine for spoken parts and clips of minutes, roughly 1 GB for 10 minutes
-  of 48 kHz stereo. A streaming file-level leveller belongs in `mixing`.
+- A lossy `dst` (mp3) can read a few tenths of a dB over the ceiling. A
+  levelled part is an intermediate: the final master limits again.
+- Memory is bounded by the decode chunk, not the part’s length.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
-
-### braidio.leveling.peak_ceiling(true_peak_db)
-
-The linear ceiling (full scale 1.0) of a `true_peak_db` dBTP limit.
-
-* **Return type:**
-  [`float`](https://docs.python.org/3/builtins/functions.html#float)
 
 
 # _autosummary/braidio.markdown_script.html.md
@@ -5158,18 +5142,20 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-02 05:49 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/6e8439a633b5bc64996e7f93026882d4ea94ea1e"><code>6e8439a</code></a> on branch <code>main</code>, for **braidio 0.0.93** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 06:03 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/5fcf9cfbb441b5f61f3d78d52481b88ba1483a34"><code>5fcf9cf</code></a> on branch <code>main</code>, for **braidio 0.0.94** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.94) is ahead of the latest release on PyPI (0.0.93): these docs describe unreleased code.
 
 ## Source
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/6e8439a633b5bc64996e7f93026882d4ea94ea1e"><code>6e8439a633b5bc64996e7f93026882d4ea94ea1e</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/5fcf9cfbb441b5f61f3d78d52481b88ba1483a34"><code>5fcf9cfbb441b5f61f3d78d52481b88ba1483a34</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | <code>0.0.93</code>                                                                                                                                     |
+| Tags at this commit | <code>0.0.94</code>                                                                                                                                     |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -5178,9 +5164,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41395638799">41395638799</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41397068475">41397068475</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>be66e19a12947d555978d60785828f206889704d</code> (in the history of the built commit) |
+| Event commit | <code>2e49acb0d25752b494150ab714ed068aeba92c91</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5205,13 +5191,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.93/">0.0.93</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/braidio/0.0.93/">0.0.93</a>, older than the documented version (0.0.94).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 6e8439a633b5bc64996e7f93026882d4ea94ea1e
+git checkout 5fcf9cfbb441b5f61f3d78d52481b88ba1483a34
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

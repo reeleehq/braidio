@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=0f58e6e2"></script>
+    <script src="../_static/documentation_options.js?v=c4d1762f"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.93" />
+  <meta name="docsearch:version" content="0.0.94" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -420,13 +420,9 @@ is woven, so a quiet clip sits beside a loud take. ffmpeg’s one-pass
 <code class="docutils literal notranslate"><span class="pre">loudnorm</span></code> would do that <em>dynamically</em>: it rides the gain through the part,
 flattening a voice’s own dynamics (a whisper, an emphasis) and pumping quiet
 passages. <a class="reference internal" href="#braidio.leveling.level_part" title="braidio.leveling.level_part"><code class="xref py py-func docutils literal notranslate"><span class="pre">level_part()</span></code></a> instead measures the part once and applies one
-gain, then a true-peak limiter holds the ceiling. The measurement and the
-limiter are <code class="xref py py-mod docutils literal notranslate"><span class="pre">mixing.loudness</span></code> (the fleet’s one loudness component);
-this module only decodes, applies and encodes.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">peak_ceiling</span><span class="p">(</span><span class="n">DEFAULT_TRUE_PEAK_DB</span><span class="p">)</span>
-<span class="go">0.84...</span>
-</pre></div>
-</div>
+gain, then a true-peak limiter holds the ceiling. All of that is
+<code class="xref py py-func docutils literal notranslate"><span class="pre">mixing.loudness.level_file()</span></code> (the fleet’s one loudness component,
+streaming); this module only names braidio’s defaults for a spoken part.</p>
 <p class="rubric">Module Attributes</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
@@ -447,9 +443,6 @@ this module only decodes, applies and encodes.</p>
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#braidio.leveling.level_part" title="braidio.leveling.level_part"><code class="xref py py-obj docutils literal notranslate"><span class="pre">level_part</span></code></a>(src, dst, *[, target_lufs, ...])</p></td>
 <td><p>Write <code class="docutils literal notranslate"><span class="pre">src</span></code> to <code class="docutils literal notranslate"><span class="pre">dst</span></code> at <code class="docutils literal notranslate"><span class="pre">target_lufs</span></code> with one gain, true-peak limited.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.leveling.peak_ceiling" title="braidio.leveling.peak_ceiling"><code class="xref py py-obj docutils literal notranslate"><span class="pre">peak_ceiling</span></code></a>(true_peak_db)</p></td>
-<td><p>The linear ceiling (full scale 1.0) of a <code class="docutils literal notranslate"><span class="pre">true_peak_db</span></code> dBTP limit.</p></td>
 </tr>
 </tbody>
 </table>
@@ -477,37 +470,23 @@ parts of one rate whatever each source was.</p>
 <dt class="sig sig-object py" id="braidio.leveling.level_part">
 <span class="sig-prename descclassname"><span class="pre">braidio.leveling.</span></span><span class="sig-name descname"><span class="pre">level_part</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dst</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_lufs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-16.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">true_peak_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">44100</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/leveling.html#level_part"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.leveling.level_part" title="Link to this definition">#</a></dt>
 <dd><p>Write <code class="docutils literal notranslate"><span class="pre">src</span></code> to <code class="docutils literal notranslate"><span class="pre">dst</span></code> at <code class="docutils literal notranslate"><span class="pre">target_lufs</span></code> with one gain, true-peak limited.</p>
-<p>The gain is <code class="xref py py-func docutils literal notranslate"><span class="pre">mixing.loudness.level_group()</span></code> over the whole part (so the
-part keeps its own dynamics; silence gets none), the limiter
-<code class="xref py py-func docutils literal notranslate"><span class="pre">mixing.loudness.limit_peaks()</span></code> at <code class="docutils literal notranslate"><span class="pre">true_peak_db</span></code>. Gains are applied
-in float, so nothing clips before the limiter. <code class="docutils literal notranslate"><span class="pre">dst</span></code> is written at
-<code class="docutils literal notranslate"><span class="pre">sample_rate</span></code>, in the format its suffix names.</p>
+<p><code class="xref py py-func docutils literal notranslate"><span class="pre">mixing.loudness.level_file()</span></code>: one gain measured over the whole part
+(so it keeps its own dynamics; silence gets none), applied in float, then
+a true-peak limiter at <code class="docutils literal notranslate"><span class="pre">true_peak_db</span></code>. <code class="docutils literal notranslate"><span class="pre">dst</span></code> is written at
+<code class="docutils literal notranslate"><span class="pre">sample_rate</span></code>, in the format its suffix names; the resample happens as
+the part is decoded, so the ceiling holds at the rate written.</p>
 <p>Bounds worth knowing:</p>
 <ul class="simple">
 <li><p>The gain is capped at <code class="docutils literal notranslate"><span class="pre">mixing.loudness.MAX_GAIN_DB</span></code> (with a warning):
 a part far below the target comes out quieter than it, rather than as
 amplified noise (<code class="docutils literal notranslate"><span class="pre">loudnorm</span></code> would have pulled it all the way up).</p></li>
-<li><p>The ceiling holds on the samples handed to the encoder; a lossy <code class="docutils literal notranslate"><span class="pre">dst</span></code>
-(mp3) can read a few tenths of a dB over it. A levelled part is an
-intermediate: the final master limits again.</p></li>
-<li><p>The whole part is decoded into memory (float, plus the limiter’s copy):
-fine for spoken parts and clips of minutes, roughly 1 GB for 10 minutes
-of 48 kHz stereo. A streaming file-level leveller belongs in <code class="docutils literal notranslate"><span class="pre">mixing</span></code>.</p></li>
+<li><p>A lossy <code class="docutils literal notranslate"><span class="pre">dst</span></code> (mp3) can read a few tenths of a dB over the ceiling. A
+levelled part is an intermediate: the final master limits again.</p></li>
+<li><p>Memory is bounded by the decode chunk, not the part’s length.</p></li>
 </ul>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="braidio.leveling.peak_ceiling">
-<span class="sig-prename descclassname"><span class="pre">braidio.leveling.</span></span><span class="sig-name descname"><span class="pre">peak_ceiling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">true_peak_db</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/leveling.html#peak_ceiling"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.leveling.peak_ceiling" title="Link to this definition">#</a></dt>
-<dd><p>The linear ceiling (full scale 1.0) of a <code class="docutils literal notranslate"><span class="pre">true_peak_db</span></code> dBTP limit.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -565,7 +544,6 @@ of 48 kHz stereo. A streaming file-level leveller belongs in <code class="docuti
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.leveling.DEFAULT_TRUE_PEAK_DB"><code class="docutils literal notranslate"><span class="pre">DEFAULT_TRUE_PEAK_DB</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.leveling.OUTPUT_SAMPLE_RATE"><code class="docutils literal notranslate"><span class="pre">OUTPUT_SAMPLE_RATE</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.leveling.level_part"><code class="docutils literal notranslate"><span class="pre">level_part()</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.leveling.peak_ceiling"><code class="docutils literal notranslate"><span class="pre">peak_ceiling()</span></code></a></li>
 </ul>
   </nav></div>
 

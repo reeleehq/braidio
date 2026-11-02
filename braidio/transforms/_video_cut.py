@@ -926,7 +926,7 @@ def _crop_still(
     return dst
 
 
-def _content_keyed_prepare(workdir: Path, size: tuple[int, int]):
+def content_keyed_prepare(workdir: Path, size: tuple[int, int]):
     """A ``prepare=`` for :func:`braidio.video.render_video` that names each
     canvas by the source's **bytes** and the frame size — never by its
     ordinal or its filename stem. ``render_video``'s default naming
@@ -944,13 +944,13 @@ def _content_keyed_prepare(workdir: Path, size: tuple[int, int]):
     return prepare
 
 
-def _frames_dir(project) -> Path:
+def frames_dir(project) -> Path:
     """Where prepared canvases and cropped stills are cached (shared by the
     render and :func:`panel_path`, so a preview warms the render's cache)."""
     return _cuts_dir(project) / "_frames"
 
 
-def _panel_source(project, panel: Annotation, index: dict, workdir: Path) -> Path:
+def panel_source(project, panel: Annotation, index: dict, workdir: Path) -> Path:
     """The picture a panel shows: its still's bytes, after the still's crop."""
     still = _still_of(panel, index)
     return _crop_still(
@@ -960,6 +960,14 @@ def _panel_source(project, panel: Annotation, index: dict, workdir: Path) -> Pat
         artifact_id=str(still.body["artifact_id"]),
         suffix=_recorded_suffix(still),
     )
+
+
+# The pre-#146 private names, which reelee's adapter (reelee/_braidio.py) imports
+# today. Kept so a reelee pinned to an older braidio-facing adapter still imports;
+# remove once reelee reads the public names (braidio#156).
+_content_keyed_prepare = content_keyed_prepare
+_frames_dir = frames_dir
+_panel_source = panel_source
 
 
 def panel_footage(project, panel: Annotation):
@@ -1016,10 +1024,10 @@ def panel_path(project, panel: Annotation, *, size: tuple[int, int]):
     size = (int(size[0]), int(size[1]))
     index = graph_index(project)
     _check_stored_paths([panel], {"size": size}, [_still_of(panel, index)])
-    workdir = _frames_dir(project)
+    workdir = frames_dir(project)
     workdir.mkdir(parents=True, exist_ok=True)
-    source = _panel_source(project, panel, index, workdir)
-    canvas = _content_keyed_prepare(workdir, size)(source, None)
+    source = panel_source(project, panel, index, workdir)
+    canvas = content_keyed_prepare(workdir, size)(source, None)
     return _path_on_canvas(panel.body, canvas, source, aspect=size[0] / size[1])
 
 
@@ -1105,11 +1113,11 @@ class VideoCutRender(BaseTransform):
         fps = int(skel.body["settings"]["fps"])
         aspect = size[0] / size[1]
 
-        workdir = _frames_dir(project)
+        workdir = frames_dir(project)
         video_panels = []
         sources: list[Path] = []
         for panel in panels:
-            src = _panel_source(project, panel, index, workdir)
+            src = panel_source(project, panel, index, workdir)
             sources.append(src)
             start, end = _interval_s(panel)
             video_panels.append(
@@ -1134,7 +1142,7 @@ class VideoCutRender(BaseTransform):
             size=size,
             fps=fps,
             workdir=workdir,
-            prepare=_content_keyed_prepare(workdir, size),  # = panel_path's
+            prepare=content_keyed_prepare(workdir, size),  # = panel_path's
             path_for=path_for,
         )
         artifact = media_artifact(

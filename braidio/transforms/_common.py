@@ -308,11 +308,11 @@ def media_path(project_root, body: dict, *, what: str) -> Path:
     bytes, and a still re-fetched under the same name would be served as the
     old one. The error names every place looked.
     """
-    from braidio.importing._catalog import _IS_DIGEST, HostArtifactCatalog
+    from nw.media_catalog import HostArtifactCatalog
 
     tried = []
     artifact_id = str(body.get("artifact_id") or "")
-    if _IS_DIGEST.fullmatch(artifact_id):
+    if artifact_id:  # the catalog answers None for an id that is not a digest
         blob = HostArtifactCatalog(project_root).blob_path(artifact_id)
         if blob is not None:
             return blob

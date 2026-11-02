@@ -311,9 +311,7 @@ def estimate_cost(
         )
     # a str profile must become the enum: plan_production compares by identity
     # (``is Profile.PUBLISHED``), so "published" would plan a half-published cut
-    plan = plan_production(
-        source, DEFAULT_PROFILE if profile is None else profile
-    )
+    plan = plan_production(source, DEFAULT_PROFILE if profile is None else profile)
     return price_plan(
         plan, model_id=model_id, dialogue_model_id=dialogue_model_id, script=source
     )

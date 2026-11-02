@@ -269,7 +269,11 @@ def weave_project(
     that reused every render reports ``cost_usd_actual == 0.0`` and the spend
     it avoided as ``cache_hit_savings_usd``, so a host bills what was
     synthesized rather than re-adding :func:`braidio.estimate_cost` each run
-    (braidio#147).
+    (braidio#147). A run that fails part-way still spent what its finished
+    stages spent: the exception is re-raised unchanged, carrying that partial
+    receipt as ``exc.weave_receipt`` (``episode=None``, ``has_unknown_costs``
+    set, since the failed stage may have billed), so a retry's savings are
+    not mistaken for the whole story.
     """
     import nw
 
@@ -306,21 +310,26 @@ def weave_project(
         return results[-1].annotations[0]
 
     render_by_authoring_id = {}
-    for beat in ing.narration_beats:
-        run(voice, beat)
-        render_by_authoring_id[beat.id] = run(narration, beat, secrets=secrets)
-    for beat in ing.dialogue_beats:
-        render_by_authoring_id[beat.id] = run(dialogue, beat, secrets=secrets)
-    for clip in ing.audio_clips:
-        render_by_authoring_id[clip.id] = run(segment, clip)
+    try:
+        for beat in ing.narration_beats:
+            run(voice, beat)
+            render_by_authoring_id[beat.id] = run(narration, beat, secrets=secrets)
+        for beat in ing.dialogue_beats:
+            render_by_authoring_id[beat.id] = run(dialogue, beat, secrets=secrets)
+        for clip in ing.audio_clips:
+            render_by_authoring_id[clip.id] = run(segment, clip)
 
-    # A scene break renders no node of its own — the authoring annotation IS
-    # the member, and the episode transform turns it into a sting or a pause.
-    members = tuple(
-        auth if kind == "scene_break" else render_by_authoring_id[auth.id]
-        for kind, auth in ing.ordered
-    )
-    woven = run(episode, *members)
+        # A scene break renders no node of its own — the authoring annotation
+        # IS the member, and the episode transform turns it into a sting or a
+        # pause.
+        members = tuple(
+            auth if kind == "scene_break" else render_by_authoring_id[auth.id]
+            for kind, auth in ing.ordered
+        )
+        woven = run(episode, *members)
+    except Exception as exc:  # noqa: BLE001 — annotated and re-raised, never swallowed
+        exc.weave_receipt = WeaveReceipt.of(None, results, failed=True)
+        raise
     return WeaveReceipt.of(woven, results) if return_receipt else woven
 
 
@@ -329,26 +338,33 @@ class WeaveReceipt:
     """What one :func:`weave_project` run produced and spent.
 
     The sums of the ``TransformResult`` of every stage the run executed.
-    ``cost_usd_actual`` is real spend (``0.0`` for a stage that reused its
-    render or hit the synthesis cache); ``has_unknown_costs`` is ``True`` when
-    some billed call had no price, so ``cost_usd_actual`` is then a lower
-    bound, never a reading of "free" (the rule of :mod:`braidio.cost`).
+    ``cost_usd_actual`` is the **rate estimate** of what was synthesized
+    (:mod:`braidio.cost`; ``0.0`` for a stage that reused its render or hit the
+    synthesis cache), not an ElevenLabs invoice. ``has_unknown_costs`` is
+    ``True`` when some executed stage could not be priced (an unpriced rate,
+    even on a reuse, or a stage that failed), so ``cost_usd_actual`` is then a
+    lower bound, never a reading of "free". ``episode`` is ``None`` only on
+    the partial receipt a failed run attaches to its exception.
     """
 
-    episode: Annotation
+    episode: Annotation | None
     cost_usd_actual: float = 0.0
     cache_hit_savings_usd: float = 0.0
     has_unknown_costs: bool = False
 
     @classmethod
-    def of(cls, episode: Annotation, results) -> "WeaveReceipt":
-        """The receipt of ``episode`` over the stages' ``results``."""
+    def of(cls, episode, results, *, failed: bool = False) -> "WeaveReceipt":
+        """The receipt of ``episode`` over the stages' ``results``.
+
+        ``failed``: a stage raised after these ``results``; what it spent is
+        not in them, so the total is a lower bound.
+        """
         results = list(results)
         return cls(
             episode=episode,
-            cost_usd_actual=sum(r.cost_usd_actual for r in results),
-            cache_hit_savings_usd=sum(r.cache_hit_savings_usd for r in results),
-            has_unknown_costs=any(r.has_unknown_costs for r in results),
+            cost_usd_actual=sum((r.cost_usd_actual for r in results), 0.0),
+            cache_hit_savings_usd=sum((r.cache_hit_savings_usd for r in results), 0.0),
+            has_unknown_costs=failed or any(r.has_unknown_costs for r in results),
         )
 
 

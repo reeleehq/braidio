@@ -180,8 +180,11 @@ class CostRollup:
         return f"{self.characters:,} chars → {dollars}{tail}"
 
 
-def _script_lines(script: Script) -> list[CostLine]:
+def _script_lines(script: Script, *, model_id: str) -> list[CostLine]:
     """Billable lines of ``script``: narration + dialogue beats (segments are free).
+
+    Narration is priced at ``model_id``. A dialogue beat is always
+    :data:`~braidio.tts.DIALOGUE_MODEL_ID`, the one model Text-to-Dialogue runs on.
 
     Estimates the *default* (personal) cut. Published-cut costing (rights-safe
     rewrites + synthesized clip substitutes) must reuse :func:`braidio.plan_production`
@@ -195,8 +198,8 @@ def _script_lines(script: Script) -> list[CostLine]:
                     label=f"beat[{i}] narration",
                     kind="narration",
                     characters=billable_chars(beat.text),
-                    usd=tts_cost_usd(beat.text, model_id=DEFAULT_MODEL_ID),
-                    model_id=DEFAULT_MODEL_ID,
+                    usd=tts_cost_usd(beat.text, model_id=model_id),
+                    model_id=model_id,
                 )
             )
         elif isinstance(beat, Dialogue):
@@ -227,24 +230,31 @@ def estimate_cost(
     :class:`CostRollup` reports exact characters and an honest dollar sum (a lower
     bound when some text is unpriced; see :func:`usd_per_1k_chars`).
 
+    ``model_id`` is the model the narration will be voiced with (default
+    :data:`~braidio.tts.DEFAULT_MODEL_ID`); its rate resolves like any other
+    (:func:`usd_per_1k_chars`), so a model with no confirmed rate of its own
+    gets the general rate, never another model's. Dialogue beats are priced
+    at :data:`~braidio.tts.DIALOGUE_MODEL_ID` whatever ``model_id`` says.
+
     >>> from braidio import Script, Narration, SegmentBeat
     >>> s = Script(title="x", id_slug="01", beats=[
     ...     Narration(text="a" * 500), SegmentBeat(reference="clip:1")])
     >>> estimate_cost(s).characters  # only the narration counts; the clip is free
     500
     """
+    model_id = model_id or DEFAULT_MODEL_ID
     if isinstance(source, str):
         lines = [
             CostLine(
                 label="text",
                 kind="narration",
                 characters=billable_chars(source),
-                usd=tts_cost_usd(source, model_id=model_id or DEFAULT_MODEL_ID),
-                model_id=model_id or DEFAULT_MODEL_ID,
+                usd=tts_cost_usd(source, model_id=model_id),
+                model_id=model_id,
             )
         ]
     else:
-        lines = _script_lines(source)
+        lines = _script_lines(source, model_id=model_id)
 
     characters = sum(ln.characters for ln in lines)
     priced = [ln.usd for ln in lines if ln.usd is not None]

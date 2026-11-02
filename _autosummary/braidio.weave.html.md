@@ -11,7 +11,8 @@ Two generic, Hamilton-agnostic primitives:
 - [`weave_timeline()`](#braidio.weave.weave_timeline) — place ordered narration/clip parts on a timeline
   where each clip **overlaps its neighbours** by `clip_edge_overlap_s` and its
   faded padded edges duck under the speech, so **speech stays dominant**, then
-  mix (`amix` sum) and loudness-normalize.
+  mix (`amix` sum) and master it with one measured gain and a true-peak
+  limit (`mixing.loudness.level_file()`), so the mix keeps its dynamics.
 
 This is the audio counterpart of a video timeline; it consumes plain file paths
 
@@ -206,6 +207,10 @@ whole-span file. Falls back to a plain concat feel when
 `overlap` (a [`TurnOverlap`](#braidio.weave.TurnOverlap), e.g. `WeaveConfig.turn_overlap()`)
 lays a change of speaker as an interruption and, with `duck_db`, lowers
 the outgoing voice’s talked-over tail (see [`layout_placed()`](#braidio.weave.layout_placed)).
+
+The mix is mastered with one measured gain to `target_lufs` (LUFS) and a
+true-peak limit at `true_peak` (dBTP), so it keeps its own dynamics: a
+quiet passage stays quiet relative to its loud neighbours.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)

@@ -1,4 +1,4 @@
-> built 2026-10-30 13:16 UTC from 1995d80 (main) · braidio 0.0.87. Details: build_info.json
+> built 2026-11-02 04:50 UTC from 9a6642e (main) · braidio 0.0.88. Details: build_info.json
 
 # index.html.md
 
@@ -2356,6 +2356,10 @@ whole-span file. Falls back to a plain concat feel when
 `overlap` (a `TurnOverlap`, e.g. `WeaveConfig.turn_overlap()`)
 lays a change of speaker as an interruption and, with `duck_db`, lowers
 the outgoing voice’s talked-over tail (see `layout_placed()`).
+
+The mix is mastered with one measured gain to `target_lufs` (LUFS) and a
+true-peak limit at `true_peak` (dBTP), so it keeps its own dynamics: a
+quiet passage stays quiet relative to its loud neighbours.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
@@ -4783,7 +4787,8 @@ Two generic, Hamilton-agnostic primitives:
 - [`weave_timeline()`](_autosummary/braidio.weave.html.md#braidio.weave.weave_timeline) — place ordered narration/clip parts on a timeline
   where each clip **overlaps its neighbours** by `clip_edge_overlap_s` and its
   faded padded edges duck under the speech, so **speech stays dominant**, then
-  mix (`amix` sum) and loudness-normalize.
+  mix (`amix` sum) and master it with one measured gain and a true-peak
+  limit (`mixing.loudness.level_file()`), so the mix keeps its dynamics.
 
 This is the audio counterpart of a video timeline; it consumes plain file paths
 
@@ -4979,6 +4984,10 @@ whole-span file. Falls back to a plain concat feel when
 lays a change of speaker as an interruption and, with `duck_db`, lowers
 the outgoing voice’s talked-over tail (see [`layout_placed()`](_autosummary/braidio.weave.html.md#braidio.weave.layout_placed)).
 
+The mix is mastered with one measured gain to `target_lufs` (LUFS) and a
+true-peak limit at `true_peak` (dBTP), so it keeps its own dynamics: a
+quiet passage stays quiet relative to its loud neighbours.
+
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
@@ -5137,7 +5146,7 @@ False
 
 # About this build
 
-This documentation was built on **2026-10-30 13:16 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/1995d805b467303d9ae1bbe1c972a45d8668a806"><code>1995d80</code></a> on branch <code>main</code>, for **braidio 0.0.87** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 04:50 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/9a6642ebd0110fe65d99acb29f23d4697cfa6f9b"><code>9a6642e</code></a> on branch <code>main</code>, for **braidio 0.0.88** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -5146,9 +5155,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/1995d805b467303d9ae1bbe1c972a45d8668a806"><code>1995d805b467303d9ae1bbe1c972a45d8668a806</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/9a6642ebd0110fe65d99acb29f23d4697cfa6f9b"><code>9a6642ebd0110fe65d99acb29f23d4697cfa6f9b</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | <code>0.0.87</code>                                                                                                                                     |
+| Tags at this commit | <code>0.0.88</code>                                                                                                                                     |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -5157,9 +5166,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41061282716">41061282716</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41390160157">41390160157</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>ee7c222af76161806ad0710a96379a554dcac017</code> (in the history of the built commit) |
+| Event commit | <code>041e195c6db2be327e7d529f4208ce49d1a009ac</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5184,13 +5193,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.87/">0.0.87</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/braidio/0.0.88/">0.0.88</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 1995d805b467303d9ae1bbe1c972a45d8668a806
+git checkout 9a6642ebd0110fe65d99acb29f23d4697cfa6f9b
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

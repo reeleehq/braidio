@@ -1357,6 +1357,10 @@ whole-span file. Falls back to a plain concat feel when
 lays a change of speaker as an interruption and, with `duck_db`, lowers
 the outgoing voice’s talked-over tail (see `layout_placed()`).
 
+The mix is mastered with one measured gain to `target_lufs` (LUFS) and a
+true-peak limit at `true_peak` (dBTP), so it keeps its own dynamics: a
+quiet passage stays quiet relative to its loud neighbours.
+
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 

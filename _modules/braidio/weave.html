@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=97e62c01"></script>
+    <script src="../../_static/documentation_options.js?v=7ffc8fc3"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.87" />
+  <meta name="docsearch:version" content="0.0.88" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -726,7 +726,8 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">- :func:`weave_timeline` — place ordered narration/clip parts on a timeline</span>
 <span class="sd">  where each clip **overlaps its neighbours** by ``clip_edge_overlap_s`` and its</span>
 <span class="sd">  faded padded edges duck under the speech, so **speech stays dominant**, then</span>
-<span class="sd">  mix (``amix`` sum) and loudness-normalize.</span>
+<span class="sd">  mix (``amix`` sum) and master it with one measured gain and a true-peak</span>
+<span class="sd">  limit (:func:`mixing.loudness.level_file`), so the mix keeps its dynamics.</span>
 
 <span class="sd">This is the audio counterpart of a video timeline; it consumes plain file paths</span>
 <span class="sd">+ numbers, no Genius/lyrics knowledge (that resolution lives in</span>
@@ -741,10 +742,14 @@ window.runMermaid = runMermaid;</script>
 <span class="kn">import</span><span class="w"> </span><span class="nn">random</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
-<span class="n">_LOUDNESS_RANGE</span> <span class="o">=</span> <span class="mi">11</span>  <span class="c1"># loudnorm LRA target for the mastered mix</span>
+<span class="c1">#: Encoder options of the mastered file (ignored by a lossless format).</span>
+<span class="n">_MASTER_ENCODE_ARGS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"-b:a"</span><span class="p">,</span> <span class="s2">"192k"</span><span class="p">)</span>
+<span class="c1">#: The unmastered mix is float, so a sum above full scale survives to the limiter.</span>
+<span class="n">_UNMASTERED_CODEC</span> <span class="o">=</span> <span class="s2">"pcm_f32le"</span>
 
 <span class="c1">#: Upper bound of the intelligible range for a speaker interruption: past it two</span>
 <span class="c1">#: voices talking over each other stop being understood (Hamilton#22).</span>
@@ -1117,6 +1122,10 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">    ``overlap`` (a :class:`TurnOverlap`, e.g. ``WeaveConfig.turn_overlap()``)</span>
 <span class="sd">    lays a change of speaker as an interruption and, with ``duck_db``, lowers</span>
 <span class="sd">    the outgoing voice's talked-over tail (see :func:`layout_placed`).</span>
+
+<span class="sd">    The mix is mastered with one measured gain to ``target_lufs`` (LUFS) and a</span>
+<span class="sd">    true-peak limit at ``true_peak`` (dBTP), so it keeps its own dynamics: a</span>
+<span class="sd">    quiet passage stays quiet relative to its loud neighbours.</span>
 <span class="sd">    """</span>
     <span class="n">_require_ffmpeg</span><span class="p">()</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">items</span><span class="p">:</span>
@@ -1207,29 +1216,47 @@ window.runMermaid = runMermaid;</script>
     <span class="n">mix</span> <span class="o">=</span> <span class="p">(</span>
         <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">"amix=inputs=</span><span class="si">{</span><span class="n">n_inputs</span><span class="si">}</span><span class="s2">:normalize=0:dropout_transition=0[m]"</span>
     <span class="p">)</span>
-    <span class="n">norm</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"[m]loudnorm=I=</span><span class="si">{</span><span class="n">target_lufs</span><span class="si">}</span><span class="s2">:TP=</span><span class="si">{</span><span class="n">true_peak</span><span class="si">}</span><span class="s2">:LRA=</span><span class="si">{</span><span class="n">_LOUDNESS_RANGE</span><span class="si">}</span><span class="s2">[out]"</span>
-    <span class="n">filtergraph</span> <span class="o">=</span> <span class="s2">";"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">filters</span> <span class="o">+</span> <span class="p">[</span><span class="n">mix</span><span class="p">,</span> <span class="n">norm</span><span class="p">])</span>
+    <span class="n">filtergraph</span> <span class="o">=</span> <span class="s2">";"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">filters</span> <span class="o">+</span> <span class="p">[</span><span class="n">mix</span><span class="p">])</span>
 
-    <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-        <span class="p">[</span>
-            <span class="s2">"ffmpeg"</span><span class="p">,</span>
-            <span class="s2">"-y"</span><span class="p">,</span>
-            <span class="o">*</span><span class="n">inputs</span><span class="p">,</span>
-            <span class="s2">"-filter_complex"</span><span class="p">,</span>
-            <span class="n">filtergraph</span><span class="p">,</span>
-            <span class="s2">"-map"</span><span class="p">,</span>
-            <span class="s2">"[out]"</span><span class="p">,</span>
-            <span class="s2">"-ar"</span><span class="p">,</span>
-            <span class="nb">str</span><span class="p">(</span><span class="n">sample_rate</span><span class="p">),</span>
-            <span class="s2">"-ac"</span><span class="p">,</span>
-            <span class="s2">"2"</span><span class="p">,</span>
-            <span class="s2">"-b:a"</span><span class="p">,</span>
-            <span class="s2">"192k"</span><span class="p">,</span>
-            <span class="nb">str</span><span class="p">(</span><span class="n">out</span><span class="p">),</span>
-        <span class="p">],</span>
-        <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-        <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="p">)</span>
+    <span class="c1"># Mix, then master: one measured gain to ``target_lufs`` and a true-peak limit</span>
+    <span class="c1"># at ``true_peak``. One-pass ``loudnorm`` would ride the gain through the mix</span>
+    <span class="c1"># and pull a quiet passage between two loud ones up (braidio#130). The</span>
+    <span class="c1"># intermediate is float on disk and ``level_file`` streams it, so memory does</span>
+    <span class="c1"># not grow with the episode. Imported here: the mix engine stays free of the</span>
+    <span class="c1"># mixing/TTS layers at import (tests/test_turn_overlap.py guards that).</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">mixing.loudness</span><span class="w"> </span><span class="kn">import</span> <span class="n">level_file</span>
+
+    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">"braidio-mix-"</span><span class="p">)</span> <span class="k">as</span> <span class="n">work</span><span class="p">:</span>
+        <span class="c1"># named after ``out``: a GainCappedWarning names this file</span>
+        <span class="n">unmastered</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">work</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">out</span><span class="o">.</span><span class="n">stem</span><span class="si">}</span><span class="s2">.wav"</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="s2">"ffmpeg"</span><span class="p">,</span>
+                <span class="s2">"-y"</span><span class="p">,</span>
+                <span class="o">*</span><span class="n">inputs</span><span class="p">,</span>
+                <span class="s2">"-filter_complex"</span><span class="p">,</span>
+                <span class="n">filtergraph</span><span class="p">,</span>
+                <span class="s2">"-map"</span><span class="p">,</span>
+                <span class="s2">"[m]"</span><span class="p">,</span>
+                <span class="s2">"-ar"</span><span class="p">,</span>
+                <span class="nb">str</span><span class="p">(</span><span class="n">sample_rate</span><span class="p">),</span>
+                <span class="s2">"-ac"</span><span class="p">,</span>
+                <span class="s2">"2"</span><span class="p">,</span>
+                <span class="s2">"-c:a"</span><span class="p">,</span>
+                <span class="n">_UNMASTERED_CODEC</span><span class="p">,</span>
+                <span class="nb">str</span><span class="p">(</span><span class="n">unmastered</span><span class="p">),</span>
+            <span class="p">],</span>
+            <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">level_file</span><span class="p">(</span>
+            <span class="n">unmastered</span><span class="p">,</span>
+            <span class="n">out</span><span class="p">,</span>
+            <span class="n">target_lufs</span><span class="o">=</span><span class="n">target_lufs</span><span class="p">,</span>
+            <span class="n">ceiling_db</span><span class="o">=</span><span class="n">true_peak</span><span class="p">,</span>
+            <span class="n">sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">,</span>
+            <span class="n">encode_args</span><span class="o">=</span><span class="n">_MASTER_ENCODE_ARGS</span><span class="p">,</span>
+        <span class="p">)</span>
     <span class="k">return</span> <span class="n">out</span></div>
 
 </pre></div>

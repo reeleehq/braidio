@@ -1,34 +1,34 @@
 {
   "schema_version": 1,
-  "built_at": "2026-10-30T13:16:41Z",
+  "built_at": "2026-11-02T04:50:47Z",
   "package": {
     "name": "braidio",
-    "version": "0.0.87",
+    "version": "0.0.88",
     "display_name": "braidio",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "1995d805b467303d9ae1bbe1c972a45d8668a806",
-    "short_commit": "1995d80",
+    "commit": "9a6642ebd0110fe65d99acb29f23d4697cfa6f9b",
+    "short_commit": "9a6642e",
     "branch": "main",
     "tags": [
-      "0.0.87"
+      "0.0.88"
     ],
     "dirty": false,
     "remote_url": "https://github.com/reeleehq/braidio",
-    "commit_url": "https://github.com/reeleehq/braidio/commit/1995d805b467303d9ae1bbe1c972a45d8668a806",
+    "commit_url": "https://github.com/reeleehq/braidio/commit/9a6642ebd0110fe65d99acb29f23d4697cfa6f9b",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "reeleehq/braidio",
-    "sha": "ee7c222af76161806ad0710a96379a554dcac017",
+    "sha": "041e195c6db2be327e7d529f4208ce49d1a009ac",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "41061282716",
-    "run_url": "https://github.com/reeleehq/braidio/actions/runs/41061282716",
+    "run_id": "41390160157",
+    "run_url": "https://github.com/reeleehq/braidio/actions/runs/41390160157",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -62,11 +62,11 @@
   },
   "pypi": {
     "checked": true,
-    "latest": "0.0.87",
+    "latest": "0.0.88",
     "relation": "same",
     "error": null
   },
-  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout 1995d805b467303d9ae1bbe1c972a45d8668a806\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout 9a6642ebd0110fe65d99acb29f23d4697cfa6f9b\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
     "aligned": true,

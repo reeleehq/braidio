@@ -129,8 +129,8 @@ def _structure_and_bed(project_root, node: Annotation | None):
     bed — the pre-structure behaviour, reconstructed rather than special-cased
     at every use site. The sting and bed audio are found by their asset id
     first (:func:`media_path`), so a project moved to another machine still
-    reads them; a file found nowhere is not an error *here* (a timeline read
-    never plays the bed), only where it is played.
+    reads them; one found nowhere, with a recorded url, is not an error *here*
+    (a timeline read never plays the bed), only where it is played.
     """
     from braidio.music import MusicBed
     from braidio.structure import DEFAULT_STRUCTURE, MusicStructure, Sting
@@ -285,12 +285,13 @@ def _member_duration(project, member: Annotation, *, config: dict, structure) ->
             return length + sting.gap_after_s
         return float(structure.pause_s)
 
-    try:
-        path = media_path(project.root, member.body, what=_member_what(member))
-    except (FileNotFoundError, ValueError):
-        path = None  # gone from disk, or never recorded: the arithmetic below
-    if path is not None:
-        return float(braidio.duration_s(path))
+    if member.body.get("url") or member.body.get("artifact_id"):
+        try:
+            path = media_path(project.root, member.body, what=_member_what(member))
+        except FileNotFoundError:
+            path = None  # gone from disk: the arithmetic below
+        if path is not None:
+            return float(braidio.duration_s(path))
 
     if member.tier == TIER_SEGMENT_EXTRACTION:
         (pre, post), _fades, min_len = _pads_fades(config)

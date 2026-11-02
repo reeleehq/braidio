@@ -1788,3 +1788,67 @@ def test_ingest_document_as_beats_refuses_html(monkeypatch):
     args = {"project_id": "md", "uri": "https://example.com/a", "as_beats": True}
     with pytest.raises(ToolError, match="as_beats"):
         _call(server, "ingest_document", args)
+
+
+# --- upload_asset never stores a web page as media (braidio#144) -----------------
+
+
+def test_upload_asset_fetches_a_share_link_s_download_not_its_page(monkeypatch):
+    """A Google Drive ``/view`` link is a page about the file: the tool fetches
+    the direct download graze resolves it to."""
+    from braidio.mcp import _docs
+
+    fetched = []
+    monkeypatch.setattr(
+        _docs,
+        "fetch_uri",
+        lambda uri: fetched.append(uri) or (b"ID3\x03\x00", "audio/mpeg"),
+    )
+    out = _call(
+        _local_server(ledger={}),
+        "upload_asset",
+        {"uri": "https://drive.google.com/file/d/1AbC/view?usp=sharing"},
+    ).structured_content
+    assert fetched == ["https://drive.google.com/uc?export=download&id=1AbC"]
+    assert out["source"] == "https://drive.google.com/file/d/1AbC/view?usp=sharing"
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        {"uri": "https://www.dropbox.com/scl/fi/abc/song.mp3?rlkey=x&dl=1"},
+        {"data_b64": b"<!DOCTYPE html><html>sign in"},
+    ],
+)
+def test_upload_asset_refuses_a_web_page_and_stores_nothing(monkeypatch, args):
+    """A private share link answers HTTP 200 with a sign-in page: refused on
+    the bytes, with graze's diagnosis, before anything reaches the library."""
+    import base64
+
+    from fastmcp.exceptions import ToolError
+
+    if "data_b64" in args:
+        args = {"data_b64": base64.b64encode(args["data_b64"]).decode()}
+
+    from braidio.mcp import _docs
+
+    page = (b"<!DOCTYPE html><html><body>Sign in</body></html>", "text/html")
+    monkeypatch.setattr(_docs, "fetch_uri", lambda uri: page)
+    server = _local_server(ledger={})
+    with pytest.raises(ToolError, match="anyone-with-the-link"):
+        _call(server, "upload_asset", args)
+    assert _call(server, "list_assets", {}).structured_content["assets"] == []
+
+
+def test_upload_asset_refuses_a_folder_link_before_fetching(monkeypatch):
+    from fastmcp.exceptions import ToolError
+
+    from braidio.mcp import _docs
+
+    monkeypatch.setattr(_docs, "fetch_uri", lambda uri: pytest.fail("fetched"))
+    with pytest.raises(ToolError, match="folder link"):
+        _call(
+            _local_server(ledger={}),
+            "upload_asset",
+            {"uri": "https://www.dropbox.com/scl/fo/abc/xyz?rlkey=x&dl=0"},
+        )

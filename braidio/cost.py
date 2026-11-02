@@ -32,7 +32,7 @@ import os
 from dataclasses import dataclass
 from typing import Optional, Union
 
-from braidio.script import Script, Narration, Dialogue
+from braidio.script import Script, Dialogue
 from braidio.tts import DEFAULT_MODEL_ID, DIALOGUE_MODEL_ID
 
 #: Env var overriding the USD-per-1000-characters rate (global default for models
@@ -180,49 +180,94 @@ class CostRollup:
         return f"{self.characters:,} chars → {dollars}{tail}"
 
 
-def _script_lines(script: Script, *, model_id: str) -> list[CostLine]:
-    """Billable lines of ``script``: narration + dialogue beats (segments are free).
+def plan_cost_lines(
+    plan,
+    *,
+    model_id: Optional[str] = None,
+    dialogue_model_id: Optional[str] = None,
+    script: Optional[Script] = None,
+) -> list[CostLine]:
+    """Billable lines of a :class:`~braidio.rights.RenderPlan`: what WILL be synthesized.
 
-    Narration is priced at ``model_id``. A dialogue beat is always
-    :data:`~braidio.tts.DIALOGUE_MODEL_ID`, the one model Text-to-Dialogue runs on.
-
-    Estimates the *default* (personal) cut. Published-cut costing (rights-safe
-    rewrites + synthesized clip substitutes) must reuse :func:`braidio.plan_production`
-    rather than re-deriving the rights rules here — a follow-up.
+    Narration is priced at ``model_id`` and dialogue at ``dialogue_model_id``:
+    the models the render actually submits (a delivery's, a cast's). Clips and
+    scene breaks are local work, free, and contribute no line. Pricing the plan
+    rather than the raw script is what makes a ``published`` cut honest: dropped
+    clips cost nothing and synthesized substitutes are billed. ``script`` (the
+    one planned) only lends a dialogue beat its label. ``None`` models resolve
+    to :data:`~braidio.tts.DEFAULT_MODEL_ID` / ``DIALOGUE_MODEL_ID`` at call time.
     """
+    model_id = model_id or DEFAULT_MODEL_ID
+    dialogue_model_id = dialogue_model_id or DIALOGUE_MODEL_ID
     lines: list[CostLine] = []
-    for i, beat in enumerate(script.beats):
-        if isinstance(beat, Narration):
-            lines.append(
-                CostLine(
-                    label=f"beat[{i}] narration",
-                    kind="narration",
-                    characters=billable_chars(beat.text),
-                    usd=tts_cost_usd(beat.text, model_id=model_id),
-                    model_id=model_id,
-                )
+    for beat in plan.beats:
+        if beat.kind == "narration":
+            text, model, kind = beat.content, model_id, "narration"
+        elif beat.kind == "dialogue":
+            text, model, kind = (
+                "".join(t for _role, t in (beat.turns or ())),
+                dialogue_model_id,
+                "dialogue",
             )
-        elif isinstance(beat, Dialogue):
-            text = "".join(t for _role, t in beat.turns)
-            label = f"beat[{i}] dialogue"
-            if beat.label:
-                label += f" ({beat.label})"
-            lines.append(
-                CostLine(
-                    label=label,
-                    kind="dialogue",
-                    characters=billable_chars(text),
-                    usd=tts_cost_usd(text, model_id=DIALOGUE_MODEL_ID),
-                    model_id=DIALOGUE_MODEL_ID,
-                )
+        else:
+            continue  # a clip is extracted media, a break is structure: free
+        label = f"beat[{beat.from_index}] {kind}"
+        source = script.beats[beat.from_index] if script is not None else None
+        if isinstance(source, Dialogue) and source.label:
+            label += f" ({source.label})"
+        lines.append(
+            CostLine(
+                label=label,
+                kind=kind,
+                characters=billable_chars(text),
+                usd=tts_cost_usd(text, model_id=model),
+                model_id=model,
             )
-        # a SegmentBeat is extracted media and a SceneBreak is structure (a
-        # sting or silence, nothing synthesized) = free; neither contributes a line.
+        )
     return lines
 
 
+def rollup(lines) -> CostRollup:
+    """The :class:`CostRollup` of ``lines``: exact characters, honest dollars.
+
+    ``usd`` sums the priced lines; billable text with no rate makes it a lower
+    bound (``unpriced``), and only when nothing at all is priced does it become
+    ``None``. No billable text is a genuine ``0.0``.
+    """
+    lines = tuple(lines)
+    characters = sum(ln.characters for ln in lines)
+    priced = [ln.usd for ln in lines if ln.usd is not None]
+    unpriced = any(ln.characters > 0 and ln.usd is None for ln in lines)
+    usd = round(sum(priced), 6) if priced else (None if unpriced else 0.0)
+    return CostRollup(characters=characters, usd=usd, unpriced=unpriced, lines=lines)
+
+
+def price_plan(
+    plan,
+    *,
+    model_id: Optional[str] = None,
+    dialogue_model_id: Optional[str] = None,
+    script: Optional[Script] = None,
+) -> CostRollup:
+    """The estimated spend of a :class:`~braidio.rights.RenderPlan` — the one pricer.
+
+    :func:`estimate_cost` and every render's spend report are this function
+    over :func:`braidio.plan_production`'s output, each with the models it
+    renders with (:func:`plan_cost_lines`).
+    """
+    return rollup(
+        plan_cost_lines(
+            plan, model_id=model_id, dialogue_model_id=dialogue_model_id, script=script
+        )
+    )
+
+
 def estimate_cost(
-    source: Union[Script, str], *, model_id: Optional[str] = None
+    source: Union[Script, str],
+    *,
+    model_id: Optional[str] = None,
+    dialogue_model_id: Optional[str] = None,
+    profile=None,
 ) -> CostRollup:
     """Estimate ElevenLabs spend for a :class:`braidio.Script` or a raw string.
 
@@ -231,10 +276,13 @@ def estimate_cost(
     bound when some text is unpriced; see :func:`usd_per_1k_chars`).
 
     ``model_id`` is the model the narration will be voiced with (default
-    :data:`~braidio.tts.DEFAULT_MODEL_ID`); its rate resolves like any other
+    :data:`~braidio.tts.DEFAULT_MODEL_ID`) and ``dialogue_model_id`` the one
+    its dialogue beats are (default :data:`~braidio.tts.DIALOGUE_MODEL_ID`,
+    what the default cast uses); each rate resolves like any other
     (:func:`usd_per_1k_chars`), so a model with no confirmed rate of its own
-    gets the general rate, never another model's. Dialogue beats are priced
-    at :data:`~braidio.tts.DIALOGUE_MODEL_ID` whatever ``model_id`` says.
+    gets the general rate, never another model's. A script is priced through
+    :func:`braidio.plan_production` under ``profile`` (default: the default
+    profile, which plays every beat), so the estimate is of what renders.
 
     >>> from braidio import Script, Narration, SegmentBeat
     >>> s = Script(title="x", id_slug="01", beats=[
@@ -242,24 +290,22 @@ def estimate_cost(
     >>> estimate_cost(s).characters  # only the narration counts; the clip is free
     500
     """
+    from braidio.rights import DEFAULT_PROFILE, plan_production
+
     model_id = model_id or DEFAULT_MODEL_ID
     if isinstance(source, str):
-        lines = [
-            CostLine(
-                label="text",
-                kind="narration",
-                characters=billable_chars(source),
-                usd=tts_cost_usd(source, model_id=model_id),
-                model_id=model_id,
-            )
-        ]
-    else:
-        lines = _script_lines(source, model_id=model_id)
-
-    characters = sum(ln.characters for ln in lines)
-    priced = [ln.usd for ln in lines if ln.usd is not None]
-    unpriced = any(ln.characters > 0 and ln.usd is None for ln in lines)
-    usd = round(sum(priced), 6) if priced else (None if unpriced else 0.0)
-    return CostRollup(
-        characters=characters, usd=usd, unpriced=unpriced, lines=tuple(lines)
+        return rollup(
+            [
+                CostLine(
+                    label="text",
+                    kind="narration",
+                    characters=billable_chars(source),
+                    usd=tts_cost_usd(source, model_id=model_id),
+                    model_id=model_id,
+                )
+            ]
+        )
+    plan = plan_production(source, profile if profile is not None else DEFAULT_PROFILE)
+    return price_plan(
+        plan, model_id=model_id, dialogue_model_id=dialogue_model_id, script=source
     )

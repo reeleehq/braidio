@@ -1948,3 +1948,71 @@ def test_ingest_document_refuses_a_zip_based_document(monkeypatch):
             "ingest_document",
             {"project_id": "d", "uri": "https://example.com/essay.docx"},
         )
+
+
+# --- every render is priced at the model it voices with (braidio#155) ------------
+
+_V2, _V3 = "eleven_multilingual_v2", "eleven_v3"
+_THOUSAND = {
+    "title": "t",
+    "id_slug": "01",
+    "beats": [{"type": "narration", "text": "a" * 1000}],
+}
+
+
+@pytest.fixture
+def distinct_rates(monkeypatch):
+    """v2 and v3 at different confirmed rates, so the model shows in the price."""
+    from braidio.cost import MODEL_USD_PER_1K_CHARS
+
+    monkeypatch.setitem(MODEL_USD_PER_1K_CHARS, _V2, 0.11)
+    monkeypatch.setitem(MODEL_USD_PER_1K_CHARS, _V3, 0.33)
+
+
+def _render_stub(*args, out_path, **kw):
+    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+    Path(out_path).write_bytes(b"EP")
+    return Path(out_path)
+
+
+def test_render_production_is_priced_at_its_delivery_s_model(monkeypatch, distinct_rates):
+    monkeypatch.setattr(braidio, "render_production", _render_stub)
+    server = _local_server(ledger={})
+    default = _call(server, "render_production", {"script": _THOUSAND})
+    v3 = _call(
+        server, "render_production", {"script": _THOUSAND, "delivery": "v3-presenter"}
+    )
+    assert braidio.DELIVERIES["narration"].model_id == _V2  # the tool's default
+    assert default.structured_content["cost_usd"] == pytest.approx(0.11)
+    assert v3.structured_content["cost_usd"] == pytest.approx(0.33)
+
+
+def test_render_format_is_priced_at_the_format_s_narration_model(
+    monkeypatch, distinct_rates
+):
+    monkeypatch.setattr(braidio, "render_format", _render_stub)
+    r = _call(
+        _local_server(ledger={}),
+        "render_format",
+        {"format_id": "solo_explainer", "script": _THOUSAND},
+    )
+    assert braidio.FORMATS["solo_explainer"].narration_delivery.model_id == _V3
+    assert r.structured_content["cost_usd"] == pytest.approx(0.33)
+
+
+@_NW
+def test_weave_project_is_priced_at_the_weave_config_s_model(
+    monkeypatch, distinct_rates
+):
+    """No format: the graph voices with the default WeaveConfig's model (v2)."""
+    episode = type(
+        "Ann",
+        (),
+        {"id": "9a23da78-0a3e-4acf-a557-48bd6e519038", "body": {"url": "file:///x"}},
+    )()
+    monkeypatch.setattr(braidio, "weave_project", lambda proj, scr, **kw: episode)
+    server = _local_server(ledger={})
+    _call(server, "create_project", {"project_id": "demo", "title": "Demo"})
+    r = _call(server, "weave_project", {"project_id": "demo", "script": _THOUSAND})
+    assert braidio.WeaveConfig().model_id == _V2
+    assert r.structured_content["cost_usd"] == pytest.approx(0.11)

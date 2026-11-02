@@ -1432,3 +1432,59 @@ def test_the_sting_and_bed_are_read_by_asset_id_when_their_urls_point_nowhere(
 
     assert Path(structure.sting.asset_path).read_bytes() == b"STING-ASSET"
     assert Path(bed.asset_path).read_bytes() == b"BED-ASSET"
+
+
+def test_a_reconstructed_timeline_probes_the_takes_found_in_the_catalog(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """``episode_timeline`` on a row with no persisted timeline probes each
+    take where ``media_path`` finds it, not at its recorded url."""
+    import nw
+
+    from braidio.importing._catalog import CatalogReport, register_artifact
+    from braidio.transforms import episode_timeline
+    from braidio.transforms._common import url_to_path
+
+    script, source = script_and_source
+    episode = braidio.weave_project(project, script, source=source)
+    narration = nw.annotations_at_tier(project.root, "narration-renders")[0]
+    original = url_to_path(narration.body["url"])
+    inside = project.root / "media" / original.name
+    inside.parent.mkdir(parents=True, exist_ok=True)
+    original.rename(inside)
+    register_artifact(
+        project.root,
+        inside,
+        artifact_id=narration.body["artifact_id"],
+        kind="audio",
+        generated_at="2026-11-02T00:00:00Z",
+        report=CatalogReport(),
+    )
+    probed = []
+    monkeypatch.setattr(braidio, "duration_s", lambda p: probed.append(p) or 2.0)
+
+    stripped = {k: v for k, v in episode.body.items() if k != "timeline"}
+    episode_timeline(project, episode.model_copy(update={"body": stripped}))
+
+    assert any(Path(p).parent.name == "blobs" for p in probed), probed
+
+
+def test_a_missing_bed_does_not_fail_a_read_that_never_plays_it(
+    project, script_and_source, patched_synthesis, tmp_path
+):
+    """Found nowhere, the sting and bed keep their recorded location unchecked:
+    only the caller that plays them fails (a timeline read never does)."""
+    import nw
+
+    from braidio.transforms._common import url_to_path
+    from braidio.transforms._episode import _structure_and_bed
+
+    _weave_with_sting_and_bed(project, script_and_source, tmp_path)
+    (node,) = nw.annotations_at_tier(project.root, "production-structures")
+    (tmp_path / "bed.mp3").unlink()
+    (tmp_path / "hit.mp3").unlink()
+
+    structure, bed = _structure_and_bed(project.root, node)
+
+    assert Path(bed.asset_path) == url_to_path(node.body["bed_url"])
+    assert Path(structure.sting.asset_path) == url_to_path(node.body["sting_url"])

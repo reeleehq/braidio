@@ -57,6 +57,7 @@ into the delivered artifact.
 from __future__ import annotations
 
 import uuid
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional
 
@@ -110,6 +111,7 @@ from braidio.transforms._common import (
     safe_duration,
     file_url,
     media_path,
+    url_to_path,
 )
 from braidio.transforms._segment import _pads_fades
 
@@ -127,7 +129,8 @@ def _structure_and_bed(project_root, node: Annotation | None):
     bed — the pre-structure behaviour, reconstructed rather than special-cased
     at every use site. The sting and bed audio are found by their asset id
     first (:func:`media_path`), so a project moved to another machine still
-    reads them.
+    reads them; a file found nowhere is not an error *here* (a timeline read
+    never plays the bed), only where it is played.
     """
     from braidio.music import MusicBed
     from braidio.structure import DEFAULT_STRUCTURE, MusicStructure, Sting
@@ -148,13 +151,27 @@ def _structure_and_bed(project_root, node: Annotation | None):
     return MusicStructure(sting=sting, **(body.get("structure") or {})), bed
 
 
-def _asset_path(project_root, body: dict, asset: str):
-    """The file of a structure node's ``asset`` (``"sting"`` / ``"bed"``)."""
+def _asset_path(project_root, body: dict, asset: str) -> Path:
+    """The file of a structure node's ``asset`` (``"sting"`` / ``"bed"``).
+
+    Found nowhere → the recorded location, unchecked, as before
+    :func:`media_path`: the caller that plays it is the one that fails.
+    """
     ref = {
         "artifact_id": body.get(f"{asset}_asset_id"),
         "url": body.get(f"{asset}_url"),
     }
-    return media_path(project_root, ref, what=f"production-structure {asset}")
+    try:
+        return media_path(project_root, ref, what=f"production-structure {asset}")
+    except FileNotFoundError:
+        if not ref["url"]:
+            raise
+        return url_to_path(ref["url"])
+
+
+def _member_what(member: Annotation) -> str:
+    """How an error names ``member``'s media."""
+    return f"{member.tier} {member.id}"
 
 
 def _member_role(member: Annotation, index: dict, *, structure):
@@ -268,13 +285,12 @@ def _member_duration(project, member: Annotation, *, config: dict, structure) ->
             return length + sting.gap_after_s
         return float(structure.pause_s)
 
-    if member.body.get("url") or member.body.get("artifact_id"):
-        try:
-            path = media_path(project.root, member.body, what=member.tier)
-        except FileNotFoundError:
-            path = None  # gone from disk: fall back to the arithmetic below
-        if path is not None:
-            return float(braidio.duration_s(path))
+    try:
+        path = media_path(project.root, member.body, what=_member_what(member))
+    except (FileNotFoundError, ValueError):
+        path = None  # gone from disk, or never recorded: the arithmetic below
+    if path is not None:
+        return float(braidio.duration_s(path))
 
     if member.tier == TIER_SEGMENT_EXTRACTION:
         (pre, post), _fades, min_len = _pads_fades(config)
@@ -781,9 +797,7 @@ class WeaveToEpisode(BaseTransform):
         is_clip = member.tier == TIER_SEGMENT_EXTRACTION
         return TimelineItem(
             kind="clip" if is_clip else "narration",
-            path=str(
-                media_path(project_root, member.body, what=f"{member.tier} {member.id}")
-            ),
+            path=str(media_path(project_root, member.body, what=_member_what(member))),
             placement="sequential",
             speaker=_member_speaker(member, index),
             spotlight=(

@@ -61,8 +61,9 @@ class Project(nw.Project):
     def episodes(self) -> list:
         """The project's finished episodes (``episode-renders`` nodes), oldest first.
 
-        A re-weave adds an episode and keeps the earlier ones, so the last is
-        the current one.
+        A re-weave adds an episode and keeps the earlier ones. The last is NOT
+        necessarily the current one — a revert re-weaves to an older episode;
+        see :meth:`current_episode`.
         """
         tiers = _tiers()
         return sorted(
@@ -71,14 +72,30 @@ class Project(nw.Project):
             key=lambda a: (a.provenance.generated_at_time.to_seconds(), str(a.id)),
         )
 
+    def current_episode(self, *, episodes=None):
+        """The episode the script currently weaves to, or ``None`` if none.
+
+        The most recent **fresh** episode, else the most recent
+        (:func:`braidio.transforms._common.freshest`, the rule every "current
+        node" reader shares). After an edit and its revert, ``weave_project``
+        returns the ORIGINAL episode again, which is older than the edited cut
+        but the only fresh one (braidio#169). ``episodes``: the list
+        :meth:`episodes` returned, when the caller already has it.
+        """
+        if episodes is None:
+            episodes = self.episodes()
+        return _tiers().freshest(self, episodes)
+
     def genre_status(self) -> dict:
         """Where this production stands, for a host's one ``project_status`` door
         (``nw.Project.genre_status``, nw#133; braidio#125).
 
         Counted, in muvid's shape: the script's beats by kind, how many episodes
-        were rendered, the latest one (path-free), and the next step as
-        ``{"op", "why"}``. Indexed tier reads only — no freshness walk, no file
-        probe — and no per-item list, so it stays small however often the
+        were rendered, the current one as ``latest_episode`` (path-free; the
+        wire name predates "current", see :meth:`current_episode`), and the
+        next step as ``{"op", "why"}``. Indexed tier reads — plus one freshness
+        walk, only once there is more than one episode to choose from — no file
+        probe, and no per-item list, so it stays small however often the
         project is re-woven, and never names a path.
 
         >>> import tempfile
@@ -98,6 +115,7 @@ class Project(nw.Project):
             )
         }
         episodes = self.episodes()
+        current = self.current_episode(episodes=episodes)
         if episodes:
             op, why = NEXT_STEP_DONE
         elif any(counts.values()):
@@ -107,7 +125,7 @@ class Project(nw.Project):
         return {
             **counts,
             "episode_count": len(episodes),
-            "latest_episode": _episode_row(episodes[-1]) if episodes else None,
+            "latest_episode": _episode_row(current) if current else None,
             "next_step": {"op": op, "why": why},
         }
 

@@ -15,7 +15,6 @@ documented follow-up.
 from __future__ import annotations
 
 import uuid
-from typing import Optional
 
 from falaw import Plan
 from lacing import Annotation
@@ -33,7 +32,9 @@ from braidio.weave_config import WeaveConfig
 from braidio.transforms._common import (
     TIER_VOICE_ASSIGNMENT,
     beat_ordinal,
+    children_at_tier,
     fresh_equivalent,
+    freshest,
     singleton,
 )
 
@@ -104,3 +105,31 @@ class BeatToVoiceAssignment(BaseTransform):
             cost_usd_actual=0.0,
             cache_hit_savings_usd=0.0,
         )
+
+
+def current_voice_assignment(project, beat: Annotation) -> Annotation:
+    """The voice-assignment the voice stage would choose for ``beat`` now.
+
+    Its plan is free (no synthesis), so plan it and take the fresh node that
+    plan would only duplicate — exactly what :meth:`BeatToVoiceAssignment.execute`
+    reuses. "The most recent fresh one" cannot stand in for that: the voice
+    may come from the environment (``BRAIDIO_TTS_VOICE``, which no node
+    records), so after a voice flip A→B→A both assignments are fresh and only
+    the plan knows which one is current (braidio#169).
+
+    A single assignment is the answer without planning: the voice stage either
+    chose it or would have added a second. When the plan has no fresh
+    equivalent — a driver ran narration without running the voice stage
+    first — fall back to :func:`freshest` over the beat's assignments.
+    """
+    hits = children_at_tier(project, TIER_VOICE_ASSIGNMENT, beat.id)
+    if not hits:
+        raise ValueError(f"no {TIER_VOICE_ASSIGNMENT!r} node derived from {beat.id}")
+    if len(hits) == 1:
+        return hits[0]
+    _plan, (skeleton,) = BeatToVoiceAssignment().plan(
+        project, TransformInputs(primary=(beat,))
+    )
+    chosen = fresh_equivalent(project, skeleton)
+    # no fresh equivalent: the voice stage did not run for this plan
+    return chosen if chosen is not None else freshest(project, hits)

@@ -1614,3 +1614,54 @@ def test_a_revert_reuses_the_original_take_without_synthesis(
     reverted = braidio.weave_project(project, script, source=source)
     assert spoken == []
     assert reverted.body["ordered_member_ids"][0] == first.body["ordered_member_ids"][0]
+
+
+def test_a_voice_flip_and_back_weaves_in_the_voice_the_voice_stage_chose(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """braidio#169: the default voice comes from the environment, which no
+    node records, so after A→B→A both voice-assignments are FRESH. The
+    narration must use the one the voice stage chose — not merely the most
+    recent fresh one (that is B), nor the oldest (wrong again on →B)."""
+    script, source = script_and_source
+    voice_of_take = {}  # the synthesized file's stem (its render's id) → voice
+    stub = braidio.narrate
+
+    def spy(text, out, **kw):
+        voice_of_take[Path(out).stem] = kw.get("voice_id")
+        return stub(text, out, **kw)
+
+    monkeypatch.setattr(braidio, "narrate", spy)
+
+    def opening_voice(voice):
+        monkeypatch.setenv("BRAIDIO_TTS_VOICE", voice)
+        episode = braidio.weave_project(project, script, source=source)
+        return voice_of_take[episode.body["ordered_member_ids"][0]]
+
+    assert opening_voice("voiceA") == "voiceA"
+    assert opening_voice("voiceB") == "voiceB"
+    assert opening_voice("voiceA") == "voiceA"  # not the most recent fresh
+    assert opening_voice("voiceB") == "voiceB"  # not the oldest fresh
+
+
+def test_genre_status_names_the_episode_a_revert_returned(
+    project, script_and_source, patched_synthesis
+):
+    """After weave → edit → revert, the revert returns the ORIGINAL episode,
+    older than the edited cut: the status's current episode is that one, not
+    the newest by generation time (braidio#169)."""
+    import dataclasses
+
+    script, source = script_and_source
+    edited = dataclasses.replace(
+        script, beats=[braidio.Narration(text="Edited opening."), *script.beats[1:]]
+    )
+    first = braidio.weave_project(project, script, source=source)
+    cut = braidio.weave_project(project, edited, source=source)
+    reverted = braidio.weave_project(project, script, source=source)
+
+    assert reverted.id == first.id and project.episodes()[-1].id == cut.id
+    assert project.current_episode().id == first.id
+    status = project.genre_status()
+    assert status["episode_count"] == 2
+    assert status["latest_episode"]["episode_id"] == str(first.id)

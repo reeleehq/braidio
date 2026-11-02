@@ -243,3 +243,18 @@ def test_estimate_prices_dialogue_at_the_named_dialogue_model(monkeypatch):
         "test-narration-model",
         "test-cast-model",
     ]
+
+
+def test_plan_production_takes_a_profile_by_its_value():
+    """Every render path plans through plan_production: a profile given as its
+    string value must plan the same cut as the enum (published_text and all)."""
+    from braidio import Profile, plan_production
+
+    script = Script(
+        title="t",
+        id_slug="01",
+        beats=[Narration(text="original", published_text="cleared")],
+    )
+    by_value = plan_production(script, "published")
+    assert [b.content for b in by_value.beats] == ["cleared"]
+    assert by_value.profile is Profile.PUBLISHED

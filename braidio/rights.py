@@ -149,7 +149,13 @@ def plan_production(
     *,
     publishable_clip_rights: frozenset[str] = PUBLISHABLE_CLIP_RIGHTS,
 ) -> RenderPlan:
-    """Filter ``script`` into the beats renderable under ``profile``."""
+    """Filter ``script`` into the beats renderable under ``profile``.
+
+    ``profile`` may be its value (``"published"``): it is coerced here, the one
+    door every render and estimate plans through, because the rules below
+    compare by identity and a string would plan half a published cut.
+    """
+    profile = Profile(profile)
     plan = RenderPlan(profile=profile)
     for i, beat in enumerate(script.beats):
         if isinstance(beat, SegmentBeat):

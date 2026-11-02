@@ -2152,3 +2152,24 @@ def test_a_noop_reweave_walks_freshness_once(
     again = braidio.weave_project(project, script, source=source)
     assert again.id == first.id
     assert len(walks) == 1
+
+
+def test_after_a_voice_flip_and_back_the_status_names_the_episode_the_weave_returned(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """braidio#172: an environment voice is in no node, so after A→B→A both
+    mixes read fresh. The project's current episode is the one voiced as a
+    weave voices it now: the one the A re-weave returned, not the newer B cut."""
+    script, source = script_and_source
+    monkeypatch.setenv("BRAIDIO_TTS_VOICE", "voiceA")
+    a = braidio.weave_project(project, script, source=source)
+    monkeypatch.setenv("BRAIDIO_TTS_VOICE", "voiceB")
+    b = braidio.weave_project(project, script, source=source)
+    monkeypatch.setenv("BRAIDIO_TTS_VOICE", "voiceA")
+    again = braidio.weave_project(project, script, source=source)
+
+    assert again.id == a.id != b.id
+    assert project.current_episode().id == a.id
+    assert project.genre_status()["latest_episode"]["episode_id"] == str(a.id)
+    monkeypatch.setenv("BRAIDIO_TTS_VOICE", "voiceB")
+    assert project.current_episode().id == b.id  # it follows the voice now

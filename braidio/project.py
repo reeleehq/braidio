@@ -90,12 +90,27 @@ class Project(nw.Project):
         (:func:`braidio.transforms._common.freshest`, the rule every "current
         node" reader shares). After an edit and its revert, ``weave_project``
         returns the ORIGINAL episode again, which is older than the edited cut
-        but the only fresh one (braidio#169). ``episodes``: the list
-        :meth:`episodes` returned, when the caller already has it.
+        but the only fresh one (braidio#169). When several are fresh, the one
+        voiced as a weave would voice it now wins (an environment voice is in
+        no node, so a flip A→B→A leaves both mixes fresh; braidio#172).
+        ``episodes``: the list :meth:`episodes` returned, when the caller
+        already has it.
         """
         if episodes is None:
             episodes = self.episodes()
-        return _tiers().freshest(self, episodes)
+        tiers = _tiers()
+        if len(episodes) > 1:
+            fresh_ids = tiers.fresh_ids(self)
+            fresh = [e for e in episodes if e.id in fresh_ids]
+            if len(fresh) > 1:  # e.g. an env voice flip A→B→A (braidio#172)
+                from braidio.transforms._voice import voiced_as_now
+
+                index = tiers.graph_index(self)
+                return next(
+                    (e for e in reversed(fresh) if voiced_as_now(self, e, index=index)),
+                    fresh[-1],
+                )
+        return tiers.freshest(self, episodes)
 
     def genre_status(self) -> dict:
         """Where this production stands, for a host's one ``project_status`` door

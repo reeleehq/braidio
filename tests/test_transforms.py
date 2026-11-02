@@ -2099,3 +2099,35 @@ def test_a_replaced_take_is_pending_until_the_reweave_hears_it(
     braidio.weave_project(project, script, source=source)
     assert braidio.transforms.pending_takes(project) == ()
     assert project.genre_status()["pending_takes"] == []
+
+
+def test_one_recording_on_two_beats_is_pending_for_the_second(
+    project, take_durations, spoken, tmp_path
+):
+    """A take is heard as ITS beat's: the same bytes playing at beat 0 do not
+    make beat 2's override heard."""
+    script = braidio.Script(
+        title="t",
+        id_slug="two",
+        beats=[braidio.Narration(text="One."), braidio.Narration(text="Two.")],
+    )
+    braidio.weave_project(project, script)
+    recording = _record(tmp_path)
+    braidio.transforms.replace_take(project, 0, recording)
+    braidio.weave_project(project, script)
+    braidio.transforms.replace_take(project, 1, recording)
+    assert braidio.transforms.pending_takes(project) == ("0001",)
+
+
+def test_status_reports_two_overrides_instead_of_raising(
+    project, script_and_source, take_durations, spoken, tmp_path
+):
+    import uuid
+
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source)
+    override = braidio.transforms.replace_take(project, 0, _record(tmp_path))
+    project.graph.add_annotation(override.model_copy(update={"id": uuid.uuid4()}))
+    status = project.genre_status()
+    assert status["next_step"]["op"] == "restore_take"
+    assert "at most one" in status["next_step"]["why"]

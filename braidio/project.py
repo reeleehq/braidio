@@ -37,11 +37,11 @@ NEXT_STEP_DONE = (
 )
 
 
-def _pending_takes(project) -> tuple:
+def _pending_takes(project, *, episode) -> tuple:
     """Beats whose recorded take the current mix does not play (braidio#86)."""
     from braidio.transforms._takes import pending_takes
 
-    return pending_takes(project)
+    return pending_takes(project, episode=episode)
 
 
 def _tiers():
@@ -104,10 +104,13 @@ class Project(nw.Project):
         Counted, in muvid's shape: the script's beats by kind, how many episodes
         were rendered, the current one as ``latest_episode`` (path-free; the
         wire name predates "current", see :meth:`current_episode`), and the
-        next step as ``{"op", "why"}``. Indexed tier reads — plus one freshness
-        walk, only once there is more than one episode to choose from — no file
-        probe, and no per-item list, so it stays small however often the
-        project is re-woven, and never names a path.
+        next step as ``{"op", "why"}``, plus ``pending_takes``: the beats whose
+        recorded take the mix does not play yet (braidio#86; empty unless a
+        take was replaced). Indexed tier reads — plus one freshness walk, only
+        once there is more than one episode to choose from — no file probe, so
+        it stays small however often the project is re-woven, and never names
+        a path. Two overrides for one beat are reported as the next step
+        (``restore_take``), not raised: a polled status door must answer.
 
         >>> import tempfile
         >>> with tempfile.TemporaryDirectory() as d:
@@ -127,8 +130,13 @@ class Project(nw.Project):
         }
         episodes = self.episodes()
         current = self.current_episode(episodes=episodes)
-        pending = _pending_takes(self) if episodes else ()
-        if pending:
+        try:
+            pending, broken = _pending_takes(self, episode=current), None
+        except ValueError as exc:  # two overrides for one beat: say how out
+            pending, broken = (), str(exc)
+        if broken:
+            op, why = "restore_take", broken
+        elif pending and episodes:
             op, why = NEXT_STEP_HEAR_TAKES
         elif episodes:
             op, why = NEXT_STEP_DONE

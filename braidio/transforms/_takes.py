@@ -305,37 +305,48 @@ def _heard_take(project, beat: Annotation) -> tuple[Annotation, Annotation]:
     )
 
 
-def pending_takes(project) -> tuple[str, ...]:
+_CURRENT = object()  # "find the current episode yourself"
+
+
+def pending_takes(project, *, episode=_CURRENT) -> tuple[str, ...]:
     """The ``beat_id``s whose recording the current mix does not play yet.
 
     :func:`replace_take` writes an authoring node, so nothing reads stale until
     the next re-weave plans it: this is how a host knows a re-weave is due. A
     beat counts when its override applies (made against the beat's current
-    words) and the current mix has no take keyed by that recording.
+    words) and no take **of that beat** in the current mix is keyed by that
+    recording. ``episode``: the current episode when the caller already has it
+    (``None`` = there is none); with no override at all nothing is looked up.
+    Raises ``ValueError`` (naming the way out) when a beat has two overrides.
     """
     import nw
 
-    episode = project.current_episode()
-    heard = set()
-    if episode is not None:
-        members = {str(m) for m in episode.body.get("ordered_member_ids") or ()}
-        heard = {
-            a.body.get("cache_key")
-            for a in nw.annotations_at_tier(project.root, TIER_NARRATION_RENDER)
-            if str(a.id) in members
-        }
+    overrides = _all_overrides(project)
+    if not overrides:
+        return ()
+    if episode is _CURRENT:
+        episode = project.current_episode()
+    members = (
+        {str(m) for m in (episode.body.get("ordered_member_ids") or ())}
+        if episode
+        else set()
+    )
+    heard = {  # (beat, key): a take is heard as ITS beat's, never another's
+        (parent, a.body.get("cache_key"))
+        for a in nw.annotations_at_tier(project.root, TIER_NARRATION_RENDER)
+        if str(a.id) in members
+        for parent in annotation_parents(a)
+    }
     beats = {
         str(b.body.get("beat_id")): b
         for b in nw.annotations_at_tier(project.root, TIER_NARRATIVE_BEAT)
     }
     pending = []
-    for beat_id in sorted(
-        {str(o.body.get("beat_id")) for o in _all_overrides(project)}
-    ):
+    for beat_id in sorted({str(o.body.get("beat_id")) for o in overrides}):
         beat = beats.get(beat_id)
         override = take_override_for(project, beat) if beat is not None else None
         if override is not None and (
-            upload_cache_key(override.body["artifact_id"]) not in heard
+            (beat.id, upload_cache_key(override.body["artifact_id"])) not in heard
         ):
             pending.append(beat_id)
     return tuple(pending)

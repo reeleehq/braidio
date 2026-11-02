@@ -651,3 +651,24 @@ def test_commentary_weave_genre_carries_dialogue():
         genre.body_schema_uris
     )
     assert braidio.transforms.DIALOGUE_RENDER_TRANSFORM in genre.transform_names
+
+
+def test_the_weave_receipt_counts_dialogue_and_a_cache_hit_as_savings(
+    project, script, source, synthesis
+):
+    """braidio#147: a dialogue beat bills at the dialogue model's rate; a
+    Text-to-Dialogue take mixing served from disk is savings, not spend."""
+    from braidio.cost import tts_cost_usd
+    from braidio.tts import DEFAULT_MODEL_ID, DIALOGUE_MODEL_ID
+
+    talk = tts_cost_usd("".join(t for _r, t in TURNS), model_id=DIALOGUE_MODEL_ID)
+    line = tts_cost_usd("Opening line.", model_id=DEFAULT_MODEL_ID)
+
+    live = braidio.weave_project(project, script, source=source, return_receipt=True)
+    assert live.cost_usd_actual == pytest.approx(line + talk)
+
+    synthesis["was_cached"] = True  # a fresh project: synthesized, but from disk
+    other = braidio.Project.init(project.root.parent / "other", title="cached")
+    cached = braidio.weave_project(other, script, source=source, return_receipt=True)
+    assert cached.cost_usd_actual == pytest.approx(line)  # the narration was live
+    assert cached.cache_hit_savings_usd == pytest.approx(talk)

@@ -1488,3 +1488,82 @@ def test_a_missing_bed_does_not_fail_a_read_that_never_plays_it(
 
     assert Path(bed.asset_path) == url_to_path(node.body["bed_url"])
     assert Path(structure.sting.asset_path) == url_to_path(node.body["sting_url"])
+
+
+# --- what a weave spent (braidio#147) --------------------------------------------
+
+
+def test_the_receipt_reports_synthesis_once_and_a_reuse_as_savings(
+    project, script_and_source, patched_synthesis
+):
+    """The first weave synthesizes both narration beats; a re-run with nothing
+    changed reuses them, so a host bills it ``0.0`` and sees the avoided spend."""
+    from braidio.cost import tts_cost_usd
+    from braidio.tts import DEFAULT_MODEL_ID
+
+    script, source = script_and_source
+    spoken = [b.text for b in script.beats if isinstance(b, braidio.Narration)]
+    synthesis = sum(tts_cost_usd(t, model_id=DEFAULT_MODEL_ID) for t in spoken)
+
+    first = braidio.weave_project(project, script, source=source, return_receipt=True)
+    again = braidio.weave_project(project, script, source=source, return_receipt=True)
+
+    assert isinstance(first, braidio.WeaveReceipt)
+    assert first.cost_usd_actual == pytest.approx(synthesis) and synthesis > 0
+    assert first.cache_hit_savings_usd == 0.0
+    assert again.episode.id == first.episode.id
+    assert again.cost_usd_actual == 0.0
+    assert again.cache_hit_savings_usd == pytest.approx(synthesis)
+    assert not first.has_unknown_costs and not again.has_unknown_costs
+
+
+def test_an_unpriced_rate_makes_the_receipt_a_lower_bound(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    from braidio.cost import RATE_ENV_VAR
+
+    monkeypatch.setenv(RATE_ENV_VAR, "none")
+    script, source = script_and_source
+    receipt = braidio.weave_project(project, script, source=source, return_receipt=True)
+    assert receipt.has_unknown_costs
+
+
+def test_without_the_flag_the_episode_is_returned_as_before(
+    project, script_and_source, patched_synthesis
+):
+    script, source = script_and_source
+    episode = braidio.weave_project(project, script, source=source)
+    assert episode.tier == "episode-renders"
+
+
+def test_a_failed_weave_carries_what_it_spent_on_its_exception(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """The first narration beat is synthesized (and billed), the second raises:
+    the error is re-raised unchanged, with the partial spend attached and the
+    total marked a lower bound (the failed stage may have billed too)."""
+    from braidio.cost import tts_cost_usd
+    from braidio.tts import DEFAULT_MODEL_ID
+
+    script, source = script_and_source
+    first_line = script.beats[0].text
+    calls = []
+
+    def _narrate(text, out, *, return_cache_status=False, **kw):
+        calls.append(text)
+        if len(calls) > 1:
+            raise RuntimeError("synthesis failed")
+        Path(out).parent.mkdir(parents=True, exist_ok=True)
+        Path(out).write_bytes(b"TTS")
+        return (Path(out), False) if return_cache_status else Path(out)
+
+    monkeypatch.setattr(braidio, "narrate", _narrate)
+    with pytest.raises(RuntimeError, match="synthesis failed") as caught:
+        braidio.weave_project(project, script, source=source)
+
+    receipt = caught.value.weave_receipt
+    assert receipt.episode is None
+    assert receipt.cost_usd_actual == pytest.approx(
+        tts_cost_usd(first_line, model_id=DEFAULT_MODEL_ID)
+    )
+    assert receipt.has_unknown_costs

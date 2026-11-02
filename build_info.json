@@ -1,32 +1,32 @@
 {
   "schema_version": 1,
-  "built_at": "2026-11-02T07:14:40Z",
+  "built_at": "2026-11-02T07:36:26Z",
   "package": {
     "name": "braidio",
-    "version": "0.0.96",
+    "version": "0.0.98",
     "display_name": "braidio",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "9a1946a9387ba9838690d48cad35a02a6b085e66",
-    "short_commit": "9a1946a",
+    "commit": "02b9609235830cb4d4d86b22092f1d155728e09e",
+    "short_commit": "02b9609",
     "branch": "main",
     "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/reeleehq/braidio",
-    "commit_url": "https://github.com/reeleehq/braidio/commit/9a1946a9387ba9838690d48cad35a02a6b085e66",
+    "commit_url": "https://github.com/reeleehq/braidio/commit/02b9609235830cb4d4d86b22092f1d155728e09e",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "reeleehq/braidio",
-    "sha": "9a1946a9387ba9838690d48cad35a02a6b085e66",
+    "sha": "432a021a31c2bb2ae77362c3cf0d1f5c7b7e076e",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "41404462076",
-    "run_url": "https://github.com/reeleehq/braidio/actions/runs/41404462076",
+    "run_id": "41406824093",
+    "run_url": "https://github.com/reeleehq/braidio/actions/runs/41406824093",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -60,11 +60,11 @@
   },
   "pypi": {
     "checked": true,
-    "latest": "0.0.96",
+    "latest": "0.0.98",
     "relation": "same",
     "error": null
   },
-  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout 9a1946a9387ba9838690d48cad35a02a6b085e66\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout 02b9609235830cb4d4d86b22092f1d155728e09e\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
     "aligned": true,

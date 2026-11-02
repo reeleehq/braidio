@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=bf4bdb9e"></script>
+    <script src="../../_static/documentation_options.js?v=a02dbd69"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.99" />
+  <meta name="docsearch:version" content="0.0.100" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -747,9 +747,10 @@ window.runMermaid = runMermaid;</script>
 <span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">braidio.script</span><span class="w"> </span><span class="kn">import</span> <span class="n">Script</span><span class="p">,</span> <span class="n">Narration</span><span class="p">,</span> <span class="n">Dialogue</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">braidio.rights</span><span class="w"> </span><span class="kn">import</span> <span class="n">DEFAULT_PROFILE</span><span class="p">,</span> <span class="n">Profile</span><span class="p">,</span> <span class="n">RenderPlan</span><span class="p">,</span> <span class="n">plan_production</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">braidio.script</span><span class="w"> </span><span class="kn">import</span> <span class="n">Script</span><span class="p">,</span> <span class="n">Dialogue</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.tts</span><span class="w"> </span><span class="kn">import</span> <span class="n">DEFAULT_MODEL_ID</span><span class="p">,</span> <span class="n">DIALOGUE_MODEL_ID</span>
 
 <span class="c1">#: Env var overriding the USD-per-1000-characters rate (global default for models</span>
@@ -906,6 +907,27 @@ window.runMermaid = runMermaid;</script>
     <span class="n">unpriced</span><span class="p">:</span> <span class="nb">bool</span>
     <span class="n">lines</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">CostLine</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
 
+<div class="viewcode-block" id="CostRollup.from_lines">
+<a class="viewcode-back" href="../../_autosummary/braidio.cost.html#braidio.CostRollup.from_lines">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_lines</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">lines</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">CostLine</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">CostRollup</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The rollup of ``lines``: exact characters, honest dollars.</span>
+
+<span class="sd">        ``usd`` sums the priced lines; billable text with no rate makes it a</span>
+<span class="sd">        lower bound (``unpriced``), and only when nothing at all is priced does</span>
+<span class="sd">        it become ``None``. No billable text is a genuine ``0.0``.</span>
+
+<span class="sd">        &gt;&gt;&gt; CostRollup.from_lines([]).usd</span>
+<span class="sd">        0.0</span>
+<span class="sd">        """</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
+        <span class="n">characters</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">ln</span><span class="o">.</span><span class="n">characters</span> <span class="k">for</span> <span class="n">ln</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">)</span>
+        <span class="n">priced</span> <span class="o">=</span> <span class="p">[</span><span class="n">ln</span><span class="o">.</span><span class="n">usd</span> <span class="k">for</span> <span class="n">ln</span> <span class="ow">in</span> <span class="n">lines</span> <span class="k">if</span> <span class="n">ln</span><span class="o">.</span><span class="n">usd</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="n">unpriced</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span><span class="n">ln</span><span class="o">.</span><span class="n">characters</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">ln</span><span class="o">.</span><span class="n">usd</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">ln</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">)</span>
+        <span class="n">usd</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">priced</span><span class="p">),</span> <span class="mi">6</span><span class="p">)</span> <span class="k">if</span> <span class="n">priced</span> <span class="k">else</span> <span class="p">(</span><span class="kc">None</span> <span class="k">if</span> <span class="n">unpriced</span> <span class="k">else</span> <span class="mf">0.0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">characters</span><span class="o">=</span><span class="n">characters</span><span class="p">,</span> <span class="n">usd</span><span class="o">=</span><span class="n">usd</span><span class="p">,</span> <span class="n">unpriced</span><span class="o">=</span><span class="n">unpriced</span><span class="p">,</span> <span class="n">lines</span><span class="o">=</span><span class="n">lines</span><span class="p">)</span></div>
+
+
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">summary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""One-line human summary (handy for a CLI/MCP preview)."""</span>
@@ -915,51 +937,81 @@ window.runMermaid = runMermaid;</script>
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_script_lines</span><span class="p">(</span><span class="n">script</span><span class="p">:</span> <span class="n">Script</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">model_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">CostLine</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""Billable lines of ``script``: narration + dialogue beats (segments are free).</span>
-
-<span class="sd">    Narration is priced at ``model_id``. A dialogue beat is always</span>
-<span class="sd">    :data:`~braidio.tts.DIALOGUE_MODEL_ID`, the one model Text-to-Dialogue runs on.</span>
-
-<span class="sd">    Estimates the *default* (personal) cut. Published-cut costing (rights-safe</span>
-<span class="sd">    rewrites + synthesized clip substitutes) must reuse :func:`braidio.plan_production`</span>
-<span class="sd">    rather than re-deriving the rights rules here — a follow-up.</span>
-<span class="sd">    """</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_plan_lines</span><span class="p">(</span>
+    <span class="n">plan</span><span class="p">:</span> <span class="n">RenderPlan</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">model_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">dialogue_model_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">script</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Script</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">CostLine</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The billable :class:`CostLine`\\ s of ``plan`` — :func:`price_plan`'s body."""</span>
+    <span class="n">model_id</span> <span class="o">=</span> <span class="n">model_id</span> <span class="ow">or</span> <span class="n">DEFAULT_MODEL_ID</span>
+    <span class="n">dialogue_model_id</span> <span class="o">=</span> <span class="n">dialogue_model_id</span> <span class="ow">or</span> <span class="n">DIALOGUE_MODEL_ID</span>
     <span class="n">lines</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">CostLine</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">beat</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">script</span><span class="o">.</span><span class="n">beats</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">beat</span><span class="p">,</span> <span class="n">Narration</span><span class="p">):</span>
-            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                <span class="n">CostLine</span><span class="p">(</span>
-                    <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">"beat[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">] narration"</span><span class="p">,</span>
-                    <span class="n">kind</span><span class="o">=</span><span class="s2">"narration"</span><span class="p">,</span>
-                    <span class="n">characters</span><span class="o">=</span><span class="n">billable_chars</span><span class="p">(</span><span class="n">beat</span><span class="o">.</span><span class="n">text</span><span class="p">),</span>
-                    <span class="n">usd</span><span class="o">=</span><span class="n">tts_cost_usd</span><span class="p">(</span><span class="n">beat</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">model_id</span><span class="o">=</span><span class="n">model_id</span><span class="p">),</span>
-                    <span class="n">model_id</span><span class="o">=</span><span class="n">model_id</span><span class="p">,</span>
-                <span class="p">)</span>
+    <span class="k">for</span> <span class="n">beat</span> <span class="ow">in</span> <span class="n">plan</span><span class="o">.</span><span class="n">beats</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">beat</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"narration"</span><span class="p">:</span>
+            <span class="n">text</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">kind</span> <span class="o">=</span> <span class="n">beat</span><span class="o">.</span><span class="n">content</span><span class="p">,</span> <span class="n">model_id</span><span class="p">,</span> <span class="s2">"narration"</span>
+        <span class="k">elif</span> <span class="n">beat</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"dialogue"</span><span class="p">:</span>
+            <span class="n">text</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">kind</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">t</span> <span class="k">for</span> <span class="n">_role</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="p">(</span><span class="n">beat</span><span class="o">.</span><span class="n">turns</span> <span class="ow">or</span> <span class="p">())),</span>
+                <span class="n">dialogue_model_id</span><span class="p">,</span>
+                <span class="s2">"dialogue"</span><span class="p">,</span>
             <span class="p">)</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">beat</span><span class="p">,</span> <span class="n">Dialogue</span><span class="p">):</span>
-            <span class="n">text</span> <span class="o">=</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">t</span> <span class="k">for</span> <span class="n">_role</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">beat</span><span class="o">.</span><span class="n">turns</span><span class="p">)</span>
-            <span class="n">label</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"beat[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">] dialogue"</span>
-            <span class="k">if</span> <span class="n">beat</span><span class="o">.</span><span class="n">label</span><span class="p">:</span>
-                <span class="n">label</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">" (</span><span class="si">{</span><span class="n">beat</span><span class="o">.</span><span class="n">label</span><span class="si">}</span><span class="s2">)"</span>
-            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                <span class="n">CostLine</span><span class="p">(</span>
-                    <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
-                    <span class="n">kind</span><span class="o">=</span><span class="s2">"dialogue"</span><span class="p">,</span>
-                    <span class="n">characters</span><span class="o">=</span><span class="n">billable_chars</span><span class="p">(</span><span class="n">text</span><span class="p">),</span>
-                    <span class="n">usd</span><span class="o">=</span><span class="n">tts_cost_usd</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">model_id</span><span class="o">=</span><span class="n">DIALOGUE_MODEL_ID</span><span class="p">),</span>
-                    <span class="n">model_id</span><span class="o">=</span><span class="n">DIALOGUE_MODEL_ID</span><span class="p">,</span>
-                <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">continue</span>  <span class="c1"># a clip is extracted media, a break is structure: free</span>
+        <span class="n">label</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"beat[</span><span class="si">{</span><span class="n">beat</span><span class="o">.</span><span class="n">from_index</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">kind</span><span class="si">}</span><span class="s2">"</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">script</span><span class="o">.</span><span class="n">beats</span><span class="p">[</span><span class="n">beat</span><span class="o">.</span><span class="n">from_index</span><span class="p">]</span> <span class="k">if</span> <span class="n">script</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">Dialogue</span><span class="p">)</span> <span class="ow">and</span> <span class="n">source</span><span class="o">.</span><span class="n">label</span><span class="p">:</span>
+            <span class="n">label</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">" (</span><span class="si">{</span><span class="n">source</span><span class="o">.</span><span class="n">label</span><span class="si">}</span><span class="s2">)"</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">CostLine</span><span class="p">(</span>
+                <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
+                <span class="n">kind</span><span class="o">=</span><span class="n">kind</span><span class="p">,</span>
+                <span class="n">characters</span><span class="o">=</span><span class="n">billable_chars</span><span class="p">(</span><span class="n">text</span><span class="p">),</span>
+                <span class="n">usd</span><span class="o">=</span><span class="n">tts_cost_usd</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">model_id</span><span class="o">=</span><span class="n">model</span><span class="p">),</span>
+                <span class="n">model_id</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
             <span class="p">)</span>
-        <span class="c1"># a SegmentBeat is extracted media and a SceneBreak is structure (a</span>
-        <span class="c1"># sting or silence, nothing synthesized) = free; neither contributes a line.</span>
+        <span class="p">)</span>
     <span class="k">return</span> <span class="n">lines</span>
+
+
+<div class="viewcode-block" id="price_plan">
+<a class="viewcode-back" href="../../_autosummary/braidio.cost.html#braidio.price_plan">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">price_plan</span><span class="p">(</span>
+    <span class="n">plan</span><span class="p">:</span> <span class="n">RenderPlan</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">model_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">dialogue_model_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">script</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Script</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CostRollup</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The estimated spend of a :class:`~braidio.rights.RenderPlan` — the one pricer.</span>
+
+<span class="sd">    :func:`estimate_cost` and every render's spend report are this function</span>
+<span class="sd">    over :func:`braidio.plan_production`'s output, each with the models it</span>
+<span class="sd">    renders with. Narration is priced at ``model_id`` and dialogue at</span>
+<span class="sd">    ``dialogue_model_id`` (``None`` = :data:`~braidio.tts.DEFAULT_MODEL_ID` /</span>
+<span class="sd">    ``DIALOGUE_MODEL_ID``, resolved at call time); clips and scene breaks are</span>
+<span class="sd">    local work, free, and contribute no line. Pricing the plan rather than the</span>
+<span class="sd">    raw script is what makes a ``published`` cut honest: dropped clips cost</span>
+<span class="sd">    nothing and synthesized substitutes are billed. ``script`` (the one</span>
+<span class="sd">    planned) only lends a dialogue line its label.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">CostRollup</span><span class="o">.</span><span class="n">from_lines</span><span class="p">(</span>
+        <span class="n">_plan_lines</span><span class="p">(</span>
+            <span class="n">plan</span><span class="p">,</span> <span class="n">model_id</span><span class="o">=</span><span class="n">model_id</span><span class="p">,</span> <span class="n">dialogue_model_id</span><span class="o">=</span><span class="n">dialogue_model_id</span><span class="p">,</span> <span class="n">script</span><span class="o">=</span><span class="n">script</span>
+        <span class="p">)</span>
+    <span class="p">)</span></div>
+
 
 
 <div class="viewcode-block" id="estimate_cost">
 <a class="viewcode-back" href="../../_autosummary/braidio.cost.html#braidio.estimate_cost">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">estimate_cost</span><span class="p">(</span>
-    <span class="n">source</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Script</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">model_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">source</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Script</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">model_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">dialogue_model_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">profile</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Profile</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CostRollup</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Estimate ElevenLabs spend for a :class:`braidio.Script` or a raw string.</span>
 
@@ -968,10 +1020,18 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">    bound when some text is unpriced; see :func:`usd_per_1k_chars`).</span>
 
 <span class="sd">    ``model_id`` is the model the narration will be voiced with (default</span>
-<span class="sd">    :data:`~braidio.tts.DEFAULT_MODEL_ID`); its rate resolves like any other</span>
+<span class="sd">    :data:`~braidio.tts.DEFAULT_MODEL_ID`) and ``dialogue_model_id`` the one</span>
+<span class="sd">    its dialogue beats are (default :data:`~braidio.tts.DIALOGUE_MODEL_ID`,</span>
+<span class="sd">    what the default cast uses); each rate resolves like any other</span>
 <span class="sd">    (:func:`usd_per_1k_chars`), so a model with no confirmed rate of its own</span>
-<span class="sd">    gets the general rate, never another model's. Dialogue beats are priced</span>
-<span class="sd">    at :data:`~braidio.tts.DIALOGUE_MODEL_ID` whatever ``model_id`` says.</span>
+<span class="sd">    gets the general rate, never another model's. A script is priced through</span>
+<span class="sd">    :func:`braidio.plan_production` under ``profile`` (a :class:`~braidio.Profile`</span>
+<span class="sd">    or its value, e.g. ``"published"``; default :data:`~braidio.rights.DEFAULT_PROFILE`,</span>
+<span class="sd">    which plays every beat), so the estimate is of what renders: under</span>
+<span class="sd">    ``"published"`` a dropped clip costs nothing and a ``published_text`` or</span>
+<span class="sd">    ``published_substitute`` is billed in its beat's place. A beat of a type</span>
+<span class="sd">    the planner does not know raises ``TypeError`` (from ``plan_production``)</span>
+<span class="sd">    rather than being skipped, so an estimate is never silently short.</span>
 
 <span class="sd">    &gt;&gt;&gt; from braidio import Script, Narration, SegmentBeat</span>
 <span class="sd">    &gt;&gt;&gt; s = Script(title="x", id_slug="01", beats=[</span>
@@ -981,24 +1041,22 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">    """</span>
     <span class="n">model_id</span> <span class="o">=</span> <span class="n">model_id</span> <span class="ow">or</span> <span class="n">DEFAULT_MODEL_ID</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-        <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">CostLine</span><span class="p">(</span>
-                <span class="n">label</span><span class="o">=</span><span class="s2">"text"</span><span class="p">,</span>
-                <span class="n">kind</span><span class="o">=</span><span class="s2">"narration"</span><span class="p">,</span>
-                <span class="n">characters</span><span class="o">=</span><span class="n">billable_chars</span><span class="p">(</span><span class="n">source</span><span class="p">),</span>
-                <span class="n">usd</span><span class="o">=</span><span class="n">tts_cost_usd</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">model_id</span><span class="o">=</span><span class="n">model_id</span><span class="p">),</span>
-                <span class="n">model_id</span><span class="o">=</span><span class="n">model_id</span><span class="p">,</span>
-            <span class="p">)</span>
-        <span class="p">]</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">lines</span> <span class="o">=</span> <span class="n">_script_lines</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">model_id</span><span class="o">=</span><span class="n">model_id</span><span class="p">)</span>
-
-    <span class="n">characters</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">ln</span><span class="o">.</span><span class="n">characters</span> <span class="k">for</span> <span class="n">ln</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">)</span>
-    <span class="n">priced</span> <span class="o">=</span> <span class="p">[</span><span class="n">ln</span><span class="o">.</span><span class="n">usd</span> <span class="k">for</span> <span class="n">ln</span> <span class="ow">in</span> <span class="n">lines</span> <span class="k">if</span> <span class="n">ln</span><span class="o">.</span><span class="n">usd</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
-    <span class="n">unpriced</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span><span class="n">ln</span><span class="o">.</span><span class="n">characters</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">ln</span><span class="o">.</span><span class="n">usd</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">ln</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">)</span>
-    <span class="n">usd</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">priced</span><span class="p">),</span> <span class="mi">6</span><span class="p">)</span> <span class="k">if</span> <span class="n">priced</span> <span class="k">else</span> <span class="p">(</span><span class="kc">None</span> <span class="k">if</span> <span class="n">unpriced</span> <span class="k">else</span> <span class="mf">0.0</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">CostRollup</span><span class="p">(</span>
-        <span class="n">characters</span><span class="o">=</span><span class="n">characters</span><span class="p">,</span> <span class="n">usd</span><span class="o">=</span><span class="n">usd</span><span class="p">,</span> <span class="n">unpriced</span><span class="o">=</span><span class="n">unpriced</span><span class="p">,</span> <span class="n">lines</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">CostRollup</span><span class="o">.</span><span class="n">from_lines</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">CostLine</span><span class="p">(</span>
+                    <span class="n">label</span><span class="o">=</span><span class="s2">"text"</span><span class="p">,</span>
+                    <span class="n">kind</span><span class="o">=</span><span class="s2">"narration"</span><span class="p">,</span>
+                    <span class="n">characters</span><span class="o">=</span><span class="n">billable_chars</span><span class="p">(</span><span class="n">source</span><span class="p">),</span>
+                    <span class="n">usd</span><span class="o">=</span><span class="n">tts_cost_usd</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">model_id</span><span class="o">=</span><span class="n">model_id</span><span class="p">),</span>
+                    <span class="n">model_id</span><span class="o">=</span><span class="n">model_id</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+    <span class="c1"># a str profile must become the enum: plan_production compares by identity</span>
+    <span class="c1"># (``is Profile.PUBLISHED``), so "published" would plan a half-published cut</span>
+    <span class="n">plan</span> <span class="o">=</span> <span class="n">plan_production</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">DEFAULT_PROFILE</span> <span class="k">if</span> <span class="n">profile</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">profile</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">price_plan</span><span class="p">(</span>
+        <span class="n">plan</span><span class="p">,</span> <span class="n">model_id</span><span class="o">=</span><span class="n">model_id</span><span class="p">,</span> <span class="n">dialogue_model_id</span><span class="o">=</span><span class="n">dialogue_model_id</span><span class="p">,</span> <span class="n">script</span><span class="o">=</span><span class="n">source</span>
     <span class="p">)</span></div>
 
 </pre></div>

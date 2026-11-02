@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=bf4bdb9e"></script>
+    <script src="../_static/documentation_options.js?v=a02dbd69"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.99" />
+  <meta name="docsearch:version" content="0.0.100" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -603,6 +603,9 @@ phrases don’t trip it — only substantial verbatim quoting.</p>
 <dt class="sig sig-object py" id="braidio.rights.plan_production">
 <span class="sig-prename descclassname"><span class="pre">braidio.rights.</span></span><span class="sig-name descname"><span class="pre">plan_production</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">script</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">publishable_clip_rights</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">frozenset({'public-domain'})</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/rights.html#plan_production"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.rights.plan_production" title="Link to this definition">#</a></dt>
 <dd><p>Filter <code class="docutils literal notranslate"><span class="pre">script</span></code> into the beats renderable under <code class="docutils literal notranslate"><span class="pre">profile</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">profile</span></code> may be its value (<code class="docutils literal notranslate"><span class="pre">&quot;published&quot;</span></code>): it is coerced here, the one
+door every render and estimate plans through, because the rules below
+compare by identity and a string would plan half a published cut.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#braidio.rights.RenderPlan" title="braidio.rights.RenderPlan"><code class="xref py py-class docutils literal notranslate"><span class="pre">RenderPlan</span></code></a></span></p>

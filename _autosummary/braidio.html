@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=bf4bdb9e"></script>
+    <script src="../_static/documentation_options.js?v=a02dbd69"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.99" />
+  <meta name="docsearch:version" content="0.0.100" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -484,7 +484,7 @@ in the <em>Hamilton</em> repo — braidio has its own #18 about something else.<
 <tr class="row-odd"><td><p><a class="reference internal" href="#braidio.resolve_voice_id" title="braidio.resolve_voice_id"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_voice_id</span></code></a>([voice_id])</p></td>
 <td><p>Voice id from arg → <code class="xref py py-data docutils literal notranslate"><span class="pre">VOICE_ENV_VAR</span></code> env → default.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.estimate_cost" title="braidio.estimate_cost"><code class="xref py py-obj docutils literal notranslate"><span class="pre">estimate_cost</span></code></a>(source, *[, model_id])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.estimate_cost" title="braidio.estimate_cost"><code class="xref py py-obj docutils literal notranslate"><span class="pre">estimate_cost</span></code></a>(source, *[, model_id, ...])</p></td>
 <td><p>Estimate ElevenLabs spend for a <a class="reference internal" href="#braidio.Script" title="braidio.Script"><code class="xref py py-class docutils literal notranslate"><span class="pre">braidio.Script</span></code></a> or a raw string.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#braidio.tts_cost_usd" title="braidio.tts_cost_usd"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tts_cost_usd</span></code></a>(text, *[, model_id])</p></td>
@@ -723,6 +723,24 @@ lines (e.g. an all-segment script) gives <code class="docutils literal notransla
 <span class="pre">unpriced=False</span></code>. Named <code class="docutils literal notranslate"><span class="pre">CostRollup</span></code> to match <code class="docutils literal notranslate"><span class="pre">falaw.CostRollup</span></code>.</p>
 <dl class="field-list simple">
 </dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="braidio.CostRollup.from_lines">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_lines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lines</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/cost.html#CostRollup.from_lines"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.CostRollup.from_lines" title="Link to this definition">#</a></dt>
+<dd><p>The rollup of <code class="docutils literal notranslate"><span class="pre">lines</span></code>: exact characters, honest dollars.</p>
+<p><code class="docutils literal notranslate"><span class="pre">usd</span></code> sums the priced lines; billable text with no rate makes it a
+lower bound (<code class="docutils literal notranslate"><span class="pre">unpriced</span></code>), and only when nothing at all is priced does
+it become <code class="docutils literal notranslate"><span class="pre">None</span></code>. No billable text is a genuine <code class="docutils literal notranslate"><span class="pre">0.0</span></code>.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">CostRollup</span><span class="o">.</span><span class="n">from_lines</span><span class="p">([])</span><span class="o">.</span><span class="n">usd</span>
+<span class="go">0.0</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="braidio.cost.html#braidio.cost.CostRollup" title="braidio.cost.CostRollup"><code class="xref py py-class docutils literal notranslate"><span class="pre">CostRollup</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="braidio.CostRollup.summary">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">summary</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#braidio.CostRollup.summary" title="Link to this definition">#</a></dt>
@@ -1699,16 +1717,24 @@ commonest cause is a config file they forgot they wrote.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="braidio.estimate_cost">
-<span class="sig-prename descclassname"><span class="pre">braidio.</span></span><span class="sig-name descname"><span class="pre">estimate_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/cost.html#estimate_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.estimate_cost" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">braidio.</span></span><span class="sig-name descname"><span class="pre">estimate_cost</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dialogue_model_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/cost.html#estimate_cost"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.estimate_cost" title="Link to this definition">#</a></dt>
 <dd><p>Estimate ElevenLabs spend for a <a class="reference internal" href="#braidio.Script" title="braidio.Script"><code class="xref py py-class docutils literal notranslate"><span class="pre">braidio.Script</span></code></a> or a raw string.</p>
 <p>Free/local work (segment extraction, weaving) contributes nothing. The returned
 <a class="reference internal" href="#braidio.CostRollup" title="braidio.CostRollup"><code class="xref py py-class docutils literal notranslate"><span class="pre">CostRollup</span></code></a> reports exact characters and an honest dollar sum (a lower
 bound when some text is unpriced; see <a class="reference internal" href="#braidio.usd_per_1k_chars" title="braidio.usd_per_1k_chars"><code class="xref py py-func docutils literal notranslate"><span class="pre">usd_per_1k_chars()</span></code></a>).</p>
 <p><code class="docutils literal notranslate"><span class="pre">model_id</span></code> is the model the narration will be voiced with (default
-<a class="reference internal" href="braidio.tts.html#braidio.tts.DEFAULT_MODEL_ID" title="braidio.tts.DEFAULT_MODEL_ID"><code class="xref py py-data docutils literal notranslate"><span class="pre">DEFAULT_MODEL_ID</span></code></a>); its rate resolves like any other
+<a class="reference internal" href="braidio.tts.html#braidio.tts.DEFAULT_MODEL_ID" title="braidio.tts.DEFAULT_MODEL_ID"><code class="xref py py-data docutils literal notranslate"><span class="pre">DEFAULT_MODEL_ID</span></code></a>) and <code class="docutils literal notranslate"><span class="pre">dialogue_model_id</span></code> the one
+its dialogue beats are (default <code class="xref py py-data docutils literal notranslate"><span class="pre">DIALOGUE_MODEL_ID</span></code>,
+what the default cast uses); each rate resolves like any other
 (<a class="reference internal" href="#braidio.usd_per_1k_chars" title="braidio.usd_per_1k_chars"><code class="xref py py-func docutils literal notranslate"><span class="pre">usd_per_1k_chars()</span></code></a>), so a model with no confirmed rate of its own
-gets the general rate, never another model’s. Dialogue beats are priced
-at <code class="xref py py-data docutils literal notranslate"><span class="pre">DIALOGUE_MODEL_ID</span></code> whatever <code class="docutils literal notranslate"><span class="pre">model_id</span></code> says.</p>
+gets the general rate, never another model’s. A script is priced through
+<a class="reference internal" href="#braidio.plan_production" title="braidio.plan_production"><code class="xref py py-func docutils literal notranslate"><span class="pre">braidio.plan_production()</span></code></a> under <code class="docutils literal notranslate"><span class="pre">profile</span></code> (a <a class="reference internal" href="#braidio.Profile" title="braidio.Profile"><code class="xref py py-class docutils literal notranslate"><span class="pre">Profile</span></code></a>
+or its value, e.g. <code class="docutils literal notranslate"><span class="pre">&quot;published&quot;</span></code>; default <a class="reference internal" href="braidio.rights.html#braidio.rights.DEFAULT_PROFILE" title="braidio.rights.DEFAULT_PROFILE"><code class="xref py py-data docutils literal notranslate"><span class="pre">DEFAULT_PROFILE</span></code></a>,
+which plays every beat), so the estimate is of what renders: under
+<code class="docutils literal notranslate"><span class="pre">&quot;published&quot;</span></code> a dropped clip costs nothing and a <code class="docutils literal notranslate"><span class="pre">published_text</span></code> or
+<code class="docutils literal notranslate"><span class="pre">published_substitute</span></code> is billed in its beat’s place. A beat of a type
+the planner does not know raises <code class="docutils literal notranslate"><span class="pre">TypeError</span></code> (from <code class="docutils literal notranslate"><span class="pre">plan_production</span></code>)
+rather than being skipped, so an estimate is never silently short.</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">braidio</span><span class="w"> </span><span class="kn">import</span> <span class="n">Script</span><span class="p">,</span> <span class="n">Narration</span><span class="p">,</span> <span class="n">SegmentBeat</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">Script</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">"x"</span><span class="p">,</span> <span class="n">id_slug</span><span class="o">=</span><span class="s2">"01"</span><span class="p">,</span> <span class="n">beats</span><span class="o">=</span><span class="p">[</span>
 <span class="gp">... </span>    <span class="n">Narration</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="s2">"a"</span> <span class="o">*</span> <span class="mi">500</span><span class="p">),</span> <span class="n">SegmentBeat</span><span class="p">(</span><span class="n">reference</span><span class="o">=</span><span class="s2">"clip:1"</span><span class="p">)])</span>
@@ -1857,6 +1883,9 @@ thread a per-user BYO key without touching the process environment.</p>
 <dt class="sig sig-object py" id="braidio.plan_production">
 <span class="sig-prename descclassname"><span class="pre">braidio.</span></span><span class="sig-name descname"><span class="pre">plan_production</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">script</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">publishable_clip_rights</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">frozenset({'public-domain'})</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/rights.html#plan_production"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.plan_production" title="Link to this definition">#</a></dt>
 <dd><p>Filter <code class="docutils literal notranslate"><span class="pre">script</span></code> into the beats renderable under <code class="docutils literal notranslate"><span class="pre">profile</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">profile</span></code> may be its value (<code class="docutils literal notranslate"><span class="pre">&quot;published&quot;</span></code>): it is coerced here, the one
+door every render and estimate plans through, because the rules below
+compare by identity and a string would plan half a published cut.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="braidio.rights.html#braidio.rights.RenderPlan" title="braidio.rights.RenderPlan"><code class="xref py py-class docutils literal notranslate"><span class="pre">RenderPlan</span></code></a></span></p>
@@ -2359,6 +2388,7 @@ quiet passage stays quiet relative to its loud neighbours.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.BeatSpan"><code class="docutils literal notranslate"><span class="pre">BeatSpan</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.CostLine"><code class="docutils literal notranslate"><span class="pre">CostLine</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.CostRollup"><code class="docutils literal notranslate"><span class="pre">CostRollup</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.CostRollup.from_lines"><code class="docutils literal notranslate"><span class="pre">CostRollup.from_lines()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.CostRollup.summary"><code class="docutils literal notranslate"><span class="pre">CostRollup.summary</span></code></a></li>
 </ul>
 </li>

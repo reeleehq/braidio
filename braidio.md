@@ -1,4 +1,4 @@
-> built 2026-11-02 08:10 UTC from cf27694 (main) · braidio 0.0.99. Details: build_info.json
+> built 2026-11-02 08:20 UTC from 8c0f418 (main) · braidio 0.0.100. Details: build_info.json
 
 # index.html.md
 
@@ -547,12 +547,13 @@ recomputed if the rate changes.
 
 ### Functions
 
-| [`backend_cost_usd`](_autosummary/braidio.cost.html.md#braidio.cost.backend_cost_usd)(text, \*, tts[, model_id])   | Estimated USD for `text` on the voice backend that speaks it.                                                                   |
-|------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
-| [`billable_chars`](_autosummary/braidio.cost.html.md#braidio.cost.billable_chars)(text)                          | Characters ElevenLabs bills for `text` (the whole submitted string).                                                            |
-| [`estimate_cost`](_autosummary/braidio.cost.html.md#braidio.cost.estimate_cost)(source, \*[, model_id])         | Estimate ElevenLabs spend for a [`braidio.Script`](_autosummary/braidio.html.md#braidio.Script) or a raw string. |
-| [`tts_cost_usd`](_autosummary/braidio.cost.html.md#braidio.cost.tts_cost_usd)(text, \*[, model_id])            | Estimated USD to synthesize `text`; `0.0` for empty, `None` if unpriced.                                                        |
-| [`usd_per_1k_chars`](_autosummary/braidio.cost.html.md#braidio.cost.usd_per_1k_chars)([model_id])                  | Resolved USD-per-1000-characters rate (most specific source first).                                                             |
+| [`backend_cost_usd`](_autosummary/braidio.cost.html.md#braidio.cost.backend_cost_usd)(text, \*, tts[, model_id])   | Estimated USD for `text` on the voice backend that speaks it.                                                                    |
+|------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------|
+| [`billable_chars`](_autosummary/braidio.cost.html.md#braidio.cost.billable_chars)(text)                          | Characters ElevenLabs bills for `text` (the whole submitted string).                                                             |
+| [`estimate_cost`](_autosummary/braidio.cost.html.md#braidio.cost.estimate_cost)(source, \*[, model_id, ...])    | Estimate ElevenLabs spend for a [`braidio.Script`](_autosummary/braidio.html.md#braidio.Script) or a raw string.  |
+| [`price_plan`](_autosummary/braidio.cost.html.md#braidio.cost.price_plan)(plan, \*[, model_id, ...])         | The estimated spend of a [`RenderPlan`](_autosummary/braidio.rights.html.md#braidio.rights.RenderPlan) — the one pricer. |
+| [`tts_cost_usd`](_autosummary/braidio.cost.html.md#braidio.cost.tts_cost_usd)(text, \*[, model_id])            | Estimated USD to synthesize `text`; `0.0` for empty, `None` if unpriced.                                                         |
+| [`usd_per_1k_chars`](_autosummary/braidio.cost.html.md#braidio.cost.usd_per_1k_chars)([model_id])                  | Resolved USD-per-1000-characters rate (most specific source first).                                                              |
 
 ### Classes
 
@@ -580,6 +581,22 @@ A production’s estimated TTS spend, exact on characters, honest on dollars.
 billable text had no configured rate (so `usd` is a lower bound). No billable
 lines (e.g. an all-segment script) gives `characters=0, usd=0.0,
 unpriced=False`. Named `CostRollup` to match `falaw.CostRollup`.
+
+#### *classmethod* from_lines(lines)
+
+The rollup of `lines`: exact characters, honest dollars.
+
+`usd` sums the priced lines; billable text with no rate makes it a
+lower bound (`unpriced`), and only when nothing at all is priced does
+it become `None`. No billable text is a genuine `0.0`.
+
+```pycon
+>>> CostRollup.from_lines([]).usd
+0.0
+```
+
+* **Return type:**
+  [`CostRollup`](_autosummary/braidio.cost.html.md#braidio.cost.CostRollup)
 
 #### *property* summary *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)*
 
@@ -643,7 +660,7 @@ billing definition in one place if it ever needs to change.
 * **Return type:**
   [`int`](https://docs.python.org/3/builtins/functions.html#int)
 
-### braidio.cost.estimate_cost(source, , model_id=None)
+### braidio.cost.estimate_cost(source, , model_id=None, dialogue_model_id=None, profile=None)
 
 Estimate ElevenLabs spend for a [`braidio.Script`](_autosummary/braidio.html.md#braidio.Script) or a raw string.
 
@@ -652,10 +669,18 @@ Free/local work (segment extraction, weaving) contributes nothing. The returned
 bound when some text is unpriced; see [`usd_per_1k_chars()`](_autosummary/braidio.cost.html.md#braidio.cost.usd_per_1k_chars)).
 
 `model_id` is the model the narration will be voiced with (default
-[`DEFAULT_MODEL_ID`](_autosummary/braidio.tts.html.md#braidio.tts.DEFAULT_MODEL_ID)); its rate resolves like any other
+[`DEFAULT_MODEL_ID`](_autosummary/braidio.tts.html.md#braidio.tts.DEFAULT_MODEL_ID)) and `dialogue_model_id` the one
+its dialogue beats are (default `DIALOGUE_MODEL_ID`,
+what the default cast uses); each rate resolves like any other
 ([`usd_per_1k_chars()`](_autosummary/braidio.cost.html.md#braidio.cost.usd_per_1k_chars)), so a model with no confirmed rate of its own
-gets the general rate, never another model’s. Dialogue beats are priced
-at `DIALOGUE_MODEL_ID` whatever `model_id` says.
+gets the general rate, never another model’s. A script is priced through
+[`braidio.plan_production()`](_autosummary/braidio.html.md#braidio.plan_production) under `profile` (a [`Profile`](_autosummary/braidio.html.md#braidio.Profile)
+or its value, e.g. `"published"`; default [`DEFAULT_PROFILE`](_autosummary/braidio.rights.html.md#braidio.rights.DEFAULT_PROFILE),
+which plays every beat), so the estimate is of what renders: under
+`"published"` a dropped clip costs nothing and a `published_text` or
+`published_substitute` is billed in its beat’s place. A beat of a type
+the planner does not know raises `TypeError` (from `plan_production`)
+rather than being skipped, so an estimate is never silently short.
 
 ```pycon
 >>> from braidio import Script, Narration, SegmentBeat
@@ -664,6 +689,23 @@ at `DIALOGUE_MODEL_ID` whatever `model_id` says.
 >>> estimate_cost(s).characters  # only the narration counts; the clip is free
 500
 ```
+
+* **Return type:**
+  [`CostRollup`](_autosummary/braidio.cost.html.md#braidio.cost.CostRollup)
+
+### braidio.cost.price_plan(plan, , model_id=None, dialogue_model_id=None, script=None)
+
+The estimated spend of a [`RenderPlan`](_autosummary/braidio.rights.html.md#braidio.rights.RenderPlan) — the one pricer.
+
+[`estimate_cost()`](_autosummary/braidio.cost.html.md#braidio.cost.estimate_cost) and every render’s spend report are this function
+over [`braidio.plan_production()`](_autosummary/braidio.html.md#braidio.plan_production)’s output, each with the models it
+renders with. Narration is priced at `model_id` and dialogue at
+`dialogue_model_id` (`None` = [`DEFAULT_MODEL_ID`](_autosummary/braidio.tts.html.md#braidio.tts.DEFAULT_MODEL_ID) /
+`DIALOGUE_MODEL_ID`, resolved at call time); clips and scene breaks are
+local work, free, and contribute no line. Pricing the plan rather than the
+raw script is what makes a `published` cut honest: dropped clips cost
+nothing and synthesized substitutes are billed. `script` (the one
+planned) only lends a dialogue line its label.
 
 * **Return type:**
   [`CostRollup`](_autosummary/braidio.cost.html.md#braidio.cost.CostRollup)
@@ -1045,7 +1087,7 @@ in the *Hamilton* repo — braidio has its own #18 about something else.
 | [`cut_quote`](_autosummary/braidio.html.md#braidio.cut_quote)(audio_path, lines, quote, out_path, \*)  | Resolve `quote` → segment and cut it from `audio_path` (pad + fades).                                                   |
 | [`narrate`](_autosummary/braidio.html.md#braidio.narrate)(text, out_path, \*[, api_key, ...])        | Synthesize `text` to `out_path` (mp3).                                                                                  |
 | [`resolve_voice_id`](_autosummary/braidio.html.md#braidio.resolve_voice_id)([voice_id])                       | Voice id from arg → `VOICE_ENV_VAR` env → default.                                                                      |
-| [`estimate_cost`](_autosummary/braidio.html.md#braidio.estimate_cost)(source, \*[, model_id])              | Estimate ElevenLabs spend for a [`braidio.Script`](_autosummary/braidio.html.md#braidio.Script) or a raw string.        |
+| [`estimate_cost`](_autosummary/braidio.html.md#braidio.estimate_cost)(source, \*[, model_id, ...])         | Estimate ElevenLabs spend for a [`braidio.Script`](_autosummary/braidio.html.md#braidio.Script) or a raw string.        |
 | [`tts_cost_usd`](_autosummary/braidio.html.md#braidio.tts_cost_usd)(text, \*[, model_id])                 | Estimated USD to synthesize `text`; `0.0` for empty, `None` if unpriced.                                                |
 | [`billable_chars`](_autosummary/braidio.html.md#braidio.billable_chars)(text)                               | Characters ElevenLabs bills for `text` (the whole submitted string).                                                    |
 | [`usd_per_1k_chars`](_autosummary/braidio.html.md#braidio.usd_per_1k_chars)([model_id])                       | Resolved USD-per-1000-characters rate (most specific source first).                                                     |
@@ -1144,6 +1186,22 @@ A production’s estimated TTS spend, exact on characters, honest on dollars.
 billable text had no configured rate (so `usd` is a lower bound). No billable
 lines (e.g. an all-segment script) gives `characters=0, usd=0.0,
 unpriced=False`. Named `CostRollup` to match `falaw.CostRollup`.
+
+#### *classmethod* from_lines(lines)
+
+The rollup of `lines`: exact characters, honest dollars.
+
+`usd` sums the priced lines; billable text with no rate makes it a
+lower bound (`unpriced`), and only when nothing at all is priced does
+it become `None`. No billable text is a genuine `0.0`.
+
+```pycon
+>>> CostRollup.from_lines([]).usd
+0.0
+```
+
+* **Return type:**
+  [`CostRollup`](_autosummary/braidio.cost.html.md#braidio.cost.CostRollup)
 
 #### *property* summary *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)*
 
@@ -1920,7 +1978,7 @@ commonest cause is a config file they forgot they wrote.
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
-### braidio.estimate_cost(source, , model_id=None)
+### braidio.estimate_cost(source, , model_id=None, dialogue_model_id=None, profile=None)
 
 Estimate ElevenLabs spend for a [`braidio.Script`](_autosummary/braidio.html.md#braidio.Script) or a raw string.
 
@@ -1929,10 +1987,18 @@ Free/local work (segment extraction, weaving) contributes nothing. The returned
 bound when some text is unpriced; see [`usd_per_1k_chars()`](_autosummary/braidio.html.md#braidio.usd_per_1k_chars)).
 
 `model_id` is the model the narration will be voiced with (default
-[`DEFAULT_MODEL_ID`](_autosummary/braidio.tts.html.md#braidio.tts.DEFAULT_MODEL_ID)); its rate resolves like any other
+[`DEFAULT_MODEL_ID`](_autosummary/braidio.tts.html.md#braidio.tts.DEFAULT_MODEL_ID)) and `dialogue_model_id` the one
+its dialogue beats are (default `DIALOGUE_MODEL_ID`,
+what the default cast uses); each rate resolves like any other
 ([`usd_per_1k_chars()`](_autosummary/braidio.html.md#braidio.usd_per_1k_chars)), so a model with no confirmed rate of its own
-gets the general rate, never another model’s. Dialogue beats are priced
-at `DIALOGUE_MODEL_ID` whatever `model_id` says.
+gets the general rate, never another model’s. A script is priced through
+[`braidio.plan_production()`](_autosummary/braidio.html.md#braidio.plan_production) under `profile` (a [`Profile`](_autosummary/braidio.html.md#braidio.Profile)
+or its value, e.g. `"published"`; default [`DEFAULT_PROFILE`](_autosummary/braidio.rights.html.md#braidio.rights.DEFAULT_PROFILE),
+which plays every beat), so the estimate is of what renders: under
+`"published"` a dropped clip costs nothing and a `published_text` or
+`published_substitute` is billed in its beat’s place. A beat of a type
+the planner does not know raises `TypeError` (from `plan_production`)
+rather than being skipped, so an estimate is never silently short.
 
 ```pycon
 >>> from braidio import Script, Narration, SegmentBeat
@@ -2055,6 +2121,10 @@ All narration (default text) of a script, as sentence-level segments.
 ### braidio.plan_production(script, profile, , publishable_clip_rights=frozenset({'public-domain'}))
 
 Filter `script` into the beats renderable under `profile`.
+
+`profile` may be its value (`"published"`): it is coerced here, the one
+door every render and estimate plans through, because the rules below
+compare by identity and a string would plan half a published cut.
 
 * **Return type:**
   [`RenderPlan`](_autosummary/braidio.rights.html.md#braidio.rights.RenderPlan)
@@ -3366,6 +3436,10 @@ phrases don’t trip it — only substantial verbatim quoting.
 ### braidio.rights.plan_production(script, profile, , publishable_clip_rights=frozenset({'public-domain'}))
 
 Filter `script` into the beats renderable under `profile`.
+
+`profile` may be its value (`"published"`): it is coerced here, the one
+door every render and estimate plans through, because the rules below
+compare by identity and a string would plan half a published cut.
 
 * **Return type:**
   [`RenderPlan`](_autosummary/braidio.rights.html.md#braidio.rights.RenderPlan)
@@ -5142,20 +5216,18 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-02 08:10 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/cf27694c4c405c94c46bea24f13bf34dcf2fadf0"><code>cf27694</code></a> on branch <code>main</code>, for **braidio 0.0.99** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 08:20 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/8c0f418c64399270b9a68ad486b4565e69e00410"><code>8c0f418</code></a> on branch <code>main</code>, for **braidio 0.0.100** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.0.99) is ahead of the latest release on PyPI (0.0.98): these docs describe unreleased code.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/cf27694c4c405c94c46bea24f13bf34dcf2fadf0"><code>cf27694c4c405c94c46bea24f13bf34dcf2fadf0</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/8c0f418c64399270b9a68ad486b4565e69e00410"><code>8c0f418c64399270b9a68ad486b4565e69e00410</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | <code>0.0.99</code>                                                                                                                                     |
+| Tags at this commit | <code>0.0.100</code>                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -5164,9 +5236,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41410463668">41410463668</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41411538118">41411538118</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>1db0a856958362d01b77b5515669c0f2ec815d69</code> (in the history of the built commit) |
+| Event commit | <code>4ba530fd20a9c07132303a6c152e891df7263896</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5191,13 +5263,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.98/">0.0.98</a>, older than the documented version (0.0.99).
+Latest release: <a href="https://pypi.org/project/braidio/0.0.100/">0.0.100</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout cf27694c4c405c94c46bea24f13bf34dcf2fadf0
+git checkout 8c0f418c64399270b9a68ad486b4565e69e00410
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

@@ -54,7 +54,6 @@ from braidio.transforms._common import (
     TIER_WEAVE_CONFIG,
     TIER_NARRATION_RENDER,
     beat_ordinal,
-    child_at_tier,
     singleton,
     graph_index,
     resolve_parents,
@@ -67,6 +66,8 @@ from braidio.transforms._common import (
     file_url,
     elevenlabs_key,
 )
+
+from braidio.transforms._voice import current_voice_assignment
 
 NAME = "narration_render.tts"
 
@@ -237,7 +238,7 @@ class NarrationRenderTTS(BaseTransform):
     ) -> tuple[Plan, tuple[Annotation, ...]]:
         beat = inputs.primary[0]
         cfg = singleton(project, TIER_WEAVE_CONFIG)
-        va = child_at_tier(project, TIER_VOICE_ASSIGNMENT, beat.id)
+        va = current_voice_assignment(project, beat)
         cache_key = _render_inputs(beat, va, cfg).cache_key(self)
 
         full = TransformInputs(

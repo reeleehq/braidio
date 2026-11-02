@@ -726,6 +726,17 @@ def test_project_status_serves_the_genre_status_plus_full_episodes(
     assert row["episode_id"] == str(episode.id)
     assert row["url"].startswith("file://")
 
+    # an edit and its revert: the revert re-weaves to the ORIGINAL episode, so
+    # the status's latest_episode is that one, not the newer edited cut (#169)
+    edited = braidio.Script(
+        title="Demo", id_slug="demo", beats=[braidio.Narration(text="Hi there.")]
+    )
+    braidio.weave_project(proj, edited)
+    assert braidio.weave_project(proj, script).id == episode.id
+    out = _call(server, "project_status", {"project_id": "demo"}).structured_content
+    assert out["episode_count"] == 2
+    assert out["latest_episode"]["episode_id"] == str(episode.id)
+
 
 @_NW
 def test_weave_project_records_cost(monkeypatch):

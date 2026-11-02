@@ -215,10 +215,34 @@ def fresh_equivalent(project, skeleton: Annotation) -> Annotation | None:
     ]
     if not candidates:
         return None
-    fresh = {
+    fresh = fresh_ids(project)
+    return next((a for a in reversed(candidates) if a.id in fresh), None)
+
+
+def fresh_ids(project) -> set:
+    """The ids of every annotation nw's freshness walk verifies as fresh."""
+    import nw
+
+    return {
         v.annotation.id for v in nw.stale_verdicts_all(project.root) if not v.is_stale
     }
-    return next((a for a in reversed(candidates) if a.id in fresh), None)
+
+
+def freshest(project, annotations):
+    """The current one of ``annotations`` (oldest first): the most recent
+    **fresh** one, else the most recent; ``None`` when there are none.
+
+    The one rule for "the current node" when a tier holds several candidates
+    (braidio#169): a parent rewritten and then rewritten back (an edit, then
+    its revert) makes an OLDER node fresh again while the newest reads stale,
+    so store or generation order alone names the wrong one. Walks freshness
+    only when there is a choice to make.
+    """
+    annotations = list(annotations)
+    if len(annotations) <= 1:
+        return annotations[-1] if annotations else None
+    fresh = fresh_ids(project)
+    return next((a for a in reversed(annotations) if a.id in fresh), annotations[-1])
 
 
 def adopt_output(skeleton: Annotation, hit: Annotation) -> Annotation:
@@ -403,18 +427,15 @@ def asset_ref(path: str | Path) -> tuple[str, str]:
     return artifact.asset_id, file_url(path)
 
 
-def child_at_tier(project, tier: str, parent_id) -> Annotation:
-    """The most recent ``tier`` annotation derived from ``parent_id``."""
+def children_at_tier(project, tier: str, parent_id) -> list:
+    """Every ``tier`` annotation derived from ``parent_id``, in store order."""
     import nw
 
-    hits = [
+    return [
         a
         for a in nw.annotations_at_tier(project.root, tier)
         if parent_id in a.provenance.was_derived_from
     ]
-    if not hits:
-        raise ValueError(f"no {tier!r} node derived from {parent_id}")
-    return hits[-1]
 
 
 def resolve_parents(skeleton: Annotation, index: dict) -> list:

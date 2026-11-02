@@ -2337,6 +2337,8 @@ def test_panel_canvas_is_the_canvas_the_render_frames_on(
             assert img.size == size
     # JSON callers send the size as a list; the answer is the same file
     assert panel_canvas(project, panels[1], size=list(size)) == prepared[1]
+    # ... and as floats: the canvas name is keyed on the int size
+    assert panel_canvas(project, panels[1], size=[float(v) for v in size]) == prepared[1]
 
 
 # --- media by content, not by recorded path (thorwhalen/braidio#89) --------------

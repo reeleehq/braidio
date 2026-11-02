@@ -1068,6 +1068,10 @@ def panel_canvas(project, panel: Annotation, *, size: tuple[int, int]) -> Path:
     Raises ``FileNotFoundError`` when the still's bytes are reachable nowhere
     (not in the catalog, not at the recorded url), and ``ValueError`` when the
     panel's ``still_id`` is not a still in the graph.
+
+    A footage panel plays its recording, over no canvas: check
+    :func:`panel_footage` first. For one, this answers with its poster's
+    canvas, which the film never shows.
     """
     _, canvas = _source_and_canvas(
         project, panel, size=_delivery_size(size), index=graph_index(project)
@@ -1084,7 +1088,9 @@ def _source_and_canvas(
     project, panel: Annotation, *, size: tuple[int, int], index: dict
 ) -> tuple[Path, Path]:
     """``(source, canvas)`` for ``panel`` at ``size``: the cropped still and
-    the prepared canvas over it. The only place a panel's canvas is built."""
+    the prepared canvas over it. The only place a canvas is built outside the
+    render, which builds the same one through ``prepare=``;
+    ``test_panel_canvas_is_the_canvas_the_render_frames_on`` pins that they agree."""
     workdir = frames_dir(project)
     workdir.mkdir(parents=True, exist_ok=True)
     source = panel_source(project, panel, index, workdir)

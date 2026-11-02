@@ -26,7 +26,9 @@ def _quiet_tone(path: Path, duration_s: float) -> Path:
     return lavfi(path, src, duration_s)
 
 
-def _render(tmp_path: Path, *, target_lufs: float = -16.0) -> Path:
+def _render(
+    tmp_path: Path, *, target_lufs: float = -16.0, true_peak: float = -1.0
+) -> Path:
     items = [
         TimelineItem("narration", str(tone(tmp_path / "a.wav", 440, LOUD_S))),
         TimelineItem("narration", str(_quiet_tone(tmp_path / "q.wav", QUIET_S))),
@@ -37,6 +39,7 @@ def _render(tmp_path: Path, *, target_lufs: float = -16.0) -> Path:
         tmp_path / "out.wav",
         narration_crossfade_s=0.0,
         target_lufs=target_lufs,
+        true_peak=true_peak,
     )
 
 
@@ -56,7 +59,10 @@ def test_the_master_reaches_the_target_under_the_ceiling(tmp_path):
     from mixing.decode import decode_float_chunks
     from mixing.loudness import file_loudness, true_peak_db
 
-    out = _render(tmp_path, target_lufs=-20.0)
-    assert abs(file_loudness(out).integrated_lufs - -20.0) < 1.0
+    # a sine peaks ~0.7 dB above its loudness, so a -10 LUFS gain would put the
+    # peaks near -9.3 dBTP: the -12 dBTP ceiling has to take ~3 dB off them
+    out = _render(tmp_path, target_lufs=-10.0, true_peak=-12.0)
     rate, chunks = decode_float_chunks(out)
-    assert true_peak_db(np.concatenate(list(chunks)), rate) <= -1.0 + 0.3
+    assert true_peak_db(np.concatenate(list(chunks)), rate) <= -12.0 + 0.3
+    # the limiter took the peaks, not the level: still close to the target
+    assert file_loudness(out).integrated_lufs > -14.0

@@ -487,7 +487,8 @@ def weave_timeline(
     from mixing.loudness import level_file
 
     with tempfile.TemporaryDirectory(prefix="braidio-mix-") as work:
-        unmastered = Path(work) / "mix.wav"
+        # named after ``out``: a GainCappedWarning names this file
+        unmastered = Path(work) / f"{out.stem}.wav"
         subprocess.run(
             [
                 "ffmpeg",

@@ -2131,3 +2131,22 @@ def test_status_reports_two_overrides_instead_of_raising(
     status = project.genre_status()
     assert status["next_step"]["op"] == "restore_take"
     assert "at most one" in status["next_step"]["why"]
+
+
+def test_a_noop_reweave_walks_freshness_once(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """braidio#171: freshness changes only through a write, so a re-weave that
+    writes nothing needs one walk of the graph, not about two per beat."""
+    import nw
+
+    script, source = script_and_source
+    first = braidio.weave_project(project, script, source=source)
+    walks = []
+    real = nw.stale_verdicts_all
+    monkeypatch.setattr(
+        nw, "stale_verdicts_all", lambda root: walks.append(root) or real(root)
+    )
+    again = braidio.weave_project(project, script, source=source)
+    assert again.id == first.id
+    assert len(walks) == 1

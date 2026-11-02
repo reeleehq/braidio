@@ -44,6 +44,9 @@ from nw import TransformInputs
 
 from braidio.transforms._common import (
     ELEVENLABS_SECRET,
+    forget_fresh_ids,
+    fresh_ids,
+    fresh_ids_pass,
     TIER_WEAVE_CONFIG,
     TIER_PRODUCTION_STRUCTURE,
     TIER_RENDER_PROFILE,
@@ -381,29 +384,34 @@ def weave_project(
 
     def run(transform, *primary, secrets=None):
         results.append(_execute(transform, project, *primary, secrets=secrets))
-        return results[-1].annotations[0]
+        out = results[-1].annotations[0]
+        if out.id not in fresh_ids(project):  # a node was written: walk again
+            forget_fresh_ids(project)
+        return out
 
     render_by_authoring_id = {}
-    try:
-        for beat in ing.narration_beats:
-            run(voice, beat)
-            render_by_authoring_id[beat.id] = run(narration, beat, secrets=secrets)
-        for beat in ing.dialogue_beats:
-            render_by_authoring_id[beat.id] = run(dialogue, beat, secrets=secrets)
-        for clip in ing.audio_clips:
-            render_by_authoring_id[clip.id] = run(segment, clip)
+    # one freshness walk per write, not ~two per beat (braidio#171)
+    with fresh_ids_pass():
+        try:
+            for beat in ing.narration_beats:
+                run(voice, beat)
+                render_by_authoring_id[beat.id] = run(narration, beat, secrets=secrets)
+            for beat in ing.dialogue_beats:
+                render_by_authoring_id[beat.id] = run(dialogue, beat, secrets=secrets)
+            for clip in ing.audio_clips:
+                render_by_authoring_id[clip.id] = run(segment, clip)
 
-        # A scene break renders no node of its own — the authoring annotation
-        # IS the member, and the episode transform turns it into a sting or a
-        # pause.
-        members = tuple(
-            auth if kind == "scene_break" else render_by_authoring_id[auth.id]
-            for kind, auth in ing.ordered
-        )
-        woven = run(episode, *members)
-    except Exception as exc:  # annotated and re-raised, never swallowed
-        exc.weave_receipt = WeaveReceipt.of(None, results, failed=True)
-        raise
+            # A scene break renders no node of its own — the authoring annotation
+            # IS the member, and the episode transform turns it into a sting or a
+            # pause.
+            members = tuple(
+                auth if kind == "scene_break" else render_by_authoring_id[auth.id]
+                for kind, auth in ing.ordered
+            )
+            woven = run(episode, *members)
+        except Exception as exc:  # annotated and re-raised, never swallowed
+            exc.weave_receipt = WeaveReceipt.of(None, results, failed=True)
+            raise
     return WeaveReceipt.of(woven, results) if return_receipt else woven
 
 

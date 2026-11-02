@@ -17,7 +17,10 @@ Tier-name constants mirror :mod:`braidio.bodies._tiers`; body schemas live in
 from __future__ import annotations
 
 import uuid
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
+from typing import Optional
 from urllib.parse import urlparse
 from urllib.request import url2pathname
 
@@ -228,12 +231,55 @@ def fresh_equivalent(project, skeleton: Annotation) -> Annotation | None:
 
 
 def fresh_ids(project) -> set:
-    """The ids of every annotation nw's freshness walk verifies as fresh."""
+    """The ids of every annotation nw's freshness walk verifies as fresh.
+
+    One full walk of the graph, unless a :func:`fresh_ids_pass` is open, in
+    which case the walk is reused until :func:`forget_fresh_ids` (braidio#171).
+    """
     import nw
 
-    return {
+    cache = _FRESH_PASS.get()
+    key = str(Path(project.root).resolve())
+    if cache is not None and key in cache:
+        return cache[key]
+    ids = {
         v.annotation.id for v in nw.stale_verdicts_all(project.root) if not v.is_stale
     }
+    if cache is not None:
+        cache[key] = ids
+    return ids
+
+
+#: The walks a :func:`fresh_ids_pass` reuses, by project root (``None``: no pass).
+_FRESH_PASS: ContextVar[Optional[dict]] = ContextVar("braidio_fresh_pass", default=None)
+
+
+@contextmanager
+def fresh_ids_pass():
+    """Reuse one freshness walk per project until something is written.
+
+    Freshness changes only through a write, and adding a node changes no
+    *other* node's freshness (it is a function of each node's own parents),
+    so a pass that writes nothing needs one walk however many lookups it does.
+    The driver that writes calls :func:`forget_fresh_ids` after each write;
+    ``weave_project`` does, so a no-op re-weave is one walk instead of about
+    two per beat (braidio#171). Nested passes share the outer one.
+    """
+    if _FRESH_PASS.get() is not None:
+        yield
+        return
+    token = _FRESH_PASS.set({})
+    try:
+        yield
+    finally:
+        _FRESH_PASS.reset(token)
+
+
+def forget_fresh_ids(project) -> None:
+    """Drop the open pass's walk of ``project``: the graph was just written."""
+    cache = _FRESH_PASS.get()
+    if cache is not None:
+        cache.pop(str(Path(project.root).resolve()), None)
 
 
 def freshest(project, annotations):

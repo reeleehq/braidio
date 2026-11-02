@@ -12,6 +12,10 @@ for every refusal (what the tools turn into a ``ToolError``) and a content type.
 
 Extraction is content-type aware: HTML is stripped to text, PDF uses ``pypdf``
 (page-capped), everything else is decoded as UTF-8.
+
+Media uploads (``upload_asset``) use the same fetch, plus two guards:
+:func:`direct_media_url` turns a pasted share link into its download, and
+:func:`refuse_non_media` keeps a web page or an archive out of the asset library.
 """
 
 from __future__ import annotations
@@ -112,6 +116,57 @@ def fetch_uri(uri: str, **fetch_options) -> tuple[bytes, str]:
     except graze.GuardedFetchError as err:
         raise ValueError(f"fetch failed: {err}") from err
     return data, ctype.lower() or "application/octet-stream"
+
+
+#: What a library asset may never be, whatever its declared kind: a web page
+#: (a share link that is not public answers HTTP 200 with a sign-in page) or an
+#: archive (what a folder share link downloads as). Sniffed, not read off the
+#: Content-Type, which a share host gets wrong in both directions.
+NOT_MEDIA_FAMILIES = frozenset({"html", "archive"})
+
+
+def direct_media_url(uri: str) -> str:
+    """The URL whose body is the file a pasted ``uri`` names.
+
+    A Dropbox ``dl=0`` or Google Drive ``/view`` link is a web page about the
+    file; :func:`graze.share_links.resolve_share_url` turns it into the
+    download (a plain URL passes through). A folder link is refused: it is
+    many files, and an asset is one. ``ValueError`` names why.
+    """
+    from graze.share_links import ShareLinkKind, resolve_share_url
+
+    resolved = resolve_share_url(uri)  # pure: it answers, it does not raise
+    if resolved.kind in (ShareLinkKind.ARCHIVE, ShareLinkKind.FOLDER):
+        raise ValueError(
+            f"{uri} is a {resolved.provider} folder link, and one asset is one "
+            "file: link the file itself, or give its direct download URL"
+        )
+    if not resolved.direct_url:
+        raise ValueError(
+            f"{resolved.provider} link cannot be downloaded directly: {resolved.reason}"
+        )
+    return resolved.direct_url
+
+
+def refuse_non_media(data: bytes, *, uri: str | None = None) -> None:
+    """``ValueError`` when ``data`` is a web page or an archive (:data:`NOT_MEDIA_FAMILIES`).
+
+    graze's message is passed on as is: it names the usual cause (a share link
+    that is not public) and the fix (anyone-with-the-link).
+    """
+    from graze.content_kind import (
+        SNIFF_BYTES,
+        ContentKindMismatch,
+        assert_content_kind,
+        sniff_content_family,
+    )
+
+    head = data[:SNIFF_BYTES]
+    if sniff_content_family(head) in NOT_MEDIA_FAMILIES:
+        try:
+            assert_content_kind(head, expect_kind="media", url=uri)
+        except ContentKindMismatch as err:
+            raise ValueError(str(err)) from err
 
 
 def _pdf_text(data: bytes) -> str:

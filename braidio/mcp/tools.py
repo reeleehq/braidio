@@ -490,7 +490,7 @@ def upload_asset(
 
     if uri:
         try:
-            data, ctype = _docs.fetch_uri(uri)
+            data, ctype = _docs.fetch_uri(_docs.direct_media_url(uri))
         except ValueError as exc:
             raise ToolError(str(exc)) from exc
         src = uri
@@ -502,6 +502,10 @@ def upload_asset(
         ctype, src = None, "inline"
     else:
         raise ToolError("provide either `uri` or `data_b64`")
+    try:  # before anything is stored: a page or an archive is never media
+        _docs.refuse_non_media(data, uri=uri)
+    except ValueError as exc:
+        raise ToolError(str(exc)) from exc
 
     ws = _workspace()
     ref = ws.content_store().add(data, mime_type=ctype, name=name or (uri or None))

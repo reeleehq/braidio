@@ -109,7 +109,7 @@ from braidio.transforms._common import (
     audio_artifact,
     safe_duration,
     file_url,
-    url_to_path,
+    media_path,
 )
 from braidio.transforms._segment import _pads_fades
 
@@ -120,12 +120,14 @@ NAME = "weave_to_episode.default"
 _LABEL_SNIPPET_CHARS = 48
 
 
-def _structure_and_bed(node: Annotation | None):
+def _structure_and_bed(project_root, node: Annotation | None):
     """``(MusicStructure, MusicBed | None)`` from a ``production-structure`` node.
 
     ``None`` (no such node) resolves to braidio's inert default structure and no
     bed — the pre-structure behaviour, reconstructed rather than special-cased
-    at every use site.
+    at every use site. The sting and bed audio are found by their asset id
+    first (:func:`media_path`), so a project moved to another machine still
+    reads them.
     """
     from braidio.music import MusicBed
     from braidio.structure import DEFAULT_STRUCTURE, MusicStructure, Sting
@@ -134,12 +136,25 @@ def _structure_and_bed(node: Annotation | None):
         return DEFAULT_STRUCTURE, None
     body = node.body
     sting = None
-    if body.get("sting_url"):
-        sting = Sting(str(url_to_path(body["sting_url"])), **(body.get("sting") or {}))
+    if body.get("sting_url") or body.get("sting_asset_id"):
+        sting = Sting(
+            str(_asset_path(project_root, body, "sting")), **(body.get("sting") or {})
+        )
     bed = None
-    if body.get("bed_url"):
-        bed = MusicBed(str(url_to_path(body["bed_url"])), **(body.get("bed") or {}))
+    if body.get("bed_url") or body.get("bed_asset_id"):
+        bed = MusicBed(
+            str(_asset_path(project_root, body, "bed")), **(body.get("bed") or {})
+        )
     return MusicStructure(sting=sting, **(body.get("structure") or {})), bed
+
+
+def _asset_path(project_root, body: dict, asset: str):
+    """The file of a structure node's ``asset`` (``"sting"`` / ``"bed"``)."""
+    ref = {
+        "artifact_id": body.get(f"{asset}_asset_id"),
+        "url": body.get(f"{asset}_url"),
+    }
+    return media_path(project_root, ref, what=f"production-structure {asset}")
 
 
 def _member_role(member: Annotation, index: dict, *, structure):
@@ -253,10 +268,12 @@ def _member_duration(project, member: Annotation, *, config: dict, structure) ->
             return length + sting.gap_after_s
         return float(structure.pause_s)
 
-    url = member.body.get("url")
-    if url:
-        path = url_to_path(url)
-        if path.exists():
+    if member.body.get("url") or member.body.get("artifact_id"):
+        try:
+            path = media_path(project.root, member.body, what=member.tier)
+        except FileNotFoundError:
+            path = None  # gone from disk: fall back to the arithmetic below
+        if path is not None:
             return float(braidio.duration_s(path))
 
     if member.tier == TIER_SEGMENT_EXTRACTION:
@@ -289,7 +306,8 @@ def episode_timeline(project, episode: Annotation) -> TimelineBreakdown:
         cfg = singleton(project, TIER_WEAVE_CONFIG)
     config = cfg.body.get("config", {})
     structure, _bed = _structure_and_bed(
-        next((p for p in parents if p.tier == TIER_PRODUCTION_STRUCTURE), None)
+        project.root,
+        next((p for p in parents if p.tier == TIER_PRODUCTION_STRUCTURE), None),
     )
     members = _resolve_members(
         episode,
@@ -652,7 +670,8 @@ class WeaveToEpisode(BaseTransform):
         cfg = require_tier(parents, TIER_WEAVE_CONFIG)
         config = cfg.body.get("config", {})
         structure, bed = _structure_and_bed(
-            next((a for a in parents if a.tier == TIER_PRODUCTION_STRUCTURE), None)
+            project.root,
+            next((a for a in parents if a.tier == TIER_PRODUCTION_STRUCTURE), None),
         )
         weave = WeaveConfig.from_snapshot(config)  # omitted knobs → the defaults
         target_lufs = weave.target_lufs
@@ -666,6 +685,7 @@ class WeaveToEpisode(BaseTransform):
                 bed=bed,
                 target_lufs=target_lufs,
                 breaks_dir=breaks_dir,
+                project_root=project.root,
             )
             for m in members
         ]
@@ -735,6 +755,7 @@ class WeaveToEpisode(BaseTransform):
         bed,
         target_lufs: float,
         breaks_dir,
+        project_root,
     ) -> TimelineItem:
         """One timeline part for ``member`` — a rendered beat, or a scene break.
 
@@ -760,7 +781,9 @@ class WeaveToEpisode(BaseTransform):
         is_clip = member.tier == TIER_SEGMENT_EXTRACTION
         return TimelineItem(
             kind="clip" if is_clip else "narration",
-            path=str(url_to_path(member.body["url"])),
+            path=str(
+                media_path(project_root, member.body, what=f"{member.tier} {member.id}")
+            ),
             placement="sequential",
             speaker=_member_speaker(member, index),
             spotlight=(

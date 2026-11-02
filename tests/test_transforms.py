@@ -1633,15 +1633,17 @@ def test_a_voice_flip_and_back_weaves_in_the_voice_the_voice_stage_chose(
 
     monkeypatch.setattr(braidio, "narrate", spy)
 
-    def opening_voice(voice):
+    def voices(voice):
+        """The voice of EVERY narration take in the mix (a clip has none)."""
         monkeypatch.setenv("BRAIDIO_TTS_VOICE", voice)
         episode = braidio.weave_project(project, script, source=source)
-        return voice_of_take[episode.body["ordered_member_ids"][0]]
+        members = [str(m) for m in episode.body["ordered_member_ids"]]
+        return {voice_of_take[m] for m in members if m in voice_of_take}
 
-    assert opening_voice("voiceA") == "voiceA"
-    assert opening_voice("voiceB") == "voiceB"
-    assert opening_voice("voiceA") == "voiceA"  # not the most recent fresh
-    assert opening_voice("voiceB") == "voiceB"  # not the oldest fresh
+    assert voices("voiceA") == {"voiceA"}
+    assert voices("voiceB") == {"voiceB"}
+    assert voices("voiceA") == {"voiceA"}  # not the most recent fresh
+    assert voices("voiceB") == {"voiceB"}  # not the oldest fresh
 
 
 def test_genre_status_names_the_episode_a_revert_returned(
@@ -2131,3 +2133,22 @@ def test_status_reports_two_overrides_instead_of_raising(
     status = project.genre_status()
     assert status["next_step"]["op"] == "restore_take"
     assert "at most one" in status["next_step"]["why"]
+
+
+def test_a_noop_reweave_walks_freshness_once(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """braidio#171: freshness changes only through a write, so a re-weave that
+    writes nothing needs one walk of the graph, not about two per beat."""
+    import nw
+
+    script, source = script_and_source
+    first = braidio.weave_project(project, script, source=source)
+    walks = []
+    real = nw.stale_verdicts_all
+    monkeypatch.setattr(
+        nw, "stale_verdicts_all", lambda root: walks.append(root) or real(root)
+    )
+    again = braidio.weave_project(project, script, source=source)
+    assert again.id == first.id
+    assert len(walks) == 1

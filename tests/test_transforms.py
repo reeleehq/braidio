@@ -1335,3 +1335,156 @@ def test_genre_status_follows_the_project_from_empty_to_woven(
     # and no string naming the project root — the episode's file:// url is left out)
     assert nw.genre_status_of(project) == woven
     assert str(project.root) not in repr(woven)
+
+
+# --- the weave reads takes by content, not by recorded path (braidio#86) ---------
+
+
+def test_a_reweave_reads_the_takes_by_artifact_id_when_their_urls_point_nowhere(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """The server case for an imported project: every take's recorded url is
+    the importing machine's path, so the weave must find each take through the
+    delivery catalog, keyed by the ``artifact_id`` the graph already records,
+    exactly as the stills do (braidio#89/#90)."""
+    import shutil
+
+    import nw
+
+    from braidio.importing._catalog import CatalogReport, register_artifact
+    from braidio.transforms._common import url_to_path
+
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source)
+
+    takes = [
+        a
+        for tier in ("narration-renders", "segment-extractions")
+        for a in nw.annotations_at_tier(project.root, tier)
+    ]
+    for take in takes:
+        original = url_to_path(take.body["url"])
+        inside = project.root / "media" / original.name
+        inside.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(original, inside)
+        register_artifact(
+            project.root,
+            inside,
+            artifact_id=take.body["artifact_id"],
+            kind="audio",
+            generated_at="2026-11-02T00:00:00Z",
+            report=CatalogReport(),
+        )
+        original.unlink()
+        _rewrite_in_place(
+            project,
+            take,
+            body={
+                **take.body,
+                "url": f"file:///Users/someone-else/gone/{original.name}",
+            },
+        )
+
+    woven = []
+
+    def _capture(items, out, **kw):
+        woven.extend(items)
+        Path(out).write_bytes(b"EPISODE")
+        return Path(out)
+
+    monkeypatch.setattr(braidio, "weave_timeline", _capture)
+    braidio.weave_project(project, script, source=source)
+
+    assert len(woven) == len(takes)
+    assert all(Path(item.path).exists() for item in woven)
+    assert not any("someone-else" in item.path for item in woven)
+
+
+def test_the_sting_and_bed_are_read_by_asset_id_when_their_urls_point_nowhere(
+    project, script_and_source, patched_synthesis, tmp_path
+):
+    """Same rule for the production-structure assets: ``*_asset_id`` first."""
+    import nw
+
+    from braidio.importing._catalog import CatalogReport, register_artifact
+    from braidio.transforms._episode import _structure_and_bed
+
+    _weave_with_sting_and_bed(project, script_and_source, tmp_path)
+    (node,) = nw.annotations_at_tier(project.root, "production-structures")
+    body = dict(node.body)
+    for asset, name in (("sting", "hit.mp3"), ("bed", "bed.mp3")):
+        inside = project.root / "media" / name
+        inside.parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / name).rename(inside)
+        register_artifact(
+            project.root,
+            inside,
+            artifact_id=body[f"{asset}_asset_id"],
+            kind="audio",
+            generated_at="2026-11-02T00:00:00Z",
+            report=CatalogReport(),
+        )
+        body[f"{asset}_url"] = f"file:///Users/someone-else/gone/{name}"
+
+    structure, bed = _structure_and_bed(
+        project.root, node.model_copy(update={"body": body})
+    )
+
+    assert Path(structure.sting.asset_path).read_bytes() == b"STING-ASSET"
+    assert Path(bed.asset_path).read_bytes() == b"BED-ASSET"
+
+
+def test_a_reconstructed_timeline_probes_the_takes_found_in_the_catalog(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """``episode_timeline`` on a row with no persisted timeline probes each
+    take where ``media_path`` finds it, not at its recorded url."""
+    import nw
+
+    from braidio.importing._catalog import CatalogReport, register_artifact
+    from braidio.transforms import episode_timeline
+    from braidio.transforms._common import url_to_path
+
+    script, source = script_and_source
+    episode = braidio.weave_project(project, script, source=source)
+    narration = nw.annotations_at_tier(project.root, "narration-renders")[0]
+    original = url_to_path(narration.body["url"])
+    inside = project.root / "media" / original.name
+    inside.parent.mkdir(parents=True, exist_ok=True)
+    original.rename(inside)
+    register_artifact(
+        project.root,
+        inside,
+        artifact_id=narration.body["artifact_id"],
+        kind="audio",
+        generated_at="2026-11-02T00:00:00Z",
+        report=CatalogReport(),
+    )
+    probed = []
+    monkeypatch.setattr(braidio, "duration_s", lambda p: probed.append(p) or 2.0)
+
+    stripped = {k: v for k, v in episode.body.items() if k != "timeline"}
+    episode_timeline(project, episode.model_copy(update={"body": stripped}))
+
+    assert any(Path(p).parent.name == "blobs" for p in probed), probed
+
+
+def test_a_missing_bed_does_not_fail_a_read_that_never_plays_it(
+    project, script_and_source, patched_synthesis, tmp_path
+):
+    """Found nowhere, the sting and bed keep their recorded location unchecked:
+    only the caller that plays them fails (a timeline read never does)."""
+    import nw
+
+    from braidio.transforms._common import url_to_path
+    from braidio.transforms._episode import _structure_and_bed
+
+    _weave_with_sting_and_bed(project, script_and_source, tmp_path)
+    (node,) = nw.annotations_at_tier(project.root, "production-structures")
+    (tmp_path / "bed.mp3").unlink()
+    (tmp_path / "hit.mp3").unlink()
+
+    structure, bed = _structure_and_bed(project.root, node)
+
+    assert Path(bed.asset_path) == url_to_path(node.body["bed_url"])
+    assert Path(structure.sting.asset_path) == url_to_path(node.body["sting_url"])

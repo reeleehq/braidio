@@ -1,34 +1,34 @@
 {
   "schema_version": 1,
-  "built_at": "2026-11-02T05:28:40Z",
+  "built_at": "2026-11-02T05:39:58Z",
   "package": {
     "name": "braidio",
-    "version": "0.0.91",
+    "version": "0.0.92",
     "display_name": "braidio",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "5624bcb244eddf872f5635a3e02452bb1acd3b6f",
-    "short_commit": "5624bcb",
+    "commit": "88e733ec0a4cf5d0984a7d822337eecd1f64c16f",
+    "short_commit": "88e733e",
     "branch": "main",
     "tags": [
-      "0.0.91"
+      "0.0.92"
     ],
     "dirty": false,
     "remote_url": "https://github.com/reeleehq/braidio",
-    "commit_url": "https://github.com/reeleehq/braidio/commit/5624bcb244eddf872f5635a3e02452bb1acd3b6f",
+    "commit_url": "https://github.com/reeleehq/braidio/commit/88e733ec0a4cf5d0984a7d822337eecd1f64c16f",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "reeleehq/braidio",
-    "sha": "c628d8d7fe670a8aa4ae469bbd4d4f19bc81cf0a",
+    "sha": "4c8efa2972f8f4343bac8b956810d9820bdc6693",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "41393740713",
-    "run_url": "https://github.com/reeleehq/braidio/actions/runs/41393740713",
+    "run_id": "41394872981",
+    "run_url": "https://github.com/reeleehq/braidio/actions/runs/41394872981",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -62,16 +62,16 @@
   },
   "pypi": {
     "checked": true,
-    "latest": "0.0.90",
+    "latest": "0.0.91",
     "relation": "ahead",
     "error": null
   },
-  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout 5624bcb244eddf872f5635a3e02452bb1acd3b6f\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout 88e733ec0a4cf5d0984a7d822337eecd1f64c16f\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
     "aligned": false,
     "notes": [
-      "The documented version (0.0.91) is ahead of the latest release on PyPI (0.0.90): these docs describe unreleased code."
+      "The documented version (0.0.92) is ahead of the latest release on PyPI (0.0.91): these docs describe unreleased code."
     ]
   }
 }

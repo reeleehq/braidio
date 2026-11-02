@@ -16,6 +16,8 @@ _AUDIO_CLIPS = Tier("audio-clips")
 _NARRATIVE_BEATS = Tier("narrative-beats")
 _DIALOGUE_BEATS = Tier("dialogue-beats")
 _SCENE_BREAKS = Tier("scene-breaks")
+# A person's recording standing in for a beat's take (braidio#86).
+_TAKE_OVERRIDES = Tier("take-overrides")
 # Render-provenance layers.
 _WEAVE_CONFIGS = Tier("weave-configs")
 _PRODUCTION_STRUCTURES = Tier("production-structures")
@@ -40,6 +42,7 @@ TIERS: tuple[Tier, ...] = (
     _NARRATIVE_BEATS,
     _DIALOGUE_BEATS,
     _SCENE_BREAKS,
+    _TAKE_OVERRIDES,
     _WEAVE_CONFIGS,
     _PRODUCTION_STRUCTURES,
     _RENDER_PROFILES,

@@ -1,4 +1,4 @@
-"""Stability guard for the 21 body schemas braidio registers with lacing.
+"""Stability guard for the 22 body schemas braidio registers with lacing.
 
 These URIs are *on the wire*. The graph path (nw pipeline + the two deployed
 MCP connectors) reads and writes annotations carrying them, and real projects
@@ -30,7 +30,7 @@ Breaking and additive changes fail in different tests, with different advice:
   exists but isn't pinned, and tells you whether it is additive (optional,
   with a default) or breaking (required).
 
-Two of the 21 bodies (``still/v1``, ``video-panel/v1``) nest a carrier
+Two of the 22 bodies (``still/v1``, ``video-panel/v1``) nest a carrier
 model, ``RectV1`` (a normalized ``x``/``y``/``w``/``h`` region — the same keys
 as ``burns.Rect`` and a ``BurnsPath`` keyframe rect). It is not a registered
 body, so it has no URI, but its shape IS on the wire inside those two bodies,
@@ -67,6 +67,7 @@ from braidio.bodies import (
     SOURCE_MEDIA_V1,
     SOURCE_V1,
     STILL_V1,
+    TAKE_OVERRIDE_V1,
     VIDEO_CUT_V1,
     VIDEO_PANEL_V1,
     VOICE_ASSIGNMENT_V1,
@@ -90,6 +91,7 @@ from braidio.bodies import (
     SourceBodyV1,
     SourceMediaBodyV1,
     StillBodyV1,
+    TakeOverrideBodyV1,
     VideoCutBodyV1,
     VideoPanelBodyV1,
     VoiceAssignmentBodyV1,
@@ -142,6 +144,7 @@ def test_body_schema_uris_are_pinned():
         "VIDEO_PANEL_V1": VIDEO_PANEL_V1,
         "VIDEO_CUT_V1": VIDEO_CUT_V1,
         "LABEL_TRACK_V1": LABEL_TRACK_V1,
+        "TAKE_OVERRIDE_V1": TAKE_OVERRIDE_V1,
     }
     assert actual == {
         "COMMENTARY_V1": "annot://schema/commentary/v1",
@@ -165,6 +168,8 @@ def test_body_schema_uris_are_pinned():
         "VIDEO_PANEL_V1": "annot://schema/video-panel/v1",
         "VIDEO_CUT_V1": "annot://schema/video-cut/v1",
         "LABEL_TRACK_V1": "annot://schema/label-track/v1",
+        # added braidio#86: a person's recording standing in for a take
+        "TAKE_OVERRIDE_V1": "annot://schema/take-override/v1",
     }, MIGRATION_RULE
 
 
@@ -191,6 +196,7 @@ OWNED: dict[str, type] = {
     VIDEO_PANEL_V1: VideoPanelBodyV1,
     VIDEO_CUT_V1: VideoCutBodyV1,
     LABEL_TRACK_V1: LabelTrackBodyV1,
+    TAKE_OVERRIDE_V1: TakeOverrideBodyV1,
 }
 
 #: Carrier models nested inside an owned body (no URI of their own, but on
@@ -205,8 +211,8 @@ def test_uri_resolves_to_its_pinned_model(uri):
     assert get_body_schema(uri) is OWNED[uri], MIGRATION_RULE
 
 
-def test_braidio_owns_exactly_these_twenty_one_body_schemas():
-    """A twenty-second braidio-owned schema must be pinned here too, or it ships
+def test_braidio_owns_exactly_these_twenty_two_body_schemas():
+    """A twenty-third braidio-owned schema must be pinned here too, or it ships
     unguarded. (Filtered to braidio's own models: the lacing registry is
     global and other packages register into it as well.)"""
     owned = {
@@ -230,7 +236,7 @@ def test_bodies_forbid_extra_fields(uri):
 # --- the serialized shapes ---------------------------------------------------
 
 #: Model name → its pinned ``required`` field names and per-field shapes.
-#: Generated once from the current models (two of the 21 bodies nest
+#: Generated once from the current models (two of the 22 bodies nest
 #: another registered model, ``RectV1`` — see the ``PINNED_NESTED`` note
 #: in the module docstring — otherwise there is exactly one entry per
 #: body — no full nested-model table like artful's
@@ -482,6 +488,19 @@ PINNED: dict[str, dict] = {
             "weight": "integer(minimum=1) = 2",
         },
     },
+    # added braidio#86, pinned from the model when it was introduced
+    "TakeOverrideBodyV1": {
+        "required": frozenset(
+            {"artifact_id", "beat_id", "duration_s", "text_digest", "url"}
+        ),
+        "fields": {
+            "artifact_id": 'string(pattern="^[0-9a-f]{64}$")',
+            "beat_id": "string",
+            "duration_s": "number(exclusiveMinimum=0)",
+            "text_digest": 'string(pattern="^[0-9a-f]{64}$")',
+            "url": "string",
+        },
+    },
 }
 
 #: The nested carriers' shapes — same rules, same advice.
@@ -603,7 +622,7 @@ PROSE_KEYS = frozenset({"title", "description"})
 
 def _actual_shapes() -> dict[str, dict]:
     """``{model name: {"required": frozenset(...), "fields": {name: shape}}}``
-    for the 21 owned bodies (top level only; nested carriers are
+    for the 22 owned bodies (top level only; nested carriers are
     :func:`_nested_shapes`)."""
     return {
         js["title"]: _entry(js)

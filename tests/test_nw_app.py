@@ -41,6 +41,8 @@ EXPECTED_SCHEMA_URIS = frozenset(
         "annot://schema/video-panel/v1",
         "annot://schema/video-cut/v1",
         "annot://schema/label-track/v1",
+        # a person's recording standing in for a narration take (braidio#86)
+        "annot://schema/take-override/v1",
     }
 )
 

@@ -209,11 +209,10 @@ def estimate_cost(
     """Estimate the ElevenLabs cost of a production BEFORE paying for synthesis.
 
     ``script`` is a JSON script envelope (shape: see :func:`weave_project`). Only
-    narration + dialogue text is billed. Pass the ``format_id`` (or ``delivery``)
-    and ``profile`` you will render with, so the estimate prices that render. A
-    re-weave of an existing project keeps the model it was first voiced with:
-    pass that project's format. Returns exact character counts and an honest
-    dollar estimate.
+    narration + dialogue text is billed. Pass the ``format_id`` or ``delivery``
+    (default narration) and ``profile`` you will render with. A re-weave keeps
+    the narration model a project was first voiced with: pass its format.
+    Returns exact character counts and an honest dollar estimate.
     """
     if format_id is not None and delivery is not None:
         raise ToolError(

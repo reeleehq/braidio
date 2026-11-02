@@ -13,9 +13,19 @@ for every refusal (what the tools turn into a ``ToolError``) and a content type.
 Extraction is content-type aware: HTML is stripped to text, PDF uses ``pypdf``
 (page-capped), everything else is decoded as UTF-8.
 
-Media uploads (``upload_asset``) use the same fetch, plus two guards:
-:func:`direct_media_url` turns a pasted share link into its download, and
-:func:`refuse_non_media` keeps a web page or an archive out of the asset library.
+Both URI tools resolve a pasted share link first: :func:`resolve_file_link`
+returns the URL whose body is the file, and whether that URL is a *rewrite* of
+the one given (a Dropbox ``dl=0`` or Drive ``/view`` link turned into its
+download). Then each guards the bytes for what it expects:
+
+- ``upload_asset``: :func:`refuse_page_or_archive` keeps a web page or an
+  archive out of the asset library, always.
+- ``ingest_document``: an HTML body is refused only when the link was
+  rewritten, because then it is the host's sign-in or preview page; an
+  un-rewritten URL's HTML may be the document itself (a plain web page, a
+  Google Docs ``/pub`` or ``/export?format=html``). An archive is always
+  refused (:func:`refuse_archive_document`): ``docx``/``epub``/``odt`` are ZIPs
+  and :func:`extract_text` cannot read one.
 """
 
 from __future__ import annotations
@@ -118,38 +128,50 @@ def fetch_uri(uri: str, **fetch_options) -> tuple[bytes, str]:
     return data, ctype.lower() or "application/octet-stream"
 
 
-#: What a library asset may never be, whatever its declared kind: a web page
-#: (a share link that is not public answers HTTP 200 with a sign-in page) or an
-#: archive (what a folder share link downloads as). Sniffed, not read off the
-#: Content-Type, which a share host gets wrong in both directions.
-NOT_MEDIA_FAMILIES = frozenset({"html", "archive"})
+#: What a fetched file is refused as: a web page (a share link that is not
+#: public answers HTTP 200 with a sign-in page) or an archive (what a folder
+#: share link downloads as). Sniffed, not read off the Content-Type, which a
+#: share host gets wrong in both directions.
+PAGE_OR_ARCHIVE_FAMILIES = frozenset({"html", "archive"})
 
 
-def direct_media_url(uri: str) -> str:
-    """The URL whose body is the file a pasted ``uri`` names.
+def resolve_file_link(uri: str) -> tuple[str, bool]:
+    """``(direct_url, rewritten)`` for a pasted ``uri``.
 
-    A Dropbox ``dl=0`` or Google Drive ``/view`` link is a web page about the
-    file; :func:`graze.share_links.resolve_share_url` turns it into the
-    download (a plain URL passes through). A folder link is refused: it is
-    many files, and an asset is one. ``ValueError`` names why.
+    ``direct_url`` is the URL whose body is the file: a Dropbox ``dl=0`` or
+    Google Drive ``/view`` link is a web page about the file, and
+    :func:`graze.share_links.resolve_share_url` turns it into the download (a
+    plain URL, or one that already names a download or export, passes through).
+    ``rewritten`` says whether it did: only then is an HTML body known to be the
+    host's page rather than the file. A folder link is refused: it is many
+    files, and what is asked for is one. ``ValueError`` names why.
+
+    >>> resolve_file_link('https://drive.google.com/file/d/1AbC/view')
+    ('https://drive.google.com/uc?export=download&id=1AbC', True)
+    >>> resolve_file_link('https://docs.google.com/document/d/1X/pub')
+    ('https://docs.google.com/document/d/1X/pub', False)
     """
     from graze.share_links import ShareLinkKind, resolve_share_url
 
     resolved = resolve_share_url(uri)  # pure: it answers, it does not raise
     if resolved.kind in (ShareLinkKind.ARCHIVE, ShareLinkKind.FOLDER):
         raise ValueError(
-            f"{uri} is a {resolved.provider} folder link, and one asset is one "
-            "file: link the file itself, or give its direct download URL"
+            f"{uri} is a {resolved.provider} folder link: link the file itself, "
+            "or give its direct download URL"
         )
     if not resolved.direct_url:
         raise ValueError(
             f"{resolved.provider} link cannot be downloaded directly: {resolved.reason}"
         )
-    return resolved.direct_url
+    # ``resolved.url`` is the input as resolved (whitespace-stripped)
+    return resolved.direct_url, resolved.direct_url != resolved.url
 
 
-def refuse_non_media(data: bytes, *, uri: str | None = None) -> None:
-    """``ValueError`` when ``data`` is a web page or an archive (:data:`NOT_MEDIA_FAMILIES`).
+def refuse_page_or_archive(
+    data: bytes, *, uri: str | None = None, kind: str = "media"
+) -> None:
+    """``ValueError`` when ``data`` is a web page or an archive
+    (:data:`PAGE_OR_ARCHIVE_FAMILIES`) where a ``kind`` file was expected.
 
     graze's message is passed on as is: it names the usual cause (a share link
     that is not public) and the fix (anyone-with-the-link).
@@ -162,11 +184,28 @@ def refuse_non_media(data: bytes, *, uri: str | None = None) -> None:
     )
 
     head = data[:SNIFF_BYTES]
-    if sniff_content_family(head) in NOT_MEDIA_FAMILIES:
+    if sniff_content_family(head) in PAGE_OR_ARCHIVE_FAMILIES:
         try:
-            assert_content_kind(head, expect_kind="media", url=uri)
+            assert_content_kind(head, expect_kind=kind, url=uri)
         except ContentKindMismatch as err:
             raise ValueError(str(err)) from err
+
+
+def refuse_archive_document(data: bytes) -> None:
+    """``ValueError`` when ``data`` is an archive where a document was expected.
+
+    ``docx``, ``epub`` and ``odt`` are ZIPs, and :func:`extract_text` decodes
+    bytes as text, so an archive is never a readable document, whatever link
+    it came from.
+    """
+    from graze.content_kind import SNIFF_BYTES, sniff_content_family
+
+    if sniff_content_family(data[:SNIFF_BYTES]) == "archive":
+        raise ValueError(
+            "this is an archive (zip/gzip), not a readable document: archives and "
+            "ZIP-based formats (docx, epub, odt) are not supported; export it as "
+            "PDF or plain text"
+        )
 
 
 def _pdf_text(data: bytes) -> str:

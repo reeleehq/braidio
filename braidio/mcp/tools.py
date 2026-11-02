@@ -384,7 +384,11 @@ def ingest_document(
         raise ToolError(f"no project {project_id!r} — call create_project first")
     try:
         if uri:
-            data, ctype = _docs.fetch_uri(uri)
+            direct_url, rewritten = _docs.resolve_file_link(uri)
+            data, ctype = _docs.fetch_uri(direct_url)
+            _docs.refuse_archive_document(data)
+            if rewritten:  # a rewritten link's page is the host's, not the document
+                _docs.refuse_page_or_archive(data, uri=uri, kind="document")
             src = uri
         elif text is not None:
             data, ctype, src = text.encode("utf-8"), "text/plain", "inline"
@@ -490,7 +494,8 @@ def upload_asset(
 
     if uri:
         try:
-            data, ctype = _docs.fetch_uri(_docs.direct_media_url(uri))
+            direct_url, _ = _docs.resolve_file_link(uri)
+            data, ctype = _docs.fetch_uri(direct_url)
         except ValueError as exc:
             raise ToolError(str(exc)) from exc
         src = uri
@@ -503,7 +508,7 @@ def upload_asset(
     else:
         raise ToolError("provide either `uri` or `data_b64`")
     try:  # before anything is stored: a page or an archive is never media
-        _docs.refuse_non_media(data, uri=uri)
+        _docs.refuse_page_or_archive(data, uri=uri)
     except ValueError as exc:
         raise ToolError(str(exc)) from exc
 

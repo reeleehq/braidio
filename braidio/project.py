@@ -90,12 +90,29 @@ class Project(nw.Project):
         (:func:`braidio.transforms._common.freshest`, the rule every "current
         node" reader shares). After an edit and its revert, ``weave_project``
         returns the ORIGINAL episode again, which is older than the edited cut
-        but the only fresh one (braidio#169). ``episodes``: the list
-        :meth:`episodes` returned, when the caller already has it.
+        but the only fresh one (braidio#169). When several are fresh, the one
+        voiced as a weave would voice it now wins (an environment voice is in
+        no node, so a flip A→B→A leaves both mixes fresh; braidio#172).
+        ``episodes``: the list :meth:`episodes` returned, when the caller
+        already has it.
         """
         if episodes is None:
             episodes = self.episodes()
-        return _tiers().freshest(self, episodes)
+        tiers = _tiers()
+        if len(episodes) <= 1:
+            return episodes[-1] if episodes else None
+        with tiers.fresh_ids_pass():  # writes nothing: one walk for every lookup
+            fresh_ids = tiers.fresh_ids(self)
+            fresh = [e for e in episodes if e.id in fresh_ids]
+            if len(fresh) > 1:  # e.g. an env voice flip A→B→A (braidio#172)
+                from braidio.transforms._voice import voiced_as_now
+
+                index = tiers.graph_index(self)
+                return next(
+                    (e for e in reversed(fresh) if voiced_as_now(self, e, index=index)),
+                    fresh[-1],  # voiced in no mix yet (an env voice never woven)
+                )
+            return tiers.freshest(self, episodes)
 
     def genre_status(self) -> dict:
         """Where this production stands, for a host's one ``project_status`` door
@@ -110,7 +127,9 @@ class Project(nw.Project):
         once there is more than one episode to choose from — no file probe, so
         it stays small however often the project is re-woven, and never names
         a path. Two overrides for one beat are reported as the next step
-        (``restore_take``), not raised: a polled status door must answer.
+        (``restore_take``), not raised: a polled status door must answer. The
+        current episode depends on this process's environment voice when
+        several mixes are fresh (:meth:`current_episode`, braidio#172).
 
         >>> import tempfile
         >>> with tempfile.TemporaryDirectory() as d:

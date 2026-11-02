@@ -135,3 +135,45 @@ def current_voice_assignment(project, beat: Annotation) -> Annotation:
     chosen = fresh_equivalent(project, skeleton)
     # no fresh equivalent: the voice stage did not run for this plan
     return chosen if chosen is not None else freshest(project, hits)
+
+
+def voiced_as_now(project, episode: Annotation, *, index: dict) -> bool:
+    """Whether every narration take of ``episode`` uses the voice-assignment
+    the voice stage would choose for its beat now (:func:`current_voice_assignment`).
+
+    Freshness alone cannot tell two mixes apart when the voice came from the
+    environment (``BRAIDIO_TTS_VOICE``), which no node records: after a flip
+    A→B→A both mixes read fresh, and only this says which one a weave now
+    returns (braidio#172). ``index`` is :func:`~braidio.transforms._common.graph_index`.
+
+    It reads the voice the environment gives *this* process, so a server and a
+    CLI with different ``BRAIDIO_TTS_VOICE`` can disagree, as their weaves would.
+    """
+    from braidio.transforms._common import (
+        TIER_NARRATION_RENDER,
+        TIER_NARRATIVE_BEAT,
+        annotation_parents,
+    )
+
+    for member in episode.body.get("ordered_member_ids") or ():
+        take = index.get(_as_id(member))
+        if take is None or take.tier != TIER_NARRATION_RENDER:
+            continue
+        parents = [index.get(p) for p in annotation_parents(take)]
+        beat = next((a for a in parents if a and a.tier == TIER_NARRATIVE_BEAT), None)
+        voice = next(
+            (a for a in parents if a and a.tier == TIER_VOICE_ASSIGNMENT), None
+        )
+        if beat is None or voice is None:
+            continue  # e.g. an imported take: the importer writes no assignment
+        try:
+            chosen = current_voice_assignment(project, beat)
+        except ValueError:
+            continue  # a graph the voice stage cannot plan over: cannot tell here
+        if chosen.id != voice.id:
+            return False
+    return True
+
+
+def _as_id(member):
+    return member if isinstance(member, uuid.UUID) else uuid.UUID(str(member))

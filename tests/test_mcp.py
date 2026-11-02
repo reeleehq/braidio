@@ -2088,3 +2088,35 @@ def test_weave_project_is_priced_at_the_weave_config_s_model(
     monkeypatch.setattr(braidio, "weave_project", lambda proj, scr, **kw: episode)
     r = _call(server, "weave_project", {"project_id": "demo", "script": _THOUSAND})
     assert r.structured_content["cost_usd"] == pytest.approx(0.33)
+
+
+# --- the free estimate prices the render you will run (braidio#175) --------------
+
+
+def test_estimate_cost_prices_the_delivery_or_format_you_will_render_with(
+    distinct_rates,
+):
+    server = _local_server(ledger={})
+
+    def usd(**args):
+        return _call(server, "estimate_cost", {"script": _THOUSAND, **args}).structured_content["usd"]
+
+    # the default matches render_production's default delivery (v2) ...
+    assert usd() == pytest.approx(0.11)
+    # ... a named delivery or a format prices at its model
+    assert usd(delivery="v3-presenter") == pytest.approx(0.33)
+    assert usd(format_id="solo_explainer") == pytest.approx(0.33)
+
+
+def test_estimate_cost_prices_the_profile_s_cut():
+    script = {
+        "title": "t",
+        "id_slug": "01",
+        "beats": [{"type": "narration", "text": "a" * 100, "published_text": "b" * 10}],
+    }
+    server = _local_server(ledger={})
+    personal = _call(server, "estimate_cost", {"script": script}).structured_content
+    published = _call(
+        server, "estimate_cost", {"script": script, "profile": "published"}
+    ).structured_content
+    assert (personal["characters"], published["characters"]) == (100, 10)

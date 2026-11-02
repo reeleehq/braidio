@@ -195,14 +195,31 @@ def describe_genre() -> dict:
 # --- planning / read / safety (free) ----------------------------------------
 
 
-def estimate_cost(script: dict) -> dict:
+def estimate_cost(
+    script: dict,
+    format_id: str | None = None,
+    delivery: str = "narration",
+    profile: str = DEFAULT_PROFILE.value,
+) -> dict:
     """Estimate the ElevenLabs cost of a production BEFORE paying for synthesis.
 
     ``script`` is a JSON script envelope (see :func:`weave_project` for the shape).
     Segment extraction / weaving is free; only narration + dialogue text is billed.
-    Returns exact character counts and an honest dollar estimate.
+    Pass the ``format_id`` (or ``delivery``) and ``profile`` you will render with,
+    so the price is that render's. Returns exact character counts and an honest
+    dollar estimate.
     """
-    roll = braidio.estimate_cost(script_from_json(script))
+    from braidio.conversation import DEFAULT_CAST
+
+    fmt = _format(format_id)
+    narration = fmt.narration_delivery if fmt is not None else _delivery(delivery)
+    cast = fmt.cast if fmt is not None and fmt.cast is not None else DEFAULT_CAST
+    roll = braidio.estimate_cost(
+        script_from_json(script),
+        model_id=narration.model_id,
+        dialogue_model_id=cast.model_id,
+        profile=_profile(profile),
+    )
     out = to_json(roll)
     out["summary"] = roll.summary
     return out

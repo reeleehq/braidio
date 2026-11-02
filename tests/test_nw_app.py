@@ -134,3 +134,24 @@ def test_import_braidio_core_does_not_require_graph():
     # HAS_GRAPH may be True here, but the core API must be importable regardless.
     for name in ("Script", "WeaveConfig", "render_production", "weave_timeline"):
         assert hasattr(braidio, name)
+
+
+def test_every_graph_tier_and_reader_is_public():
+    """braidio#146: a host reads the graph through ``braidio.transforms``, never
+    a private module. Derived from ``_common``, so a new tier cannot be missed."""
+    pytest.importorskip("nw")
+    import braidio.transforms as public
+    from braidio.transforms import _common, _video_cut
+
+    tiers = {n for n in vars(_common) if n.startswith("TIER_")}
+    readers = {"graph_index", "node_ref"}
+    picture = {"content_keyed_prepare", "frames_dir", "panel_source", "panel_canvas"}
+    for name in tiers | readers:
+        assert getattr(public, name) is getattr(_common, name), name
+    for name in picture:
+        assert getattr(public, name) is getattr(_video_cut, name), name
+    assert (tiers | readers | picture) <= set(public.__all__)
+    # reelee's adapter (reelee/_braidio.py) imports these private names until
+    # reeleehq/braidio#156: they must stay the very public objects, not copies.
+    for private in ("_content_keyed_prepare", "_frames_dir", "_panel_source"):
+        assert getattr(_video_cut, private) is getattr(public, private[1:]), private

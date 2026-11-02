@@ -926,13 +926,20 @@ def _crop_still(
     return dst
 
 
-def _content_keyed_prepare(workdir: Path, size: tuple[int, int]):
+def content_keyed_prepare(workdir: Path, size: tuple[int, int]):
     """A ``prepare=`` for :func:`braidio.video.render_video` that names each
     canvas by the source's **bytes** and the frame size — never by its
     ordinal or its filename stem. ``render_video``'s default naming
     (``{i:03d}_{stem}.jpg``) plus ``prepare_still``'s existing-file shortcut
     would otherwise serve a stale canvas for a swapped still with the same
     stem, or a landscape canvas to a vertical cut.
+
+    Returns ``prepare(src, dst_ignored, *, size=size) -> Path``: the canvas
+    for the picture at ``src``, written under ``workdir``. ``dst_ignored`` is
+    there only to fit ``render_video``'s ``prepare`` signature; a caller of
+    its own passes ``None``. To get the canvas a panel is framed on, call
+    :func:`panel_canvas` instead — it is this, over :func:`panel_source`, in
+    one call.
     """
     from braidio.video import prepare_still
 
@@ -944,14 +951,26 @@ def _content_keyed_prepare(workdir: Path, size: tuple[int, int]):
     return prepare
 
 
-def _frames_dir(project) -> Path:
+def frames_dir(project) -> Path:
     """Where prepared canvases and cropped stills are cached (shared by the
     render and :func:`panel_path`, so a preview warms the render's cache)."""
     return _cuts_dir(project) / "_frames"
 
 
-def _panel_source(project, panel: Annotation, index: dict, workdir: Path) -> Path:
-    """The picture a panel shows: its still's bytes, after the still's crop."""
+def panel_source(project, panel: Annotation, index: dict, workdir: Path) -> Path:
+    """The picture a panel shows: its still's bytes, after the still's crop.
+
+    ``index`` is :func:`graph_index` of ``project`` (the panel's still is
+    looked up in it) and ``workdir`` is :func:`frames_dir` of ``project``
+    (where a cropped still is cached, shared with the render). Raises
+    ``ValueError`` when the panel's ``still_id`` is not a still in ``index``
+    (or the still records neither an ``artifact_id`` nor a url), and
+    ``FileNotFoundError`` when the still's bytes are reachable nowhere — not
+    in the catalog, not at the recorded url.
+
+    The source is not yet the canvas: :func:`panel_canvas` is the one call
+    for the prepared picture the render frames on.
+    """
     still = _still_of(panel, index)
     return _crop_still(
         _local_path(project, still, "still"),
@@ -960,6 +979,14 @@ def _panel_source(project, panel: Annotation, index: dict, workdir: Path) -> Pat
         artifact_id=str(still.body["artifact_id"]),
         suffix=_recorded_suffix(still),
     )
+
+
+# The pre-#146 private names, which reelee's CURRENT adapter (reelee/_braidio.py)
+# imports. Kept (as the same objects) so that adapter keeps importing; remove once
+# reelee reads the public names (braidio#156).
+_content_keyed_prepare = content_keyed_prepare
+_frames_dir = frames_dir
+_panel_source = panel_source
 
 
 def panel_footage(project, panel: Annotation):
@@ -1013,14 +1040,61 @@ def panel_path(project, panel: Annotation, *, size: tuple[int, int]):
     predates footage keeps working, but the answer describes nothing in the film.
     """
     resolver_identity()  # refuses an old burns with the message the render gives
-    size = (int(size[0]), int(size[1]))
+    size = _delivery_size(size)
     index = graph_index(project)
     _check_stored_paths([panel], {"size": size}, [_still_of(panel, index)])
-    workdir = _frames_dir(project)
-    workdir.mkdir(parents=True, exist_ok=True)
-    source = _panel_source(project, panel, index, workdir)
-    canvas = _content_keyed_prepare(workdir, size)(source, None)
+    source, canvas = _source_and_canvas(project, panel, size=size, index=index)
     return _path_on_canvas(panel.body, canvas, source, aspect=size[0] / size[1])
+
+
+def panel_canvas(project, panel: Annotation, *, size: tuple[int, int]) -> Path:
+    """The prepared canvas the motion render and :func:`panel_path` frame
+    ``panel`` on at ``size`` — the same file, from the same cache.
+
+    The one call for "what picture does the camera move over?": a preview
+    that draws this file under :func:`panel_path`'s move shows what the film
+    shows. Rebuilding it from :func:`frames_dir`, :func:`panel_source` and
+    :func:`content_keyed_prepare` works today but couples the caller to how
+    the canvas is made; this does not.
+
+    ``size`` is the delivery ``(width, height)`` (a JSON list is fine). Reads
+    the still's bytes and writes the canvas (and any cropped still) into the
+    project's frame cache.
+
+    Unlike :func:`panel_path`, this does **not** check the panel's stored
+    path against ``size``: the canvas does not depend on the path, and a
+    preview may show the picture before a path for this delivery exists.
+
+    Raises ``FileNotFoundError`` when the still's bytes are reachable nowhere
+    (not in the catalog, not at the recorded url), and ``ValueError`` when the
+    panel's ``still_id`` is not a still in the graph.
+
+    A footage panel plays its recording, over no canvas: check
+    :func:`panel_footage` first. For one, this answers with its poster's
+    canvas, which the film never shows.
+    """
+    _, canvas = _source_and_canvas(
+        project, panel, size=_delivery_size(size), index=graph_index(project)
+    )
+    return canvas
+
+
+def _delivery_size(size) -> tuple[int, int]:
+    """``size`` as the ``(width, height)`` ints the canvas name is keyed on."""
+    return (int(size[0]), int(size[1]))
+
+
+def _source_and_canvas(
+    project, panel: Annotation, *, size: tuple[int, int], index: dict
+) -> tuple[Path, Path]:
+    """``(source, canvas)`` for ``panel`` at ``size``: the cropped still and
+    the prepared canvas over it. The only place a canvas is built outside the
+    render, which builds the same one through ``prepare=``;
+    ``test_panel_canvas_is_the_canvas_the_render_frames_on`` pins that they agree."""
+    workdir = frames_dir(project)
+    workdir.mkdir(parents=True, exist_ok=True)
+    source = panel_source(project, panel, index, workdir)
+    return source, content_keyed_prepare(workdir, size)(source, None)
 
 
 @register_transform(RENDER_NAME)
@@ -1105,11 +1179,11 @@ class VideoCutRender(BaseTransform):
         fps = int(skel.body["settings"]["fps"])
         aspect = size[0] / size[1]
 
-        workdir = _frames_dir(project)
+        workdir = frames_dir(project)
         video_panels = []
         sources: list[Path] = []
         for panel in panels:
-            src = _panel_source(project, panel, index, workdir)
+            src = panel_source(project, panel, index, workdir)
             sources.append(src)
             start, end = _interval_s(panel)
             video_panels.append(
@@ -1134,7 +1208,7 @@ class VideoCutRender(BaseTransform):
             size=size,
             fps=fps,
             workdir=workdir,
-            prepare=_content_keyed_prepare(workdir, size),  # = panel_path's
+            prepare=content_keyed_prepare(workdir, size),  # = panel_path's
             path_for=path_for,
         )
         artifact = media_artifact(

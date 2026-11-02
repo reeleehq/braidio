@@ -90,6 +90,7 @@ from braidio.transforms._video_panels import (
 from braidio.transforms._video_cut import (
     content_keyed_prepare,
     frames_dir,
+    panel_canvas,
     panel_footage,
     panel_source,
     panel_path,
@@ -139,6 +140,7 @@ __all__ = [
     # what a host reads the picture track with (braidio#146)
     "content_keyed_prepare",
     "frames_dir",
+    "panel_canvas",
     "panel_source",
     # reading the project graph: one index, a tier's ref, and every tier name
     "graph_index",

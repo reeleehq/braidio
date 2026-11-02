@@ -2291,6 +2291,54 @@ def test_panel_path_is_the_path_the_render_uses(
     assert panel_path(project, panels[1], size=list(size)) == seen[1]
 
 
+def test_panel_canvas_is_the_canvas_the_render_frames_on(
+    project, episode, stills, panels, monkeypatch, tmp_path
+):
+    """:func:`panel_canvas` is the very file ``video_cut.render`` prepares for
+    each panel (the one :func:`panel_path` resolves its move on), so a preview
+    drawing it under the move shows the film's picture — braidio#146."""
+    pytest.importorskip("burns")
+    PIL = pytest.importorskip("PIL.Image")
+    import braidio.video
+    from braidio.transforms import VIDEO_CUT_RENDER_TRANSFORM, panel_canvas
+
+    np = pytest.importorskip("numpy")
+    tex = np.random.default_rng(5).integers(0, 255, (60, 40, 3), dtype=np.uint8)
+    portrait = tmp_path / "portrait.png"
+    PIL.fromarray(np.kron(tex, np.ones((4, 4, 1), dtype=np.uint8))).save(portrait)
+    cropped = add_still(
+        project,
+        portrait,
+        key="portrait",
+        labelled=False,
+        crop={"x": 0.1, "y": 0.05, "w": 0.8, "h": 0.7},
+    )
+    swapped = _rewrite_in_place(
+        project, panels[1], body={**panels[1].body, "still_id": str(cropped.id)}
+    )
+    panels = [panels[0], swapped, *panels[2:]]
+    prepared = []
+
+    def _render_video(vpanels, *, out_path, size, workdir, prepare, **kw):
+        for i, vp in enumerate(vpanels):
+            prepared.append(
+                Path(prepare(vp.still, Path(workdir) / f"{i}.jpg", size=size))
+            )
+        return _write(out_path, b"MOTION")
+
+    monkeypatch.setattr(braidio.video, "render_video", _render_video)
+    cut = _run(VIDEO_CUT_RENDER_TRANSFORM, project, *panels).annotations[0]
+    size = tuple(cut.body["settings"]["size"])
+    canvases = [panel_canvas(project, p, size=size) for p in panels]
+    assert prepared and canvases == prepared
+    for canvas in canvases:
+        assert canvas.is_file()
+        with PIL.open(canvas) as img:
+            assert img.size == size
+    # JSON callers send the size as a list; the answer is the same file
+    assert panel_canvas(project, panels[1], size=list(size)) == prepared[1]
+
+
 # --- media by content, not by recorded path (thorwhalen/braidio#89) --------------
 
 

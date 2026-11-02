@@ -145,6 +145,9 @@ def voiced_as_now(project, episode: Annotation, *, index: dict) -> bool:
     environment (``BRAIDIO_TTS_VOICE``), which no node records: after a flip
     A→B→A both mixes read fresh, and only this says which one a weave now
     returns (braidio#172). ``index`` is :func:`~braidio.transforms._common.graph_index`.
+
+    It reads the voice the environment gives *this* process, so a server and a
+    CLI with different ``BRAIDIO_TTS_VOICE`` can disagree, as their weaves would.
     """
     from braidio.transforms._common import (
         TIER_NARRATION_RENDER,
@@ -162,8 +165,12 @@ def voiced_as_now(project, episode: Annotation, *, index: dict) -> bool:
             (a for a in parents if a and a.tier == TIER_VOICE_ASSIGNMENT), None
         )
         if beat is None or voice is None:
-            continue
-        if current_voice_assignment(project, beat).id != voice.id:
+            continue  # e.g. an imported take: the importer writes no assignment
+        try:
+            chosen = current_voice_assignment(project, beat)
+        except ValueError:
+            continue  # a graph the voice stage cannot plan over: cannot tell here
+        if chosen.id != voice.id:
             return False
     return True
 

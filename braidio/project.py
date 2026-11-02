@@ -99,7 +99,9 @@ class Project(nw.Project):
         if episodes is None:
             episodes = self.episodes()
         tiers = _tiers()
-        if len(episodes) > 1:
+        if len(episodes) <= 1:
+            return episodes[-1] if episodes else None
+        with tiers.fresh_ids_pass():  # writes nothing: one walk for every lookup
             fresh_ids = tiers.fresh_ids(self)
             fresh = [e for e in episodes if e.id in fresh_ids]
             if len(fresh) > 1:  # e.g. an env voice flip A→B→A (braidio#172)
@@ -108,9 +110,9 @@ class Project(nw.Project):
                 index = tiers.graph_index(self)
                 return next(
                     (e for e in reversed(fresh) if voiced_as_now(self, e, index=index)),
-                    fresh[-1],
+                    fresh[-1],  # voiced in no mix yet (an env voice never woven)
                 )
-        return tiers.freshest(self, episodes)
+            return tiers.freshest(self, episodes)
 
     def genre_status(self) -> dict:
         """Where this production stands, for a host's one ``project_status`` door
@@ -125,7 +127,9 @@ class Project(nw.Project):
         once there is more than one episode to choose from — no file probe, so
         it stays small however often the project is re-woven, and never names
         a path. Two overrides for one beat are reported as the next step
-        (``restore_take``), not raised: a polled status door must answer.
+        (``restore_take``), not raised: a polled status door must answer. The
+        current episode depends on this process's environment voice when
+        several mixes are fresh (:meth:`current_episode`, braidio#172).
 
         >>> import tempfile
         >>> with tempfile.TemporaryDirectory() as d:

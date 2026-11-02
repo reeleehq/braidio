@@ -80,3 +80,31 @@ def test_silence_stays_silent(tmp_path):
     src = _write(tmp_path / "silent.wav", np.zeros(_RATE * 2, np.float32))
     out, _ = _read(level_part(src, tmp_path / "out.mp3"))
     assert np.abs(out).max() < 1e-3
+
+
+def test_a_part_far_below_the_target_gets_the_capped_gain(tmp_path):
+    """mixing's gain cap: a near-silent part comes out about MAX_GAIN_DB louder
+    with a warning, not pulled all the way up to the target as noise."""
+    from mixing.loudness import MAX_GAIN_DB, GainCappedWarning
+
+    quiet = _tone(3.0, 0.0005)
+    src = _write(tmp_path / "quiet.wav", quiet)
+    with pytest.warns(GainCappedWarning):
+        out, rate = _read(level_part(src, tmp_path / "out.wav", target_lufs=-16.0))
+    gained = _lufs(out, rate) - _lufs(quiet[:, None], _RATE)
+    assert gained == pytest.approx(MAX_GAIN_DB, abs=0.5)
+
+
+def test_an_empty_part_is_refused(tmp_path):
+    """Nothing to level is an error, not a silent header-only file: a part
+    that is empty means the step before it went wrong (braidio#149)."""
+    src = _write(tmp_path / "empty.wav", np.zeros(0, np.float32))
+    with pytest.raises(ValueError, match="no audio"):
+        level_part(src, tmp_path / "out.wav")
+
+
+def test_a_zero_length_sting_is_refused_where_it_is_declared():
+    from braidio.structure import Sting
+
+    with pytest.raises(ValueError, match="max_len_s"):
+        Sting("hit.mp3", max_len_s=0.0)

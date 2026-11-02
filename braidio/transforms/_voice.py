@@ -127,9 +127,11 @@ def current_voice_assignment(project, beat: Annotation) -> Annotation:
         raise ValueError(f"no {TIER_VOICE_ASSIGNMENT!r} node derived from {beat.id}")
     if len(hits) == 1:
         return hits[0]
-    _plan, (skeleton,) = BeatToVoiceAssignment().plan(
-        project, TransformInputs(primary=(beat,))
-    )
+    import nw
+
+    # the registered voice stage, so a genre that swaps it is followed too
+    voice = nw.get_transform(NAME)
+    _plan, (skeleton,) = voice.plan(project, TransformInputs(primary=(beat,)))
     chosen = fresh_equivalent(project, skeleton)
     # no fresh equivalent: the voice stage did not run for this plan
     return chosen if chosen is not None else freshest(project, hits)

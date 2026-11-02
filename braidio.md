@@ -1,4 +1,4 @@
-> built 2026-11-02 04:50 UTC from 9a6642e (main) · braidio 0.0.88. Details: build_info.json
+> built 2026-11-02 05:04 UTC from f8bfdb7 (main) · braidio 0.0.89. Details: build_info.json
 
 # index.html.md
 
@@ -650,6 +650,12 @@ Estimate ElevenLabs spend for a [`braidio.Script`](_autosummary/braidio.html.md#
 Free/local work (segment extraction, weaving) contributes nothing. The returned
 [`CostRollup`](_autosummary/braidio.cost.html.md#braidio.cost.CostRollup) reports exact characters and an honest dollar sum (a lower
 bound when some text is unpriced; see [`usd_per_1k_chars()`](_autosummary/braidio.cost.html.md#braidio.cost.usd_per_1k_chars)).
+
+`model_id` is the model the narration will be voiced with (default
+[`DEFAULT_MODEL_ID`](_autosummary/braidio.tts.html.md#braidio.tts.DEFAULT_MODEL_ID)); its rate resolves like any other
+([`usd_per_1k_chars()`](_autosummary/braidio.cost.html.md#braidio.cost.usd_per_1k_chars)), so a model with no confirmed rate of its own
+gets the general rate, never another model’s. Dialogue beats are priced
+at `DIALOGUE_MODEL_ID` whatever `model_id` says.
 
 ```pycon
 >>> from braidio import Script, Narration, SegmentBeat
@@ -1921,6 +1927,12 @@ Estimate ElevenLabs spend for a [`braidio.Script`](_autosummary/braidio.html.md#
 Free/local work (segment extraction, weaving) contributes nothing. The returned
 [`CostRollup`](_autosummary/braidio.html.md#braidio.CostRollup) reports exact characters and an honest dollar sum (a lower
 bound when some text is unpriced; see [`usd_per_1k_chars()`](_autosummary/braidio.html.md#braidio.usd_per_1k_chars)).
+
+`model_id` is the model the narration will be voiced with (default
+[`DEFAULT_MODEL_ID`](_autosummary/braidio.tts.html.md#braidio.tts.DEFAULT_MODEL_ID)); its rate resolves like any other
+([`usd_per_1k_chars()`](_autosummary/braidio.html.md#braidio.usd_per_1k_chars)), so a model with no confirmed rate of its own
+gets the general rate, never another model’s. Dialogue beats are priced
+at `DIALOGUE_MODEL_ID` whatever `model_id` says.
 
 ```pycon
 >>> from braidio import Script, Narration, SegmentBeat
@@ -5146,7 +5158,7 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-02 04:50 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/9a6642ebd0110fe65d99acb29f23d4697cfa6f9b"><code>9a6642e</code></a> on branch <code>main</code>, for **braidio 0.0.88** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 05:04 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/f8bfdb759ba02fd608374f7b9e9f4a272ddaf5a7"><code>f8bfdb7</code></a> on branch <code>main</code>, for **braidio 0.0.89** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -5155,9 +5167,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/9a6642ebd0110fe65d99acb29f23d4697cfa6f9b"><code>9a6642ebd0110fe65d99acb29f23d4697cfa6f9b</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/f8bfdb759ba02fd608374f7b9e9f4a272ddaf5a7"><code>f8bfdb759ba02fd608374f7b9e9f4a272ddaf5a7</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | <code>0.0.88</code>                                                                                                                                     |
+| Tags at this commit | <code>0.0.89</code>                                                                                                                                     |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -5166,9 +5178,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41390160157">41390160157</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41391400766">41391400766</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>041e195c6db2be327e7d529f4208ce49d1a009ac</code> (in the history of the built commit) |
+| Event commit | <code>4901628f80045916293e15dc2ae189644418653f</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5193,13 +5205,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.88/">0.0.88</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/braidio/0.0.89/">0.0.89</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 9a6642ebd0110fe65d99acb29f23d4697cfa6f9b
+git checkout f8bfdb759ba02fd608374f7b9e9f4a272ddaf5a7
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

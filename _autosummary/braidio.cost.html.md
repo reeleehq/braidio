@@ -139,6 +139,12 @@ Free/local work (segment extraction, weaving) contributes nothing. The returned
 [`CostRollup`](#braidio.cost.CostRollup) reports exact characters and an honest dollar sum (a lower
 bound when some text is unpriced; see [`usd_per_1k_chars()`](#braidio.cost.usd_per_1k_chars)).
 
+`model_id` is the model the narration will be voiced with (default
+[`DEFAULT_MODEL_ID`](braidio.tts.html.md#braidio.tts.DEFAULT_MODEL_ID)); its rate resolves like any other
+([`usd_per_1k_chars()`](#braidio.cost.usd_per_1k_chars)), so a model with no confirmed rate of its own
+gets the general rate, never another model’s. Dialogue beats are priced
+at `DIALOGUE_MODEL_ID` whatever `model_id` says.
+
 ```pycon
 >>> from braidio import Script, Narration, SegmentBeat
 >>> s = Script(title="x", id_slug="01", beats=[

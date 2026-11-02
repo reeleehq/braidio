@@ -24,7 +24,8 @@ To turn a document into audio, the typical path is:
    (spoken commentary you write, in your own words = rights-safe) and, when there is
    source audio to quote, "segment" beats. Break the material into a natural spoken
    sequence.
-4. estimate_cost(script, format_id or delivery, profile) — preview the ElevenLabs spend of the render you will run, BEFORE rendering (free).
+4. estimate_cost(script, format_id or delivery, profile) — preview the ElevenLabs
+   spend of the render you will run, BEFORE rendering (free).
 5. save_script(project_id, script) — link the beats into the project graph (free,
    optional), or go straight to rendering.
 6. render_production(script, ...) OR weave_project(project_id, script, ...) — synthesize
@@ -60,7 +61,8 @@ def capabilities() -> dict:
             "ingest_document(project_id, uri= or text=) — pull in source material; "
             "returns the extracted text to analyze.",
             "Author a Script from that text: ordered narration + segment beats.",
-            "estimate_cost(script, format_id|delivery, profile) — preview that render's ElevenLabs spend (free).",
+            "estimate_cost(script, format_id|delivery, profile) — preview that "
+            "render's ElevenLabs spend (free).",
             "save_script(project_id, script) — link the beats into the graph (free), "
             "or render directly.",
             "render_production(script) or weave_project(project_id, script) — "

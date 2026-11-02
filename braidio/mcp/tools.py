@@ -33,6 +33,11 @@ from braidio.mcp.credentials import caller_elevenlabs_key
 from braidio.mcp.metering import current_email
 from braidio.mcp.workspace import Workspace
 
+#: The narration register ``render_production`` voices with when the caller names
+#: none — and so what ``estimate_cost`` prices when given neither a delivery nor a
+#: format. One name, so the estimate and the render cannot drift apart.
+_DEFAULT_DELIVERY = "narration"
+
 
 def _workspace() -> Workspace:
     """The calling user's workspace, keyed by the identity the middleware resolved."""
@@ -198,26 +203,28 @@ def describe_genre() -> dict:
 def estimate_cost(
     script: dict,
     format_id: str | None = None,
-    delivery: str = "narration",
+    delivery: str | None = None,
     profile: str = DEFAULT_PROFILE.value,
 ) -> dict:
     """Estimate the ElevenLabs cost of a production BEFORE paying for synthesis.
 
-    ``script`` is a JSON script envelope (see :func:`weave_project` for the shape).
-    Segment extraction / weaving is free; only narration + dialogue text is billed.
-    Pass the ``format_id`` (or ``delivery``) and ``profile`` you will render with,
-    so the price is that render's. Returns exact character counts and an honest
+    ``script`` is a JSON script envelope (shape: see :func:`weave_project`). Only
+    narration + dialogue text is billed. Pass the ``format_id`` (or ``delivery``)
+    and ``profile`` you will render with, so the estimate prices that render. A
+    re-weave of an existing project keeps the model it was first voiced with:
+    pass that project's format. Returns exact character counts and an honest
     dollar estimate.
     """
-    from braidio.conversation import DEFAULT_CAST
-
-    fmt = _format(format_id)
-    narration = fmt.narration_delivery if fmt is not None else _delivery(delivery)
-    cast = fmt.cast if fmt is not None and fmt.cast is not None else DEFAULT_CAST
+    if format_id is not None and delivery is not None:
+        raise ToolError(
+            f"estimate_cost: pass format_id or delivery, not both — format "
+            f"{format_id!r} fixes its own delivery (render_format takes none)"
+        )
+    model_id, dialogue_model_id = _render_models(_format(format_id), delivery)
     roll = braidio.estimate_cost(
         script_from_json(script),
-        model_id=narration.model_id,
-        dialogue_model_id=cast.model_id,
+        model_id=model_id,
+        dialogue_model_id=dialogue_model_id,
         profile=_profile(profile),
     )
     out = to_json(roll)
@@ -681,24 +688,41 @@ def _check_source(scr, source) -> None:
         )
 
 
-def _render_cost(scr, profile: str, *, model_id: str, cast=None) -> dict:
+def _render_models(fmt, delivery: str | None = None) -> tuple[str, str]:
+    """``(narration model_id, dialogue model_id)`` a one-shot render voices with.
+
+    The format's narration delivery, else the named ``delivery`` (``None`` =
+    :data:`_DEFAULT_DELIVERY`); the format's cast, else ``DEFAULT_CAST`` — the
+    rule ``render_format`` / ``render_production`` follow, stated once so
+    ``estimate_cost`` prices exactly what they will submit (braidio#175).
+    """
+    from braidio.conversation import DEFAULT_CAST
+
+    if fmt is not None:
+        narration = fmt.narration_delivery
+    else:
+        narration = _delivery(delivery if delivery is not None else _DEFAULT_DELIVERY)
+    cast = fmt.cast if fmt is not None and fmt.cast is not None else DEFAULT_CAST
+    return narration.model_id, cast.model_id
+
+
+def _render_cost(scr, profile: str, *, model_id: str, dialogue_model_id: str) -> dict:
     """Estimate the spend of the beats that WILL render under ``profile``.
 
     :func:`braidio.cost.price_plan` over :func:`braidio.plan_production`'s output
     (the SSOT for the rights projection, so under ``"published"`` dropped clips
     cost nothing and synthesized substitutes are billed), at the models the
     render actually submits: ``model_id`` for narration (the delivery's, or the
-    graph's weave-config), the ``cast``'s for dialogue (``None`` = the default
-    cast, as on every render entry point). The figure is a rate estimate
+    graph's weave-config) and ``dialogue_model_id`` for dialogue (the cast's;
+    see :func:`_render_models`). The figure is a rate estimate
     (``cost_basis="estimate"``; see :mod:`braidio.cost` + braidio#8).
     """
-    from braidio.conversation import DEFAULT_CAST
     from braidio.cost import price_plan
 
     roll = price_plan(
         braidio.plan_production(scr, _profile(profile)),
         model_id=model_id,
-        dialogue_model_id=(cast if cast is not None else DEFAULT_CAST).model_id,
+        dialogue_model_id=dialogue_model_id,
     )
     return {
         "cost_usd": roll.usd,
@@ -862,7 +886,7 @@ def render_production(
     script: dict,
     source: dict | None = None,
     profile: str = DEFAULT_PROFILE.value,
-    delivery: str = "narration",
+    delivery: str = _DEFAULT_DELIVERY,
     name: str | None = None,
     bed_asset_id: str | None = None,
     sting_asset_id: str | None = None,
@@ -887,12 +911,12 @@ def render_production(
     out = ws.render_path(stem)
     bed_path = _resolve_asset(ws, bed_asset_id)
     sting_path = _resolve_asset(ws, sting_asset_id)
-    voiced_with = _delivery(delivery)
+    model_id, dialogue_model_id = _render_models(None, delivery)
     braidio.render_production(
         scr,
         source=src,
         profile=_profile(profile),
-        delivery=voiced_with,
+        delivery=_delivery(delivery),
         api_key=caller_elevenlabs_key(),
         out_path=out,
         tts_dir=_work_dir(ws, stem) + "/tts",
@@ -903,7 +927,9 @@ def render_production(
     )
     return {
         **_retrieval(out),
-        **_render_cost(scr, profile, model_id=voiced_with.model_id),
+        **_render_cost(
+            scr, profile, model_id=model_id, dialogue_model_id=dialogue_model_id
+        ),
     }
 
 
@@ -942,6 +968,7 @@ def render_format(
             "omit it, or use a format whose music_bed isn't 'none'"
         )
     out = ws.render_path(stem)
+    model_id, dialogue_model_id = _render_models(fmt)
     braidio.render_format(
         fmt,
         scr,
@@ -958,7 +985,7 @@ def render_format(
     return {
         **_retrieval(out),
         **_render_cost(
-            scr, profile, model_id=fmt.narration_delivery.model_id, cast=fmt.cast
+            scr, profile, model_id=model_id, dialogue_model_id=dialogue_model_id
         ),
         "sting_applied": application["sting_applied"],
         "sting_ignored_reason": application["sting_ignored_reason"],
@@ -1020,7 +1047,9 @@ def weave_project(
             model_id=(
                 braidio.transforms.resolve_config(proj, fmt) or braidio.WeaveConfig()
             ).model_id,
-            cast=fmt.cast if fmt is not None else None,
+            # the dialogue half of the one-shot rule: the format's cast, else
+            # the default cast — as the graph's dialogue-cast node resolves it
+            dialogue_model_id=_render_models(fmt)[1],
         ),
         "sting_applied": sting_applied,
         "sting_ignored_reason": sting_ignored_reason,

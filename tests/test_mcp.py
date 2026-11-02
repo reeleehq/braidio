@@ -2093,13 +2093,19 @@ def test_weave_project_is_priced_at_the_weave_config_s_model(
 # --- the free estimate prices the render you will run (braidio#175) --------------
 
 
+def _usd(server, script, **args):
+    """``estimate_cost``'s dollar figure for ``script`` under ``args``."""
+    r = _call(server, "estimate_cost", {"script": script, **args})
+    return r.structured_content["usd"]
+
+
 def test_estimate_cost_prices_the_delivery_or_format_you_will_render_with(
     distinct_rates,
 ):
     server = _local_server(ledger={})
 
     def usd(**args):
-        return _call(server, "estimate_cost", {"script": _THOUSAND, **args}).structured_content["usd"]
+        return _usd(server, _THOUSAND, **args)
 
     # the default matches render_production's default delivery (v2) ...
     assert usd() == pytest.approx(0.11)
@@ -2120,3 +2126,91 @@ def test_estimate_cost_prices_the_profile_s_cut():
         server, "estimate_cost", {"script": script, "profile": "published"}
     ).structured_content
     assert (personal["characters"], published["characters"]) == (100, 10)
+
+
+def test_estimate_cost_prices_dialogue_at_the_format_s_cast(
+    distinct_rates, v2_cast_format
+):
+    # narration at the format's delivery (v2), dialogue at its cast's model —
+    # not the default cast's (v3), not the narration's
+    server = _local_server(ledger={})
+    usd = _usd(server, _TALK, format_id=v2_cast_format.id)
+    assert usd == pytest.approx(0.11 + 0.77)
+
+
+def test_estimate_cost_refuses_a_format_and_a_delivery_together():
+    from fastmcp.exceptions import ToolError
+
+    with pytest.raises(ToolError, match="not both"):
+        _usd(
+            _local_server(ledger={}),
+            _THOUSAND,
+            format_id="solo_explainer",
+            delivery="narration",
+        )
+
+
+@pytest.mark.parametrize(
+    "arg, match",
+    [
+        ({"format_id": "nope"}, "unknown format"),
+        ({"delivery": "nope"}, "unknown delivery"),
+        ({"profile": "nope"}, "unknown profile"),
+    ],
+)
+def test_estimate_cost_names_the_choices_for_an_unknown_value(arg, match):
+    from fastmcp.exceptions import ToolError
+
+    with pytest.raises(ToolError, match=match):
+        _usd(_local_server(ledger={}), _THOUSAND, **arg)
+
+
+#: A script whose cut differs by profile and that has a dialogue beat.
+_PUB_TALK = {
+    "title": "t",
+    "id_slug": "01",
+    "beats": [
+        {"type": "narration", "text": "a" * 100, "published_text": "b" * 10},
+        {"type": "dialogue", "turns": [["A", "d" * 1000]]},
+    ],
+}
+
+
+@pytest.mark.parametrize("profile", ["personal", "published"])
+@pytest.mark.parametrize(
+    "script", [_THOUSAND, _TALK, _PUB_TALK], ids=["narration", "talk", "pub_talk"]
+)
+def test_estimate_cost_equals_each_one_shot_render_s_cost(
+    monkeypatch, distinct_rates, v2_cast_format, script, profile
+):
+    """Differential: under distinct per-model rates, the estimate for the
+    format / delivery / profile a render is given IS that render's cost_usd."""
+    monkeypatch.setattr(braidio, "render_format", _render_stub)
+    monkeypatch.setattr(braidio, "render_production", _render_stub)
+    server = _local_server(ledger={})
+    cases = [("render_format", {"format_id": f}) for f in braidio.FORMATS]
+    cases += [("render_production", {"delivery": d}) for d in braidio.DELIVERIES]
+    cases += [("render_production", {})]  # each tool's own default
+    for tool, chosen in cases:
+        args = {"script": script, "profile": profile, **chosen}
+        rendered = _call(server, tool, args).structured_content["cost_usd"]
+        estimated = _usd(server, script, profile=profile, **chosen)
+        assert estimated == pytest.approx(rendered), (tool, chosen)
+
+
+@_NW
+def test_estimate_cost_equals_a_first_weave_s_cost(
+    monkeypatch, distinct_rates, v2_cast_format
+):
+    episode = type(
+        "Ann",
+        (),
+        {"id": "9a23da78-0a3e-4acf-a557-48bd6e519038", "body": {"url": "file:///x"}},
+    )()
+    monkeypatch.setattr(braidio, "weave_project", lambda proj, scr, **kw: episode)
+    server = _local_server(ledger={})
+    _call(server, "create_project", {"project_id": "demo", "title": "Demo"})
+    for chosen in [{}, *({"format_id": f} for f in braidio.FORMATS)]:
+        args = {"project_id": "demo", "script": _TALK, **chosen}
+        woven = _call(server, "weave_project", args).structured_content["cost_usd"]
+        assert _usd(server, _TALK, **chosen) == pytest.approx(woven), chosen

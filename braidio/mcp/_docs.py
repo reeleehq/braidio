@@ -14,8 +14,10 @@ Extraction is content-type aware: HTML is stripped to text, PDF uses ``pypdf``
 (page-capped), everything else is decoded as UTF-8.
 
 Media uploads (``upload_asset``) use the same fetch, plus two guards:
-:func:`direct_media_url` turns a pasted share link into its download, and
-:func:`refuse_non_media` keeps a web page or an archive out of the asset library.
+:func:`direct_file_url` turns a pasted share link into its download, and
+:func:`refuse_page_or_archive` keeps a web page or an archive out of the asset
+library. ``ingest_document`` resolves share links the same way, and refuses a
+page only when a share host answered with one (its sign-in or preview page).
 """
 
 from __future__ import annotations
@@ -118,28 +120,28 @@ def fetch_uri(uri: str, **fetch_options) -> tuple[bytes, str]:
     return data, ctype.lower() or "application/octet-stream"
 
 
-#: What a library asset may never be, whatever its declared kind: a web page
-#: (a share link that is not public answers HTTP 200 with a sign-in page) or an
-#: archive (what a folder share link downloads as). Sniffed, not read off the
-#: Content-Type, which a share host gets wrong in both directions.
-NOT_MEDIA_FAMILIES = frozenset({"html", "archive"})
+#: What a fetched file is refused as: a web page (a share link that is not
+#: public answers HTTP 200 with a sign-in page) or an archive (what a folder
+#: share link downloads as). Sniffed, not read off the Content-Type, which a
+#: share host gets wrong in both directions.
+PAGE_OR_ARCHIVE_FAMILIES = frozenset({"html", "archive"})
 
 
-def direct_media_url(uri: str) -> str:
+def direct_file_url(uri: str) -> str:
     """The URL whose body is the file a pasted ``uri`` names.
 
     A Dropbox ``dl=0`` or Google Drive ``/view`` link is a web page about the
     file; :func:`graze.share_links.resolve_share_url` turns it into the
     download (a plain URL passes through). A folder link is refused: it is
-    many files, and an asset is one. ``ValueError`` names why.
+    many files, and what is asked for is one. ``ValueError`` names why.
     """
     from graze.share_links import ShareLinkKind, resolve_share_url
 
     resolved = resolve_share_url(uri)  # pure: it answers, it does not raise
     if resolved.kind in (ShareLinkKind.ARCHIVE, ShareLinkKind.FOLDER):
         raise ValueError(
-            f"{uri} is a {resolved.provider} folder link, and one asset is one "
-            "file: link the file itself, or give its direct download URL"
+            f"{uri} is a {resolved.provider} folder link: link the file itself, "
+            "or give its direct download URL"
         )
     if not resolved.direct_url:
         raise ValueError(
@@ -148,8 +150,22 @@ def direct_media_url(uri: str) -> str:
     return resolved.direct_url
 
 
-def refuse_non_media(data: bytes, *, uri: str | None = None) -> None:
-    """``ValueError`` when ``data`` is a web page or an archive (:data:`NOT_MEDIA_FAMILIES`).
+def is_share_link(uri: str) -> bool:
+    """Whether ``uri`` is a file-host share link (Dropbox, Drive, OneDrive…)
+    rather than a plain URL (:func:`graze.share_links.resolve_share_url`)."""
+    from graze.share_links import resolve_share_url
+
+    return resolve_share_url(uri).provider not in _NOT_A_SHARE_HOST
+
+
+_NOT_A_SHARE_HOST = frozenset({"http", "unknown"})  # graze's non-provider slugs
+
+
+def refuse_page_or_archive(
+    data: bytes, *, uri: str | None = None, kind: str = "media"
+) -> None:
+    """``ValueError`` when ``data`` is a web page or an archive
+    (:data:`PAGE_OR_ARCHIVE_FAMILIES`) where a ``kind`` file was expected.
 
     graze's message is passed on as is: it names the usual cause (a share link
     that is not public) and the fix (anyone-with-the-link).
@@ -162,9 +178,9 @@ def refuse_non_media(data: bytes, *, uri: str | None = None) -> None:
     )
 
     head = data[:SNIFF_BYTES]
-    if sniff_content_family(head) in NOT_MEDIA_FAMILIES:
+    if sniff_content_family(head) in PAGE_OR_ARCHIVE_FAMILIES:
         try:
-            assert_content_kind(head, expect_kind="media", url=uri)
+            assert_content_kind(head, expect_kind=kind, url=uri)
         except ContentKindMismatch as err:
             raise ValueError(str(err)) from err
 

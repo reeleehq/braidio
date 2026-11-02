@@ -1852,3 +1852,46 @@ def test_upload_asset_refuses_a_folder_link_before_fetching(monkeypatch):
             "upload_asset",
             {"uri": "https://www.dropbox.com/scl/fo/abc/xyz?rlkey=x&dl=0"},
         )
+
+
+# --- ingest_document resolves share links too (braidio#162) ----------------------
+
+
+def test_ingest_document_reads_a_share_link_s_file_not_its_preview(monkeypatch):
+    from braidio.mcp import _docs
+
+    fetched = []
+    monkeypatch.setattr(
+        _docs,
+        "fetch_uri",
+        lambda uri: fetched.append(uri) or (b"The essay itself.", "text/plain"),
+    )
+    server = _local_server(ledger={})
+    _call(server, "create_project", {"project_id": "d", "title": "D"})
+    out = _call(
+        server,
+        "ingest_document",
+        {"project_id": "d", "uri": "https://drive.google.com/file/d/1AbC/view"},
+    ).structured_content
+    assert fetched == ["https://drive.google.com/uc?export=download&id=1AbC"]
+    assert out["text"] == "The essay itself."
+
+
+def test_ingest_document_refuses_a_share_host_s_sign_in_page(monkeypatch):
+    """A private share link answers HTTP 200 with a page: ingesting its text
+    would analyze a sign-in screen. A plain URL's HTML is still a document."""
+    from fastmcp.exceptions import ToolError
+
+    from braidio.mcp import _docs
+
+    page = (b"<!DOCTYPE html><html><body>Sign in</body></html>", "text/html")
+    monkeypatch.setattr(_docs, "fetch_uri", lambda uri: page)
+    server = _local_server(ledger={})
+    _call(server, "create_project", {"project_id": "d", "title": "D"})
+    share = "https://www.dropbox.com/scl/fi/abc/essay.pdf?rlkey=x&dl=0"
+    with pytest.raises(ToolError, match="anyone-with-the-link"):
+        _call(server, "ingest_document", {"project_id": "d", "uri": share})
+    plain = _call(
+        server, "ingest_document", {"project_id": "d", "uri": "https://example.com/a"}
+    ).structured_content
+    assert "Sign in" in plain["text"]

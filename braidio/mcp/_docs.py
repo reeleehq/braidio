@@ -12,6 +12,10 @@ for every refusal (what the tools turn into a ``ToolError``) and a content type.
 
 Extraction is content-type aware: HTML is stripped to text, PDF uses ``pypdf``
 (page-capped), everything else is decoded as UTF-8.
+
+Media uploads (``upload_asset``) use the same fetch, plus two guards:
+:func:`direct_media_url` turns a pasted share link into its download, and
+:func:`refuse_non_media` keeps a web page or an archive out of the asset library.
 """
 
 from __future__ import annotations
@@ -129,20 +133,13 @@ def direct_media_url(uri: str) -> str:
     download (a plain URL passes through). A folder link is refused: it is
     many files, and an asset is one. ``ValueError`` names why.
     """
-    from graze.share_links import (
-        ShareLinkKind,
-        ShareLinkResolutionError,
-        resolve_share_url,
-    )
+    from graze.share_links import ShareLinkKind, resolve_share_url
 
-    try:
-        resolved = resolve_share_url(uri)
-    except ShareLinkResolutionError as err:
-        raise ValueError(str(err)) from err
+    resolved = resolve_share_url(uri)  # pure: it answers, it does not raise
     if resolved.kind in (ShareLinkKind.ARCHIVE, ShareLinkKind.FOLDER):
         raise ValueError(
-            f"{uri} is a {resolved.provider} folder link; share the file itself "
-            "(one asset is one file)"
+            f"{uri} is a {resolved.provider} folder link, and one asset is one "
+            "file: link the file itself, or give its direct download URL"
         )
     if not resolved.direct_url:
         raise ValueError(

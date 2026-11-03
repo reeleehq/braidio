@@ -109,6 +109,12 @@ markdown = ["markdown-it-py", "mdit-py-plugins"]
 # tituli: the text pass (`video_cut.finish`) composites labels, cards and the
 # credits roll through it; burning captions in uses mixing (already a core dep).
 video = ["burns>=0.0.16", "pillow", "tituli>=0.0.4"]
+# Sound design (`braidio.sound_design`, braidio#161): foley chooses, places and
+# masters the effects. foley's `audio` extra carries numpy/soundfile (the mix is
+# encoded with them). foley>=0.0.127: the first release whose score() takes
+# segment_starts and allow_generate (checked on the published wheel), the same
+# floor nw's `sound` extra carries.
+sound = ["foley[audio]>=0.0.127"]
 # nw>=0.0.29: `derive_provenance` takes the Transform instance rather than
 # (name, version) — it reads `name` and `impl_version` off it (nw#27). The break is
 # at CALL time, not import time, so an older nw installs cleanly and then fails

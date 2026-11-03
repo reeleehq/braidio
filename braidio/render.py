@@ -43,6 +43,7 @@ from braidio.script import Script
 from braidio.sources import SegmentSource
 from braidio.structure import DEFAULT_STRUCTURE, prepare_pause, prepare_sting
 from braidio.tts import Speak, narrate, narrator_from_speak, tts_backend, tts_name
+from braidio.sound_design import SoundDesign, TalkSpan, score_mix
 from braidio.weave import TimelineItem, extract_padded, weave_timeline
 from braidio.weave_config import WeaveConfig, speaker_key
 
@@ -59,6 +60,10 @@ def _require_ffmpeg() -> None:
 #: per-file, so a render dies two thirds of the way through. ``aresample``
 #: rebuilds the frames and costs nothing audible.
 _RESAMPLE = "aresample=44100"
+
+#: Beside a sound-designed episode: what was designed, and the credits that must
+#: ship with it (``episode.mp3`` → ``episode.sound.json``).
+SOUND_SIDECAR_SUFFIX = ".sound.json"
 
 
 def _lead_gap(src: Path, dst: Path, *, gap_s: float) -> Path:
@@ -237,6 +242,7 @@ def render_production(
     end_fade_s: float = 0.35,  # soft landing: fade the last bit + trailing silence
     end_silence_s: float = 0.7,
     return_timeline: bool = False,  # also return a TimelineBreakdown of the render
+    sound_design: SoundDesign | None = None,
     tts_dir: str | Path = "data/tts",
     clips_dir: str | Path = "data/clips",
     episodes_dir: str | Path = "data/episodes",
@@ -343,6 +349,7 @@ def render_production(
     labels: list[str] = []
     spotlights: list[bool] = []  # per part: the bed drops out over it
     speakers: list[str | None] = []  # per part: voice id talking (None: clip/sting)
+    spoken: list[str] = []  # per part: what is said in it ("" for a clip/sting)
     for i, pb in enumerate(plan.beats):
         orig = script.beats[pb.from_index]
         clip_span: tuple[float, float] | None = None
@@ -365,6 +372,7 @@ def render_production(
             spans.append(None)
             spotlights.append(False)
             speakers.append(None)
+            spoken.append("")
             continue
         if pb.kind == "narration":
             # per-beat override > the render's voice > the config's pool pick
@@ -474,6 +482,7 @@ def render_production(
                 (getattr(orig, "text", "") or "")[:48]
             )  # text snippet, not the style
         spans.append(clip_span)
+        spoken.append(_spoken(pb))
 
     has_under = "under" in placements
     edge_overlap = config.clip_edge_overlap_s if config is not None else 0.0
@@ -521,7 +530,7 @@ def render_production(
     if end_silence_s > 0 or end_fade_s > 0:
         _end_tail(out, fade_s=end_fade_s, silence_s=end_silence_s)
 
-    if return_timeline:
+    if return_timeline or sound_design is not None:
         from braidio.timeline import build_timeline, render_settings
         from braidio.weave import duration_s
 
@@ -554,5 +563,41 @@ def render_production(
                 tts=backend_name or tts_name(speak),
             ),
         )
-        return out, tl
+        if sound_design is not None:
+            tl = _sound_design(out, tl, spoken, design=sound_design, profile=profile)
+        if return_timeline:
+            return out, tl
     return out
+
+
+def _spoken(pb) -> str:
+    """What a planned beat says aloud: narration text, a dialogue's turns, or
+    ``""`` for a clip (its words are the source's, not this production's)."""
+    if pb.kind == "narration":
+        return pb.content
+    if pb.kind == "dialogue":
+        return " ".join(text for _role, text in pb.turns)
+    return ""
+
+
+def _sound_design(out: Path, tl, spoken, *, design: SoundDesign, profile):
+    """Sound-design the finished mix in place; record it on the timeline.
+
+    Only spoken beats are segments (:func:`braidio.sound_design.talk_segments`),
+    at the starts the timeline laid them out at. The credits and foley's
+    timeline are also written beside the episode (``<out>.sound.json``),
+    because they must ship with it whether or not the caller asked for a
+    timeline back.
+    """
+    import json
+    from dataclasses import replace
+
+    spans = [
+        TalkSpan(start_s=beat.start, duration_s=beat.duration, text=text)
+        for beat, text in zip(tl.beats, spoken)
+        if text
+    ]
+    scored = score_mix(out, spans, design=design, profile=profile, out_path=out)
+    record = {"design": design.to_dict(), **scored.to_dict()}
+    out.with_suffix(SOUND_SIDECAR_SUFFIX).write_text(json.dumps(record, indent=2))
+    return replace(tl, settings={**(tl.settings or {}), "sound_design": record})

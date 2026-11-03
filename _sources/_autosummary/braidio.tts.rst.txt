@@ -34,4 +34,5 @@ braidio.tts
       ElevenLabsVoice
       SpeakVoice
       TTSBackend
+      VoiceBackend
    

@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../_static/documentation_options.js?v=3893778a"></script>
+    <script src="../_static/documentation_options.js?v=9cebf393"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.114" />
+  <meta name="docsearch:version" content="0.0.115" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -505,7 +505,8 @@ concatenate with <code class="docutils literal notranslate"><span class="pre">ga
 what tends to sound like alternating monologues (the thing to beat).</p>
 <p><code class="docutils literal notranslate"><span class="pre">api_key</span></code> is threaded to <a class="reference internal" href="braidio.tts.html#braidio.tts.narrate" title="braidio.tts.narrate"><code class="xref py py-func docutils literal notranslate"><span class="pre">braidio.tts.narrate()</span></code></a>; <code class="docutils literal notranslate"><span class="pre">None</span></code> (default)
 keeps the <code class="docutils literal notranslate"><span class="pre">$ELEVENLABS_API_KEY</span></code> fallback. <code class="docutils literal notranslate"><span class="pre">narrate_fn</span></code> is the per-turn
-synthesizer (default <a class="reference internal" href="braidio.tts.html#braidio.tts.narrate" title="braidio.tts.narrate"><code class="xref py py-func docutils literal notranslate"><span class="pre">braidio.tts.narrate()</span></code></a>): a renderer given another
+synthesizer (default: the ElevenLabs voice, <a class="reference internal" href="braidio.tts.html#braidio.tts.voice_for" title="braidio.tts.voice_for"><code class="xref py py-func docutils literal notranslate"><span class="pre">braidio.tts.voice_for()</span></code></a>,
+so replacing <code class="docutils literal notranslate"><span class="pre">braidio.narrate</span></code> reaches it, braidio#199): a renderer given another
 TTS backend (<a class="reference internal" href="braidio.tts.html#braidio.tts.narrator_from_speak" title="braidio.tts.narrator_from_speak"><code class="xref py py-func docutils literal notranslate"><span class="pre">braidio.tts.narrator_from_speak()</span></code></a>) renders dialogue here,
 since only ElevenLabs has the one-pass path.</p>
 <dl class="field-list simple">

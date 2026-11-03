@@ -55,7 +55,7 @@ seeded-random within the range.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 
-### braidio.multivoice.render_multivoice(segments, pool, , out_path, api_key=None, work_dir='data/tts/multivoice', seed=7, min_turn=2, max_turn=4, avoid_immediate_repeat=True, model_id='eleven_multilingual_v2', base_settings=None, speed_base=1.0, speed_jitter=0.04, crossfade_s=0.1, gap_s=0.0, target_lufs=-16.0)
+### braidio.multivoice.render_multivoice(segments, pool, , out_path, api_key=None, work_dir='data/tts/multivoice', seed=7, min_turn=2, max_turn=4, avoid_immediate_repeat=True, model_id='eleven_multilingual_v2', base_settings=None, speed_base=1.0, speed_jitter=0.04, crossfade_s=0.1, gap_s=0.0, target_lufs=-16.0, narrate_fn=None)
 
 Render `segments` cycling `pool` → `out_path`.
 
@@ -66,7 +66,9 @@ between turns (0 = none). Returns `[(voice, turn_text), …]` for reporting.
 
 `api_key` is an optional per-request ElevenLabs key threaded to every
 [`braidio.tts.narrate()`](braidio.tts.html.md#braidio.tts.narrate) call; `None` (default) keeps the
-`$ELEVENLABS_API_KEY` fallback.
+`$ELEVENLABS_API_KEY` fallback. `narrate_fn` is the per-turn
+synthesizer (default: the ElevenLabs voice, [`braidio.tts.voice_for()`](braidio.tts.html.md#braidio.tts.voice_for),
+so replacing `braidio.narrate` reaches this path too, braidio#199).
 
 #### NOTE
 overlapping/interrupting speakers and clip ducking are separate,

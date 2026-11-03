@@ -1188,7 +1188,7 @@ reported (see [`describe_asset_application()`](#braidio.describe_asset_applicati
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### braidio.render_multivoice(segments, pool, , out_path, api_key=None, work_dir='data/tts/multivoice', seed=7, min_turn=2, max_turn=4, avoid_immediate_repeat=True, model_id='eleven_multilingual_v2', base_settings=None, speed_base=1.0, speed_jitter=0.04, crossfade_s=0.1, gap_s=0.0, target_lufs=-16.0)
+### braidio.render_multivoice(segments, pool, , out_path, api_key=None, work_dir='data/tts/multivoice', seed=7, min_turn=2, max_turn=4, avoid_immediate_repeat=True, model_id='eleven_multilingual_v2', base_settings=None, speed_base=1.0, speed_jitter=0.04, crossfade_s=0.1, gap_s=0.0, target_lufs=-16.0, narrate_fn=None)
 
 Render `segments` cycling `pool` → `out_path`.
 
@@ -1199,7 +1199,9 @@ between turns (0 = none). Returns `[(voice, turn_text), …]` for reporting.
 
 `api_key` is an optional per-request ElevenLabs key threaded to every
 [`braidio.tts.narrate()`](braidio.tts.html.md#braidio.tts.narrate) call; `None` (default) keeps the
-`$ELEVENLABS_API_KEY` fallback.
+`$ELEVENLABS_API_KEY` fallback. `narrate_fn` is the per-turn
+synthesizer (default: the ElevenLabs voice, [`braidio.tts.voice_for()`](braidio.tts.html.md#braidio.tts.voice_for),
+so replacing `braidio.narrate` reaches this path too, braidio#199).
 
 #### NOTE
 overlapping/interrupting speakers and clip ducking are separate,
@@ -1208,7 +1210,7 @@ upcoming parameters (tracked as issues) — this renders turns sequentially.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`Voice`](braidio.multivoice.html.md#braidio.multivoice.Voice), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]
 
-### braidio.render_production(script, , source, api_key=None, speak=None, config=None, profile=Profile.PERSONAL, rights=None, delivery=None, cast=ConversationCast(roles={'A': 'cgSgspJ2msm6clMCkdW9', 'B': 'iP95p4xoKVk53GoZ742B'}, model_id='eleven_v3', settings={'stability': 0.45}), out_path=None, voice_id=None, crossfade_s=0.12, normalize=True, music_bed=None, structure=None, end_fade_s=0.35, end_silence_s=0.7, return_timeline=False, sound_design=None, tts_dir='data/tts', clips_dir='data/clips', episodes_dir='data/episodes')
+### braidio.render_production(script, , source, api_key=None, speak=None, config=None, profile=Profile.PERSONAL, rights=None, delivery=None, cast=ConversationCast(roles={'A': 'cgSgspJ2msm6clMCkdW9', 'B': 'iP95p4xoKVk53GoZ742B'}, model_id='eleven_v3', settings={'stability': 0.45}), out_path=None, voice_id=None, crossfade_s=0.12, normalize=True, music_bed=None, structure=None, end_fade_s=0.35, end_silence_s=0.7, return_timeline=False, sound_design=None, voice=None, tts_dir='data/tts', clips_dir='data/clips', episodes_dir='data/episodes')
 
 Render `script` under `profile` → a single audio file. Returns the path.
 
@@ -1261,6 +1263,9 @@ pass `voice_id=` / `cast=` in its vocabulary, or map them inside it.
 `None` (default) is the ElevenLabs path, exactly as before, unless
 `config.tts` names a registered backend ([`braidio.tts.register_tts()`](braidio.tts.html.md#braidio.tts.register_tts)),
 which is how the graph path selects one too; an explicit `speak` wins.
+`voice` (a [`braidio.tts.VoiceBackend`](braidio.tts.html.md#braidio.tts.VoiceBackend)) wins over both: a whole strategy,
+for a backend with its own cache or its own one-pass dialogue
+(braidio#199).
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path) | [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`object`](https://docs.python.org/3/builtins/functions.html#object)]

@@ -75,7 +75,8 @@ what tends to sound like alternating monologues (the thing to beat).
 
 `api_key` is threaded to [`braidio.tts.narrate()`](braidio.tts.html.md#braidio.tts.narrate); `None` (default)
 keeps the `$ELEVENLABS_API_KEY` fallback. `narrate_fn` is the per-turn
-synthesizer (default [`braidio.tts.narrate()`](braidio.tts.html.md#braidio.tts.narrate)): a renderer given another
+synthesizer (default: the ElevenLabs voice, [`braidio.tts.voice_for()`](braidio.tts.html.md#braidio.tts.voice_for),
+so replacing `braidio.narrate` reaches it, braidio#199): a renderer given another
 TTS backend ([`braidio.tts.narrator_from_speak()`](braidio.tts.html.md#braidio.tts.narrator_from_speak)) renders dialogue here,
 since only ElevenLabs has the one-pass path.
 

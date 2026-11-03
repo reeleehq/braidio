@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../../_static/documentation_options.js?v=3893778a"></script>
+    <script src="../../_static/documentation_options.js?v=9cebf393"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.114" />
+  <meta name="docsearch:version" content="0.0.115" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -736,13 +736,14 @@ window.runMermaid = runMermaid;</script>
 <span class="kn">import</span><span class="w"> </span><span class="nn">random</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">mixing</span><span class="w"> </span><span class="kn">import</span> <span class="n">concatenate_audio</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.conversation</span><span class="w"> </span><span class="kn">import</span> <span class="n">concat_with_gaps</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.leveling</span><span class="w"> </span><span class="kn">import</span> <span class="n">DEFAULT_TARGET_LUFS</span><span class="p">,</span> <span class="n">level_part</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">braidio.tts</span><span class="w"> </span><span class="kn">import</span> <span class="n">narrate</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">braidio.tts</span><span class="w"> </span><span class="kn">import</span> <span class="n">voice_for</span>
 
 <span class="n">_MARKUP_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"&lt;[^&gt;]*&gt;|\[[^\]]*\]"</span><span class="p">)</span>
 <span class="n">_SENT_SPLIT</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"(?&lt;=[.?!])\s+(?=[</span><span class="se">\"</span><span class="s2">“']?[A-Z])"</span><span class="p">)</span>
@@ -871,6 +872,7 @@ window.runMermaid = runMermaid;</script>
     <span class="n">crossfade_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
     <span class="n">gap_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
     <span class="n">target_lufs</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_TARGET_LUFS</span><span class="p">,</span>
+    <span class="n">narrate_fn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Voice</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">"""Render ``segments`` cycling ``pool`` → ``out_path``.</span>
 
@@ -881,7 +883,9 @@ window.runMermaid = runMermaid;</script>
 
 <span class="sd">    ``api_key`` is an optional per-request ElevenLabs key threaded to every</span>
 <span class="sd">    :func:`braidio.tts.narrate` call; ``None`` (default) keeps the</span>
-<span class="sd">    ``$ELEVENLABS_API_KEY`` fallback.</span>
+<span class="sd">    ``$ELEVENLABS_API_KEY`` fallback. ``narrate_fn`` is the per-turn</span>
+<span class="sd">    synthesizer (default: the ElevenLabs voice, :func:`braidio.tts.voice_for`,</span>
+<span class="sd">    so replacing ``braidio.narrate`` reaches this path too, braidio#199).</span>
 
 <span class="sd">    NOTE: overlapping/interrupting speakers and clip ducking are separate,</span>
 <span class="sd">    upcoming parameters (tracked as issues) — this renders turns sequentially.</span>
@@ -895,9 +899,10 @@ window.runMermaid = runMermaid;</script>
     <span class="n">work</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">work_dir</span><span class="p">)</span>
     <span class="n">work</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">parts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">synthesize</span> <span class="o">=</span> <span class="n">narrate_fn</span> <span class="ow">or</span> <span class="n">voice_for</span><span class="p">()</span><span class="o">.</span><span class="n">narrate</span>
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">turn</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">turns</span><span class="p">,</span> <span class="n">voices</span><span class="p">)):</span>
         <span class="n">speed</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">speed_base</span> <span class="o">+</span> <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="n">speed_jitter</span><span class="p">,</span> <span class="n">speed_jitter</span><span class="p">),</span> <span class="mi">3</span><span class="p">)</span>
-        <span class="n">raw</span> <span class="o">=</span> <span class="n">narrate</span><span class="p">(</span>
+        <span class="n">raw</span> <span class="o">=</span> <span class="n">synthesize</span><span class="p">(</span>
             <span class="n">turn</span><span class="p">,</span>
             <span class="n">work</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"turn</span><span class="si">{</span><span class="n">i</span><span class="si">:</span><span class="s2">03d</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.mp3"</span><span class="p">,</span>
             <span class="n">api_key</span><span class="o">=</span><span class="n">api_key</span><span class="p">,</span>

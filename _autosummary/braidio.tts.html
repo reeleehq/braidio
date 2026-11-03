@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../_static/documentation_options.js?v=3893778a"></script>
+    <script src="../_static/documentation_options.js?v=9cebf393"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.114" />
+  <meta name="docsearch:version" content="0.0.115" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -472,8 +472,8 @@ what the renderers call.</p>
 <tr class="row-even"><td><p><a class="reference internal" href="#braidio.tts.unregister_tts" title="braidio.tts.unregister_tts"><code class="xref py py-obj docutils literal notranslate"><span class="pre">unregister_tts</span></code></a>(name)</p></td>
 <td><p>Remove the backend registered as <code class="docutils literal notranslate"><span class="pre">name</span></code>; returns it, or <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.tts.voice_for" title="braidio.tts.voice_for"><code class="xref py py-obj docutils literal notranslate"><span class="pre">voice_for</span></code></a>([tts, speak])</p></td>
-<td><p>The voice a render speaks with: an explicit <code class="docutils literal notranslate"><span class="pre">speak</span></code> wins, else the registered backend <code class="docutils literal notranslate"><span class="pre">tts</span></code> names, else ElevenLabs.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.tts.voice_for" title="braidio.tts.voice_for"><code class="xref py py-obj docutils literal notranslate"><span class="pre">voice_for</span></code></a>([tts, speak, voice])</p></td>
+<td><p>The voice a render speaks with: a ready <code class="docutils literal notranslate"><span class="pre">voice</span></code> wins, then an explicit <code class="docutils literal notranslate"><span class="pre">speak</span></code>, then the registered backend <code class="docutils literal notranslate"><span class="pre">tts</span></code> names, then ElevenLabs.</p></td>
 </tr>
 </tbody>
 </table>
@@ -489,6 +489,9 @@ what the renderers call.</p>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#braidio.tts.TTSBackend" title="braidio.tts.TTSBackend"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TTSBackend</span></code></a>(speak[, usd_per_1k_chars])</p></td>
 <td><p>A named voice backend: its <code class="docutils literal notranslate"><span class="pre">speak</span></code> and what it costs.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.tts.VoiceBackend" title="braidio.tts.VoiceBackend"><code class="xref py py-obj docutils literal notranslate"><span class="pre">VoiceBackend</span></code></a>(*args, **kwargs)</p></td>
+<td><p>What a render speaks through (braidio#137, #199): a <code class="docutils literal notranslate"><span class="pre">name</span></code> for the render record and cache keys, and the two calls, both with <a class="reference internal" href="#braidio.tts.narrate" title="braidio.tts.narrate"><code class="xref py py-func docutils literal notranslate"><span class="pre">narrate()</span></code></a>'s <code class="docutils literal notranslate"><span class="pre">return_cache_status</span></code> convention.</p></td>
 </tr>
 </tbody>
 </table>
@@ -583,6 +586,20 @@ its per-turn parts removed once the exchange is assembled.</p>
 can persist it, fold it into a cache key, and resolve it at render time.
 Re-registering a name keeps the renders already cached under it: the key is
 the name, so register a <em>different</em> name for a different voice.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="braidio.tts.VoiceBackend">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">braidio.tts.</span></span><span class="sig-name descname"><span class="pre">VoiceBackend</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/tts.html#VoiceBackend"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.tts.VoiceBackend" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Protocol" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Protocol</span></code></a></p>
+<p>What a render speaks through (braidio#137, #199): a <code class="docutils literal notranslate"><span class="pre">name</span></code> for the
+render record and cache keys, and the two calls, both with
+<a class="reference internal" href="#braidio.tts.narrate" title="braidio.tts.narrate"><code class="xref py py-func docutils literal notranslate"><span class="pre">narrate()</span></code></a>’s <code class="docutils literal notranslate"><span class="pre">return_cache_status</span></code> convention. A voice with no
+one-pass dialogue renders it turn by turn through its own <code class="docutils literal notranslate"><span class="pre">narrate</span></code>
+(as <a class="reference internal" href="#braidio.tts.SpeakVoice" title="braidio.tts.SpeakVoice"><code class="xref py py-class docutils literal notranslate"><span class="pre">SpeakVoice</span></code></a> does). <a class="reference internal" href="#braidio.tts.ElevenLabsVoice" title="braidio.tts.ElevenLabsVoice"><code class="xref py py-class docutils literal notranslate"><span class="pre">ElevenLabsVoice</span></code></a> and
+<a class="reference internal" href="#braidio.tts.SpeakVoice" title="braidio.tts.SpeakVoice"><code class="xref py py-class docutils literal notranslate"><span class="pre">SpeakVoice</span></code></a> are the two shipped; pass your own as <code class="docutils literal notranslate"><span class="pre">voice=</span></code>.
+(Not <a class="reference internal" href="braidio.multivoice.html#braidio.multivoice.Voice" title="braidio.multivoice.Voice"><code class="xref py py-class docutils literal notranslate"><span class="pre">braidio.multivoice.Voice</span></code></a>, <code class="docutils literal notranslate"><span class="pre">braidio.Voice</span></code>: that is one
+voice of a narration pool, an ElevenLabs id and name.)</p>
 </dd></dl>
 
 <dl class="py function">
@@ -749,10 +766,10 @@ seeing through <code class="docutils literal notranslate"><span class="pre">func
 
 <dl class="py function">
 <dt class="sig sig-object py" id="braidio.tts.voice_for">
-<span class="sig-prename descclassname"><span class="pre">braidio.tts.</span></span><span class="sig-name descname"><span class="pre">voice_for</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">speak</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/tts.html#voice_for"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.tts.voice_for" title="Link to this definition">#</a></dt>
-<dd><p>The voice a render speaks with: an explicit <code class="docutils literal notranslate"><span class="pre">speak</span></code> wins, else the
-registered backend <code class="docutils literal notranslate"><span class="pre">tts</span></code> names, else ElevenLabs. The one place that
-choice is made, on both render paths (braidio#137).</p>
+<span class="sig-prename descclassname"><span class="pre">braidio.tts.</span></span><span class="sig-name descname"><span class="pre">voice_for</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">speak</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/tts.html#voice_for"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.tts.voice_for" title="Link to this definition">#</a></dt>
+<dd><p>The voice a render speaks with: a ready <code class="docutils literal notranslate"><span class="pre">voice</span></code> wins, then an explicit
+<code class="docutils literal notranslate"><span class="pre">speak</span></code>, then the registered backend <code class="docutils literal notranslate"><span class="pre">tts</span></code> names, then ElevenLabs. The
+one place that choice is made, on every render path (braidio#137, #199).</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">voice_for</span><span class="p">()</span><span class="o">.</span><span class="n">name</span>
 <span class="go">'elevenlabs'</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">voice_for</span><span class="p">(</span><span class="n">speak</span><span class="o">=</span><span class="k">lambda</span> <span class="n">text</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">voice</span><span class="p">:</span> <span class="p">(</span><span class="sa">b</span><span class="s2">""</span><span class="p">,</span> <span class="s2">"wav"</span><span class="p">))</span><span class="o">.</span><span class="n">name</span>
@@ -761,7 +778,7 @@ choice is made, on both render paths (braidio#137).</p>
 </div>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#braidio.tts.ElevenLabsVoice" title="braidio.tts.ElevenLabsVoice"><code class="xref py py-class docutils literal notranslate"><span class="pre">ElevenLabsVoice</span></code></a> | <a class="reference internal" href="#braidio.tts.SpeakVoice" title="braidio.tts.SpeakVoice"><code class="xref py py-class docutils literal notranslate"><span class="pre">SpeakVoice</span></code></a></span></p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#braidio.tts.VoiceBackend" title="braidio.tts.VoiceBackend"><code class="xref py py-class docutils literal notranslate"><span class="pre">VoiceBackend</span></code></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -825,6 +842,7 @@ choice is made, on both render paths (braidio#137).</p>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.TTS_BACKENDS"><code class="docutils literal notranslate"><span class="pre">TTS_BACKENDS</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.VoiceBackend"><code class="docutils literal notranslate"><span class="pre">VoiceBackend</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.narrate"><code class="docutils literal notranslate"><span class="pre">narrate()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.narrator_from_speak"><code class="docutils literal notranslate"><span class="pre">narrator_from_speak()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.register_tts"><code class="docutils literal notranslate"><span class="pre">register_tts()</span></code></a></li>

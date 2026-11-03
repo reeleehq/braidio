@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "built_at": "2026-11-03T15:39:12Z",
+  "built_at": "2026-11-03T15:39:56Z",
   "package": {
     "name": "braidio",
     "version": "0.0.111",
@@ -21,12 +21,12 @@
   "ci": {
     "provider": "github",
     "repository": "reeleehq/braidio",
-    "sha": "9192e3a96a188619d83dd2ed77c101515b8482c3",
+    "sha": "2ba8383644182158d3ec99c3fe76ad6f23aa900e",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "41657795510",
-    "run_url": "https://github.com/reeleehq/braidio/actions/runs/41657795510",
+    "run_id": "41658747860",
+    "run_url": "https://github.com/reeleehq/braidio/actions/runs/41658747860",
     "server_url": "https://github.com"
   },
   "tools": {

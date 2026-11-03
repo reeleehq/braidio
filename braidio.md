@@ -1,4 +1,4 @@
-> built 2026-11-03 11:24 UTC from 7daba9e (main) · braidio 0.0.105. Details: build_info.json
+> built 2026-11-03 12:19 UTC from f5e01f5 (main) · braidio 0.0.105. Details: build_info.json
 
 # index.html.md
 
@@ -1137,6 +1137,7 @@ in the *Hamilton* repo — braidio has its own #18 about something else.
 | [`RightsPolicy`](_autosummary/braidio.html.md#braidio.RightsPolicy)([forbidden_texts, ...])              | Injected rights configuration for the published profile.                                                           |
 | [`RenderPlan`](_autosummary/braidio.html.md#braidio.RenderPlan)(profile[, beats, dropped, ...])        |                                                                                                                    |
 | [`PlannedBeat`](_autosummary/braidio.html.md#braidio.PlannedBeat)(kind, content, from_index[, ...])     | A beat resolved for a profile — what the renderer actually plays.                                                  |
+| [`SoundDesign`](_autosummary/braidio.html.md#braidio.SoundDesign)([max_events, master, max_usd, ...])   | Sound design is on, with these knobs (foley's defaults throughout).                                                |
 | [`SegmentSource`](_autosummary/braidio.html.md#braidio.SegmentSource)(\*args, \*\*kwargs)                 | Resolve an opaque `reference` to a [`ResolvedSegment`](_autosummary/braidio.html.md#braidio.ResolvedSegment) (or None).     |
 | [`ResolvedSegment`](_autosummary/braidio.html.md#braidio.ResolvedSegment)(asset_path, start_s, end_s)       | A cuttable span of a source asset — what a [`SegmentSource`](_autosummary/braidio.html.md#braidio.SegmentSource) returns. |
 | [`Segment`](_autosummary/braidio.html.md#braidio.Segment)(start_s, end_s, score, line_start, ...)   | A resolved window for a reference, with the matched line span.                                                     |
@@ -1518,6 +1519,42 @@ bed the flag is inert.
 Bases: [`Protocol`](https://docs.python.org/3/library/typing.html#typing.Protocol)
 
 Resolve an opaque `reference` to a [`ResolvedSegment`](_autosummary/braidio.html.md#braidio.ResolvedSegment) (or None).
+
+### *class* braidio.SoundDesign(max_events=6, master='podcast', max_usd=None, allow_generate=True, designer=None)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+Sound design is on, with these knobs (foley’s defaults throughout).
+
+`max_events` caps the sounds per *sentence*; `master` is foley’s
+delivery target (it always masters the woven mix, and `"podcast"` is
+-16 LUFS / -1 dBTP, braidio’s own default); `max_usd` caps what one run
+may spend (`None`: foley’s default cap); `allow_generate=False` is
+retrieval only, with no paid generation fallback (offline and CI renders).
+The licence intent is not a knob here: it follows the render’s rights
+profile ([`commercial_ok()`](_autosummary/braidio.html.md#braidio.SoundDesign.commercial_ok)). `designer` is the strategy that does the
+work, called like `foley.score()` (default: foley itself); it is not
+part of the record.
+
+#### *static* commercial_ok(profile)
+
+foley’s licence intent for `profile`: a published production admits
+only commercially-licensed sounds; a personal one also non-commercial.
+
+```pycon
+>>> SoundDesign.commercial_ok(Profile.PUBLISHED), SoundDesign.commercial_ok(Profile.PERSONAL)
+(True, False)
+```
+
+* **Return type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
+
+#### to_dict()
+
+Plain JSON, for a render’s settings record.
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
 ### *class* braidio.Sting(asset_path, gain_db=-6.0, max_len_s=3.0, fade_out_s=0.5, gap_after_s=0.3)
 
@@ -2184,7 +2221,7 @@ upcoming parameters (tracked as issues) — this renders turns sequentially.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`Voice`](_autosummary/braidio.multivoice.html.md#braidio.multivoice.Voice), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]
 
-### braidio.render_production(script, , source, api_key=None, speak=None, config=None, profile=Profile.PERSONAL, rights=None, delivery=None, cast=ConversationCast(roles={'A': 'cgSgspJ2msm6clMCkdW9', 'B': 'iP95p4xoKVk53GoZ742B'}, model_id='eleven_v3', settings={'stability': 0.45}), out_path=None, voice_id=None, crossfade_s=0.12, normalize=True, music_bed=None, structure=None, end_fade_s=0.35, end_silence_s=0.7, return_timeline=False, tts_dir='data/tts', clips_dir='data/clips', episodes_dir='data/episodes')
+### braidio.render_production(script, , source, api_key=None, speak=None, config=None, profile=Profile.PERSONAL, rights=None, delivery=None, cast=ConversationCast(roles={'A': 'cgSgspJ2msm6clMCkdW9', 'B': 'iP95p4xoKVk53GoZ742B'}, model_id='eleven_v3', settings={'stability': 0.45}), out_path=None, voice_id=None, crossfade_s=0.12, normalize=True, music_bed=None, structure=None, end_fade_s=0.35, end_silence_s=0.7, return_timeline=False, sound_design=None, tts_dir='data/tts', clips_dir='data/clips', episodes_dir='data/episodes')
 
 Render `script` under `profile` → a single audio file. Returns the path.
 
@@ -2466,6 +2503,7 @@ quiet passage stays quiet relative to its loud neighbours.
 | [`render`](_autosummary/braidio.render.html.md#module-braidio.render)                   | Render a [`Script`](_autosummary/braidio.script.html.md#braidio.script.Script) into an audio file. |
 | [`rights`](_autosummary/braidio.rights.html.md#module-braidio.rights)                   | Render profiles: enforce personal-vs-published rights as data.                                             |
 | [`script`](_autosummary/braidio.script.html.md#module-braidio.script)                   | Composition model — the ordered beats a render walks.                                                      |
+| [`sound_design`](_autosummary/braidio.sound_design.html.md#module-braidio.sound_design)       | Sound design for a rendered production: foley chooses and places the effects (braidio#161).                |
 | [`sources`](_autosummary/braidio.sources.html.md#module-braidio.sources)                 | Segment sources: resolve a *reference* to a cuttable `[start, end]` window.                                |
 | [`structure`](_autosummary/braidio.structure.html.md#module-braidio.structure)             | Structural music — stings at scene breaks, fade-to-spotlight on exhibits.                                  |
 | [`style`](_autosummary/braidio.style.html.md#module-braidio.style)                     | Style audit — flag the recycled rhetorical tics in commentary text.                                        |
@@ -3235,7 +3273,7 @@ what keeps their per-beat durations (and so their timelines) equal.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`NarrationTurn`](_autosummary/braidio.pacing.html.md#braidio.pacing.NarrationTurn)]
 
-### braidio.render.render_production(script, , source, api_key=None, speak=None, config=None, profile=Profile.PERSONAL, rights=None, delivery=None, cast=ConversationCast(roles={'A': 'cgSgspJ2msm6clMCkdW9', 'B': 'iP95p4xoKVk53GoZ742B'}, model_id='eleven_v3', settings={'stability': 0.45}), out_path=None, voice_id=None, crossfade_s=0.12, normalize=True, music_bed=None, structure=None, end_fade_s=0.35, end_silence_s=0.7, return_timeline=False, tts_dir='data/tts', clips_dir='data/clips', episodes_dir='data/episodes')
+### braidio.render.render_production(script, , source, api_key=None, speak=None, config=None, profile=Profile.PERSONAL, rights=None, delivery=None, cast=ConversationCast(roles={'A': 'cgSgspJ2msm6clMCkdW9', 'B': 'iP95p4xoKVk53GoZ742B'}, model_id='eleven_v3', settings={'stability': 0.45}), out_path=None, voice_id=None, crossfade_s=0.12, normalize=True, music_bed=None, structure=None, end_fade_s=0.35, end_silence_s=0.7, return_timeline=False, sound_design=None, tts_dir='data/tts', clips_dir='data/clips', episodes_dir='data/episodes')
 
 Render `script` under `profile` → a single audio file. Returns the path.
 
@@ -3582,6 +3620,215 @@ All narration (default text) of a script, as sentence-level segments.
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+
+# _autosummary/braidio.sound_design.html.md
+
+# braidio.sound_design
+
+Sound design for a rendered production: foley chooses and places the effects (braidio#161).
+
+braidio designs no sound of its own beyond the caller’s music bed and the
+structural stings. Sound effects are `foley`’s job: `foley.score()` reads
+the narration text, picks sounds under its fail-closed licence gate, aligns
+them to the spoken words in the rendered audio, weaves them in and masters the
+mix. This module is the one adapter from a braidio render to that call:
+
+- [`SoundDesign`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.SoundDesign) is the switch and its knobs. Its *absence* is “off”: a
+  render that is not given one is byte-for-byte what it was before.
+- [`talk_segments()`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.talk_segments) turns the render’s talk spans (where each spoken beat
+  sits on the episode, and what it says) into foley’s segments: one per
+  sentence, each with an estimated start, so foley’s per-segment `max_events`
+  cap is per sentence (the taste ceiling) and its aligner searches the right
+  stretch of audio rather than the whole file. Clips and stings contribute no
+  segment, so no effect is anchored to a song excerpt.
+- [`score_mix()`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.score_mix) runs the designer over the mix and writes the result.
+
+foley is the optional `braidio[sound]` extra, imported only when a design
+runs. The designer is a seam (`SoundDesign(designer=...)`), so a host can
+bring its own and the tests run without foley.
+
+```pycon
+>>> talk_segments([TalkSpan(start_s=2.0, duration_s=4.0, text="Rain fell. Door shut.")])
+(['Rain fell.', 'Door shut.'], [2.0, 4.0])
+```
+
+### Module Attributes
+
+| [`SOUND_EXTRA`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.SOUND_EXTRA)          | The extra that installs the default designer.                                                                                             |
+|-----------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
+| [`DFLT_MAX_EVENTS`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.DFLT_MAX_EVENTS)      | foley's defaults, named so a render record can say what was asked for.                                                                    |
+| [`SOUND_SIDECAR_SUFFIX`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.SOUND_SIDECAR_SUFFIX) | what was designed, and the credits that must ship with it (`episode.mp3` → `episode.sound.json`).                                         |
+| [`COST_UNKNOWN`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.COST_UNKNOWN)         | foley reports no spend yet (reeleehq/foley#280), though it may pay for an LLM rung or a generated sound, capped by `SoundDesign.max_usd`. |
+| [`Designer`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.Designer)             | `foley.score`'s signature (segments, then keyword options).                                                                               |
+
+### Functions
+
+| [`score_mix`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.score_mix)(audio, spans, \*, design, profile, ...)   | Sound-design the mix at `audio` and write the result to `out_path`.   |
+|------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------|
+| [`spoken_text`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.spoken_text)(text)                                   | `text` without its audio tags, whitespace collapsed.                  |
+| [`talk_segments`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.talk_segments)(spans)                                | foley's `(segments, segment_starts)` for the talk on a timeline.      |
+
+### Classes
+
+| [`ScoredMix`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.ScoredMix)(path[, timeline, credits, ...])       | What a sound-design pass made: the mix, and what must ship with it.                                  |
+|--------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
+| [`SoundDesign`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.SoundDesign)([max_events, master, max_usd, ...]) | Sound design is on, with these knobs (foley's defaults throughout).                                  |
+| [`TalkSpan`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.TalkSpan)(start_s, duration_s, text)             | One spoken beat on the episode timeline: where it starts, how long it lasts, and what is said in it. |
+
+### braidio.sound_design.COST_UNKNOWN *= {'cost_basis': 'unknown', 'cost_usd': None}*
+
+foley reports no spend yet
+(reeleehq/foley#280), though it may pay for an LLM rung or a generated
+sound, capped by `SoundDesign.max_usd`. Unknown, never `0.0`.
+
+* **Type:**
+  What a design run spent is not known
+
+### braidio.sound_design.DFLT_MAX_EVENTS *= 6*
+
+foley’s defaults, named so a render record can say what was asked for.
+
+### braidio.sound_design.Designer
+
+`foley.score`’s signature (segments, then keyword options).
+
+* **Type:**
+  The designer
+
+alias of `Callable`[[…], [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
+
+### braidio.sound_design.SOUND_EXTRA *= 'sound'*
+
+The extra that installs the default designer.
+
+### braidio.sound_design.SOUND_SIDECAR_SUFFIX *= '.sound.json'*
+
+what was designed, and the credits that must
+ship with it (`episode.mp3` → `episode.sound.json`).
+
+* **Type:**
+  Beside a sound-designed episode
+
+### *class* braidio.sound_design.ScoredMix(path, timeline=dict(), credits=dict(), captions_vtt='', notes=())
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+What a sound-design pass made: the mix, and what must ship with it.
+
+`credits` must be published with the episode (licences of the sounds
+used); `timeline` is foley’s editable sound-design timeline; `captions_vtt`
+are SDH captions (sound cues only, no speech).
+
+#### to_dict()
+
+Plain JSON (everything but the path); foley’s numpy scalars become
+Python numbers, so the record survives `json.dumps` as is.
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
+
+### *class* braidio.sound_design.SoundDesign(max_events=6, master='podcast', max_usd=None, allow_generate=True, designer=None)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+Sound design is on, with these knobs (foley’s defaults throughout).
+
+`max_events` caps the sounds per *sentence*; `master` is foley’s
+delivery target (it always masters the woven mix, and `"podcast"` is
+-16 LUFS / -1 dBTP, braidio’s own default); `max_usd` caps what one run
+may spend (`None`: foley’s default cap); `allow_generate=False` is
+retrieval only, with no paid generation fallback (offline and CI renders).
+The licence intent is not a knob here: it follows the render’s rights
+profile ([`commercial_ok()`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.SoundDesign.commercial_ok)). `designer` is the strategy that does the
+work, called like `foley.score()` (default: foley itself); it is not
+part of the record.
+
+#### *static* commercial_ok(profile)
+
+foley’s licence intent for `profile`: a published production admits
+only commercially-licensed sounds; a personal one also non-commercial.
+
+```pycon
+>>> SoundDesign.commercial_ok(Profile.PUBLISHED), SoundDesign.commercial_ok(Profile.PERSONAL)
+(True, False)
+```
+
+* **Return type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
+
+#### to_dict()
+
+Plain JSON, for a render’s settings record.
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
+
+### *class* braidio.sound_design.TalkSpan(start_s, duration_s, text)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+One spoken beat on the episode timeline: where it starts, how long it
+lasts, and what is said in it.
+
+### braidio.sound_design.score_mix(audio, spans, , design, profile, out_path, save=None)
+
+Sound-design the mix at `audio` and write the result to `out_path`.
+
+`spans` is the talk on the mix’s timeline ([`talk_segments()`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.talk_segments)). The
+design’s `designer` (default `foley.score()`) is called with foley’s
+keywords; `save` writes its `weave` result (default: an MP3 through
+ffmpeg). `out_path` may be `audio` itself: the mix is fully
+read before anything is written.
+
+Raises `ValueError` when there is no talk to design for, rather than
+hand foley nothing and report an undesigned mix as designed.
+
+* **Return type:**
+  [`ScoredMix`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.ScoredMix)
+
+### braidio.sound_design.spoken_text(text)
+
+`text` without its audio tags, whitespace collapsed.
+
+```pycon
+>>> spoken_text("[dryly] Well. [pause] That went  well.")
+'Well. That went well.'
+```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### braidio.sound_design.talk_segments(spans)
+
+foley’s `(segments, segment_starts)` for the talk on a timeline.
+
+Each span’s sentences start where the span starts, then advance in
+proportion to the characters spoken before them. That is an estimate (the
+beat’s start is exact, the sentence’s is not), and it only has to put
+foley’s aligner in the right stretch of audio.
+
+foley needs every worded segment to start strictly after the previous one.
+The weave crossfades consecutive beats, so a beat can start before the
+previous one ends: each span’s sentences are therefore spread over its
+*window*, from its start to the next span’s start (or its own end when
+that comes first), never over its full duration.
+
+```pycon
+>>> talk_segments([TalkSpan(0.0, 3.0, "One. Two two two."), TalkSpan(5.0, 1.0, "")])
+(['One.', 'Two two two.'], [0.0, 0.75])
+```
+
+A long beat whose short last sentence would land after the crossfaded next
+beat’s start stays inside its window:
+
+```pycon
+>>> talk_segments([TalkSpan(0.0, 12.0, "x" * 98 + ". No."), TalkSpan(11.88, 2.0, "Next.")])[1]
+[0.0, 11.531, 11.88]
+```
+
+* **Return type:**
+  [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]]
 
 
 # _autosummary/braidio.sources.html.md
@@ -5216,16 +5463,18 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-03 11:24 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/7daba9e04375e3f5e7204b26e3b98c5f9e61e7c0"><code>7daba9e</code></a> on branch <code>main</code>, for **braidio 0.0.105** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-03 12:19 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/f5e01f5e4e70a48d9fce2f7b05e38e2743f2de5a"><code>f5e01f5</code></a> on branch <code>main</code>, for **braidio 0.0.105** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.105) is behind the latest release on PyPI (0.0.106): `pip install braidio` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/7daba9e04375e3f5e7204b26e3b98c5f9e61e7c0"><code>7daba9e04375e3f5e7204b26e3b98c5f9e61e7c0</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/f5e01f5e4e70a48d9fce2f7b05e38e2743f2de5a"><code>f5e01f5e4e70a48d9fce2f7b05e38e2743f2de5a</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
 | Tags at this commit | none                                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
@@ -5236,9 +5485,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41626482212">41626482212</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41631957555">41631957555</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>cbed5ea932eb049fd7bab6d57771a630d2476c1e</code> (in the history of the built commit) |
+| Event commit | <code>d85e3f6487b220ea079eeb65339ad352aff95cbe</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5263,13 +5512,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.105/">0.0.105</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/braidio/0.0.106/">0.0.106</a>, newer than the documented version (0.0.105).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 7daba9e04375e3f5e7204b26e3b98c5f9e61e7c0
+git checkout f5e01f5e4e70a48d9fce2f7b05e38e2743f2de5a
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

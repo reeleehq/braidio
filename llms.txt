@@ -25,6 +25,7 @@
 - [braidio.render](_autosummary/braidio.render.html.md): Render a &#96;Script&#96; into an audio file.
 - [braidio.rights](_autosummary/braidio.rights.html.md): Render profiles: enforce personal-vs-published rights as data.
 - [braidio.script](_autosummary/braidio.script.html.md): Composition model — the ordered beats a render walks.
+- [braidio.sound_design](_autosummary/braidio.sound_design.html.md): Sound design for a rendered production: foley chooses and places the effects (braidio#161).
 - [braidio.sources](_autosummary/braidio.sources.html.md): Segment sources: resolve a &#42;reference&#42; to a cuttable &#96;&#91;start, end&#93;&#96; window.
 - [braidio.structure](_autosummary/braidio.structure.html.md): Structural music — stings at scene breaks, fade-to-spotlight on exhibits.
 - [braidio.style](_autosummary/braidio.style.html.md): Style audit — flag the recycled rhetorical tics in commentary text.
@@ -36,7 +37,7 @@
 - [braidio.weave](_autosummary/braidio.weave.html.md): Weave narration + audio clips on a timeline (#21) — the reusable mix engine.
 - [braidio.weave_config](_autosummary/braidio.weave_config.html.md): WeaveConfig — every editing choice for weaving narration + segments (#20).
 - [For AI agents](ai-agents.html.md): &#96;braidio&#96; ships artifacts for coding agents alongside its code. This page lists
-- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-11-03 11:24 UTC&#42;&#42; from commit &lt;a href="https://github.com/ree...
+- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-11-03 12:19 UTC&#42;&#42; from commit &lt;a href="https://github.com/ree...
 
 ## Optional
 

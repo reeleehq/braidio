@@ -78,6 +78,7 @@
       RightsPolicy
       RenderPlan
       PlannedBeat
+      SoundDesign
       SegmentSource
       ResolvedSegment
       Segment
@@ -132,6 +133,7 @@
    render
    rights
    script
+   sound_design
    sources
    structure
    style

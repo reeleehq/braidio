@@ -760,6 +760,12 @@ window.runMermaid = runMermaid;</script>
 <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.sources</span><span class="w"> </span><span class="kn">import</span> <span class="n">SegmentSource</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.structure</span><span class="w"> </span><span class="kn">import</span> <span class="n">DEFAULT_STRUCTURE</span><span class="p">,</span> <span class="n">prepare_pause</span><span class="p">,</span> <span class="n">prepare_sting</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.tts</span><span class="w"> </span><span class="kn">import</span> <span class="n">Speak</span><span class="p">,</span> <span class="n">narrate</span><span class="p">,</span> <span class="n">narrator_from_speak</span><span class="p">,</span> <span class="n">tts_backend</span><span class="p">,</span> <span class="n">tts_name</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">braidio.sound_design</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">SOUND_SIDECAR_SUFFIX</span><span class="p">,</span>
+    <span class="n">SoundDesign</span><span class="p">,</span>
+    <span class="n">TalkSpan</span><span class="p">,</span>
+    <span class="n">score_mix</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.weave</span><span class="w"> </span><span class="kn">import</span> <span class="n">TimelineItem</span><span class="p">,</span> <span class="n">extract_padded</span><span class="p">,</span> <span class="n">weave_timeline</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.weave_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">WeaveConfig</span><span class="p">,</span> <span class="n">speaker_key</span>
 
@@ -962,6 +968,7 @@ window.runMermaid = runMermaid;</script>
     <span class="n">end_fade_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.35</span><span class="p">,</span>  <span class="c1"># soft landing: fade the last bit + trailing silence</span>
     <span class="n">end_silence_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.7</span><span class="p">,</span>
     <span class="n">return_timeline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>  <span class="c1"># also return a TimelineBreakdown of the render</span>
+    <span class="n">sound_design</span><span class="p">:</span> <span class="n">SoundDesign</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">tts_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">=</span> <span class="s2">"data/tts"</span><span class="p">,</span>
     <span class="n">clips_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">=</span> <span class="s2">"data/clips"</span><span class="p">,</span>
     <span class="n">episodes_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">=</span> <span class="s2">"data/episodes"</span><span class="p">,</span>
@@ -1068,6 +1075,7 @@ window.runMermaid = runMermaid;</script>
     <span class="n">labels</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">spotlights</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># per part: the bed drops out over it</span>
     <span class="n">speakers</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># per part: voice id talking (None: clip/sting)</span>
+    <span class="n">spoken</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># per part: what is said in it ("" for a clip/sting)</span>
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">pb</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">plan</span><span class="o">.</span><span class="n">beats</span><span class="p">):</span>
         <span class="n">orig</span> <span class="o">=</span> <span class="n">script</span><span class="o">.</span><span class="n">beats</span><span class="p">[</span><span class="n">pb</span><span class="o">.</span><span class="n">from_index</span><span class="p">]</span>
         <span class="n">clip_span</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
@@ -1090,6 +1098,7 @@ window.runMermaid = runMermaid;</script>
             <span class="n">spans</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
             <span class="n">spotlights</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
             <span class="n">speakers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+            <span class="n">spoken</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">""</span><span class="p">)</span>
             <span class="k">continue</span>
         <span class="k">if</span> <span class="n">pb</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"narration"</span><span class="p">:</span>
             <span class="c1"># per-beat override &gt; the render's voice &gt; the config's pool pick</span>
@@ -1199,6 +1208,7 @@ window.runMermaid = runMermaid;</script>
                 <span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">orig</span><span class="p">,</span> <span class="s2">"text"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)[:</span><span class="mi">48</span><span class="p">]</span>
             <span class="p">)</span>  <span class="c1"># text snippet, not the style</span>
         <span class="n">spans</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">clip_span</span><span class="p">)</span>
+        <span class="n">spoken</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_spoken</span><span class="p">(</span><span class="n">pb</span><span class="p">))</span>
 
     <span class="n">has_under</span> <span class="o">=</span> <span class="s2">"under"</span> <span class="ow">in</span> <span class="n">placements</span>
     <span class="n">edge_overlap</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">clip_edge_overlap_s</span> <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="mf">0.0</span>
@@ -1246,7 +1256,7 @@ window.runMermaid = runMermaid;</script>
     <span class="k">if</span> <span class="n">end_silence_s</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">end_fade_s</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
         <span class="n">_end_tail</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">fade_s</span><span class="o">=</span><span class="n">end_fade_s</span><span class="p">,</span> <span class="n">silence_s</span><span class="o">=</span><span class="n">end_silence_s</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">return_timeline</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">return_timeline</span> <span class="ow">or</span> <span class="n">sound_design</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.timeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_timeline</span><span class="p">,</span> <span class="n">render_settings</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.weave</span><span class="w"> </span><span class="kn">import</span> <span class="n">duration_s</span>
 
@@ -1279,9 +1289,49 @@ window.runMermaid = runMermaid;</script>
                 <span class="n">tts</span><span class="o">=</span><span class="n">backend_name</span> <span class="ow">or</span> <span class="n">tts_name</span><span class="p">(</span><span class="n">speak</span><span class="p">),</span>
             <span class="p">),</span>
         <span class="p">)</span>
-        <span class="k">return</span> <span class="n">out</span><span class="p">,</span> <span class="n">tl</span>
+        <span class="k">if</span> <span class="n">sound_design</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">tl</span> <span class="o">=</span> <span class="n">_sound_design</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">tl</span><span class="p">,</span> <span class="n">spoken</span><span class="p">,</span> <span class="n">design</span><span class="o">=</span><span class="n">sound_design</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">return_timeline</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">out</span><span class="p">,</span> <span class="n">tl</span>
     <span class="k">return</span> <span class="n">out</span></div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_spoken</span><span class="p">(</span><span class="n">pb</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What a planned beat says aloud: narration text, a dialogue's turns, or</span>
+<span class="sd">    ``""`` for a clip (its words are the source's, not this production's)."""</span>
+    <span class="k">if</span> <span class="n">pb</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"narration"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pb</span><span class="o">.</span><span class="n">content</span>
+    <span class="k">if</span> <span class="n">pb</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"dialogue"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">text</span> <span class="k">for</span> <span class="n">_role</span><span class="p">,</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">pb</span><span class="o">.</span><span class="n">turns</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s2">""</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_sound_design</span><span class="p">(</span><span class="n">out</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">tl</span><span class="p">,</span> <span class="n">spoken</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">design</span><span class="p">:</span> <span class="n">SoundDesign</span><span class="p">,</span> <span class="n">profile</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Sound-design the finished mix in place; record it on the timeline.</span>
+
+<span class="sd">    Only spoken beats are segments (:func:`braidio.sound_design.talk_segments`),</span>
+<span class="sd">    at the starts the timeline laid them out at. The credits and foley's</span>
+<span class="sd">    timeline are also written beside the episode (``&lt;out&gt;.sound.json``),</span>
+<span class="sd">    because they must ship with it whether or not the caller asked for a</span>
+<span class="sd">    timeline back. foley masters the result to ``design.master``, so the</span>
+<span class="sd">    record's resolved block says so (its ``target_lufs`` is the level the mix</span>
+<span class="sd">    had before the design).</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">replace</span>
+
+    <span class="n">spans</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">TalkSpan</span><span class="p">(</span><span class="n">start_s</span><span class="o">=</span><span class="n">beat</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="n">duration_s</span><span class="o">=</span><span class="n">beat</span><span class="o">.</span><span class="n">duration</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">beat</span><span class="p">,</span> <span class="n">text</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">tl</span><span class="o">.</span><span class="n">beats</span><span class="p">,</span> <span class="n">spoken</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">text</span>
+    <span class="p">]</span>
+    <span class="n">scored</span> <span class="o">=</span> <span class="n">score_mix</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">spans</span><span class="p">,</span> <span class="n">design</span><span class="o">=</span><span class="n">design</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span> <span class="n">out_path</span><span class="o">=</span><span class="n">out</span><span class="p">)</span>
+    <span class="n">record</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"design"</span><span class="p">:</span> <span class="n">design</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(),</span> <span class="o">**</span><span class="n">scored</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()}</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="n">SOUND_SIDECAR_SUFFIX</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+    <span class="n">settings</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">tl</span><span class="o">.</span><span class="n">settings</span> <span class="ow">or</span> <span class="p">{})</span>
+    <span class="n">settings</span><span class="p">[</span><span class="s2">"resolved"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"resolved"</span><span class="p">,</span> <span class="p">{}),</span> <span class="s2">"master"</span><span class="p">:</span> <span class="n">design</span><span class="o">.</span><span class="n">master</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="n">tl</span><span class="p">,</span> <span class="n">settings</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">settings</span><span class="p">,</span> <span class="s2">"sound_design"</span><span class="p">:</span> <span class="n">record</span><span class="p">})</span>
 </pre></div>
 
                 </article>

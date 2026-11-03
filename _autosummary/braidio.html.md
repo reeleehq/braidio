@@ -89,6 +89,7 @@ in the *Hamilton* repo — braidio has its own #18 about something else.
 | [`RightsPolicy`](#braidio.RightsPolicy)([forbidden_texts, ...])              | Injected rights configuration for the published profile.                                                           |
 | [`RenderPlan`](#braidio.RenderPlan)(profile[, beats, dropped, ...])        |                                                                                                                    |
 | [`PlannedBeat`](#braidio.PlannedBeat)(kind, content, from_index[, ...])     | A beat resolved for a profile — what the renderer actually plays.                                                  |
+| [`SoundDesign`](#braidio.SoundDesign)([max_events, master, max_usd, ...])   | Sound design is on, with these knobs (foley's defaults throughout).                                                |
 | [`SegmentSource`](#braidio.SegmentSource)(\*args, \*\*kwargs)                 | Resolve an opaque `reference` to a [`ResolvedSegment`](#braidio.ResolvedSegment) (or None).     |
 | [`ResolvedSegment`](#braidio.ResolvedSegment)(asset_path, start_s, end_s)       | A cuttable span of a source asset — what a [`SegmentSource`](#braidio.SegmentSource) returns. |
 | [`Segment`](#braidio.Segment)(start_s, end_s, score, line_start, ...)   | A resolved window for a reference, with the matched line span.                                                     |
@@ -470,6 +471,42 @@ bed the flag is inert.
 Bases: [`Protocol`](https://docs.python.org/3/library/typing.html#typing.Protocol)
 
 Resolve an opaque `reference` to a [`ResolvedSegment`](#braidio.ResolvedSegment) (or None).
+
+### *class* braidio.SoundDesign(max_events=6, master='podcast', max_usd=None, allow_generate=True, designer=None)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+Sound design is on, with these knobs (foley’s defaults throughout).
+
+`max_events` caps the sounds per *sentence*; `master` is foley’s
+delivery target (it always masters the woven mix, and `"podcast"` is
+-16 LUFS / -1 dBTP, braidio’s own default); `max_usd` caps what one run
+may spend (`None`: foley’s default cap); `allow_generate=False` is
+retrieval only, with no paid generation fallback (offline and CI renders).
+The licence intent is not a knob here: it follows the render’s rights
+profile ([`commercial_ok()`](#braidio.SoundDesign.commercial_ok)). `designer` is the strategy that does the
+work, called like `foley.score()` (default: foley itself); it is not
+part of the record.
+
+#### *static* commercial_ok(profile)
+
+foley’s licence intent for `profile`: a published production admits
+only commercially-licensed sounds; a personal one also non-commercial.
+
+```pycon
+>>> SoundDesign.commercial_ok(Profile.PUBLISHED), SoundDesign.commercial_ok(Profile.PERSONAL)
+(True, False)
+```
+
+* **Return type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
+
+#### to_dict()
+
+Plain JSON, for a render’s settings record.
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
 ### *class* braidio.Sting(asset_path, gain_db=-6.0, max_len_s=3.0, fade_out_s=0.5, gap_after_s=0.3)
 
@@ -1136,7 +1173,7 @@ upcoming parameters (tracked as issues) — this renders turns sequentially.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`Voice`](braidio.multivoice.html.md#braidio.multivoice.Voice), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]
 
-### braidio.render_production(script, , source, api_key=None, speak=None, config=None, profile=Profile.PERSONAL, rights=None, delivery=None, cast=ConversationCast(roles={'A': 'cgSgspJ2msm6clMCkdW9', 'B': 'iP95p4xoKVk53GoZ742B'}, model_id='eleven_v3', settings={'stability': 0.45}), out_path=None, voice_id=None, crossfade_s=0.12, normalize=True, music_bed=None, structure=None, end_fade_s=0.35, end_silence_s=0.7, return_timeline=False, tts_dir='data/tts', clips_dir='data/clips', episodes_dir='data/episodes')
+### braidio.render_production(script, , source, api_key=None, speak=None, config=None, profile=Profile.PERSONAL, rights=None, delivery=None, cast=ConversationCast(roles={'A': 'cgSgspJ2msm6clMCkdW9', 'B': 'iP95p4xoKVk53GoZ742B'}, model_id='eleven_v3', settings={'stability': 0.45}), out_path=None, voice_id=None, crossfade_s=0.12, normalize=True, music_bed=None, structure=None, end_fade_s=0.35, end_silence_s=0.7, return_timeline=False, sound_design=None, tts_dir='data/tts', clips_dir='data/clips', episodes_dir='data/episodes')
 
 Render `script` under `profile` → a single audio file. Returns the path.
 
@@ -1418,6 +1455,7 @@ quiet passage stays quiet relative to its loud neighbours.
 | [`render`](braidio.render.html.md#module-braidio.render)                   | Render a [`Script`](braidio.script.html.md#braidio.script.Script) into an audio file. |
 | [`rights`](braidio.rights.html.md#module-braidio.rights)                   | Render profiles: enforce personal-vs-published rights as data.                                             |
 | [`script`](braidio.script.html.md#module-braidio.script)                   | Composition model — the ordered beats a render walks.                                                      |
+| [`sound_design`](braidio.sound_design.html.md#module-braidio.sound_design)       | Sound design for a rendered production: foley chooses and places the effects (braidio#161).                |
 | [`sources`](braidio.sources.html.md#module-braidio.sources)                 | Segment sources: resolve a *reference* to a cuttable `[start, end]` window.                                |
 | [`structure`](braidio.structure.html.md#module-braidio.structure)             | Structural music — stings at scene breaks, fade-to-spotlight on exhibits.                                  |
 | [`style`](braidio.style.html.md#module-braidio.style)                     | Style audit — flag the recycled rhetorical tics in commentary text.                                        |

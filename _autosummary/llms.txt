@@ -23,6 +23,7 @@
 - [braidio.render](braidio.render.html.md): Render a &#96;Script&#96; into an audio file.
 - [braidio.rights](braidio.rights.html.md): Render profiles: enforce personal-vs-published rights as data.
 - [braidio.script](braidio.script.html.md): Composition model — the ordered beats a render walks.
+- [braidio.sound_design](braidio.sound_design.html.md): Sound design for a rendered production: foley chooses and places the effects (braidio#161).
 - [braidio.sources](braidio.sources.html.md): Segment sources: resolve a &#42;reference&#42; to a cuttable &#96;&#91;start, end&#93;&#96; window.
 - [braidio.structure](braidio.structure.html.md): Structural music — stings at scene breaks, fade-to-spotlight on exhibits.
 - [braidio.style](braidio.style.html.md): Style audit — flag the recycled rhetorical tics in commentary text.

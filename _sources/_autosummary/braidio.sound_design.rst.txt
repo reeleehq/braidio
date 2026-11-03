@@ -1,0 +1,32 @@
+braidio.sound\_design
+=====================
+
+.. automodule:: braidio.sound_design
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      SOUND_EXTRA
+      DFLT_MAX_EVENTS
+      SOUND_SIDECAR_SUFFIX
+      COST_UNKNOWN
+      Designer
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      score_mix
+      spoken_text
+      talk_segments
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      ScoredMix
+      SoundDesign
+      TalkSpan
+   

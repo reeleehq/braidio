@@ -423,7 +423,8 @@ class WeaveReceipt:
     (:mod:`braidio.cost`; ``0.0`` for a stage that reused its render or hit the
     synthesis cache), not an ElevenLabs invoice. ``has_unknown_costs`` is
     ``True`` when some executed stage could not be priced (an unpriced rate,
-    even on a reuse, or a stage that failed), so ``cost_usd_actual`` is then a
+    even on a reuse, a stage that failed, or a non-finite total), so
+    ``cost_usd_actual`` is then a
     lower bound, never a reading of "free". ``episode`` is ``None`` only on
     the partial receipt a failed run attaches to its exception.
     """

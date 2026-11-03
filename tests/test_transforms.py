@@ -1543,6 +1543,8 @@ def test_the_receipt_totals_with_nws_rule():
     assert (receipt.cost_usd_actual, receipt.cache_hit_savings_usd) == (0.25, 0.5)
     assert not receipt.has_unknown_costs
     assert braidio.WeaveReceipt.of(None, [_result(float("inf"))]).has_unknown_costs
+    assert braidio.WeaveReceipt.of(None, [_result(float("nan"))]).has_unknown_costs
+    assert braidio.WeaveReceipt.of(None, [_result(0.0, float("inf"))]).has_unknown_costs
     assert braidio.WeaveReceipt.of(None, [_result(0.25)], failed=True).has_unknown_costs
 
 

@@ -249,3 +249,48 @@ def test_a_rate_must_be_a_real_price():
             register_tts(
                 "bad", lambda text, *, voice: (b"", "wav"), usd_per_1k_chars=bad
             )
+
+
+class _OnePassVoice:
+    """A whole voice: its own narration and one-pass dialogue (braidio#203)."""
+
+    name = "one-pass"
+
+    def __init__(self):
+        self.tone = _Tone()
+        self.dialogues = []
+
+    def narrate(self, text, out_path, *, return_cache_status=False, **kw):
+        from braidio.tts import narrator_from_speak
+
+        path = narrator_from_speak(self.tone)(text, out_path, **kw)
+        return (path, False) if return_cache_status else path
+
+    def render_dialogue(
+        self, turns, cast, *, out_path, return_cache_status=False, **kw
+    ):
+        self.dialogues.append(tuple(text for _role, text in turns))
+        path = self.narrate(" ".join(t for _, t in turns), out_path)
+        return (path, False) if return_cache_status else path
+
+
+def test_a_registered_whole_voice_renders_the_graph(tmp_path, backends):
+    """The graph selects its voice by name; a name can now carry a whole
+    VoiceBackend, whose one-pass dialogue the graph then uses."""
+    voice = _OnePassVoice()
+    register_tts("whole", voice, usd_per_1k_chars=0.0)
+    try:
+        project = braidio.Project.init(tmp_path / "p", title="p")
+        braidio.weave_project(
+            project, _script(), config=braidio.WeaveConfig(tts="whole")
+        )
+    finally:
+        unregister_tts("whole")
+    assert voice.dialogues == [("Is that so?", "It is.")]  # one pass, not per turn
+    assert voice.tone.calls  # narration went through it too
+    assert _calls(backends) == 0
+
+
+def test_a_backend_class_is_not_a_backend():
+    with pytest.raises(TypeError, match="an instance"):
+        register_tts("bad", _OnePassVoice)

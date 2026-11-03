@@ -103,6 +103,10 @@ class UsageLedger:
         return key
 
 
+#: How far down an exception's cause chain to look (enlace_metering's bound).
+_MAX_CHAIN = 16
+
+
 def partial_receipt(exc: BaseException):
     """The ``weave_receipt`` a failed weave carries, through any wrapping.
 
@@ -116,7 +120,7 @@ def partial_receipt(exc: BaseException):
     is a lower bound, never free).
     """
     seen: set[int] = set()
-    while exc is not None and id(exc) not in seen:
+    while exc is not None and id(exc) not in seen and len(seen) < _MAX_CHAIN:
         seen.add(id(exc))
         receipt = getattr(exc, "weave_receipt", None)
         if receipt is not None:
@@ -133,9 +137,9 @@ def _partial_fields(receipt) -> dict:
 
     >>> from types import SimpleNamespace as R
     >>> _partial_fields(R(cost_usd_actual=0.4, has_unknown_costs=False))
-    {'cost_usd_actual': 0.4, 'cost_is_lower_bound': False}
-    >>> _partial_fields(R(cost_usd_actual=float("nan"), has_unknown_costs=False))
-    {'cost_usd_actual': 0.0, 'cost_is_lower_bound': True}
+    {'cost_usd': 0.4, 'cost_usd_actual': 0.4, 'cost_is_lower_bound': False}
+    >>> _partial_fields(R(cost_usd_actual=float("nan"), has_unknown_costs=False))["cost_is_lower_bound"]
+    True
     >>> _partial_fields(None)
     {}
     """
@@ -143,16 +147,23 @@ def _partial_fields(receipt) -> dict:
         return {}
     cost = getattr(receipt, "cost_usd_actual", None)
     unknown = getattr(receipt, "has_unknown_costs", False) is True
-    usable = (
-        isinstance(cost, (int, float))
-        and not isinstance(cost, bool)
-        and math.isfinite(cost)
-        and cost >= 0
-    )
+    usable = _is_amount(cost)
+    spent = float(cost) if usable else 0.0
     return {
-        "cost_usd_actual": float(cost) if usable else 0.0,
+        "cost_usd": spent,
+        "cost_usd_actual": spent,
         "cost_is_lower_bound": unknown or not usable,
     }
+
+
+def _is_amount(value) -> bool:
+    """A finite, non-negative number of dollars (a bool is not one)."""
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+        and value >= 0
+    )
 
 
 class MeteringMiddleware(Middleware):
@@ -243,6 +254,11 @@ class MeteringMiddleware(Middleware):
                 ):
                     entry[k] = out.get(k)
                 entry["artifact_ref"] = out.get("url") or out.get("path")
+                # what the call spent, actual first, as enlace_metering records
+                # it: a re-run that reused every take costs 0.0, not the estimate
+                if _is_amount(out.get("cost_usd_actual")):
+                    entry["cost_usd_estimate"] = entry["cost_usd"]
+                    entry["cost_usd"] = out["cost_usd_actual"]
             entry["status"] = "done"
             entry["elapsed_s"] = (time.time_ns() - t0) / 1e9
             return result

@@ -1050,22 +1050,49 @@ def weave_project(
         tool="weave_project",
     )
     proj = ws.open_project(project_id)
+    # A failed weave carries its partial spend as ``exc.weave_receipt`` for
+    # the metering layer's error path; ``weave_project`` attaches it itself.
+    receipt = braidio.weave_project(
+        proj,
+        scr,
+        source=src,
+        fmt=fmt,
+        structure=structure,
+        bed=bed,
+        profile=_profile(profile),
+        api_key=caller_elevenlabs_key(),
+        return_receipt=True,
+    )
     try:
-        receipt = braidio.weave_project(
-            proj,
-            scr,
-            source=src,
+        return _weave_result(
+            receipt,
+            proj=proj,
+            project_id=project_id,
+            scr=scr,
             fmt=fmt,
-            structure=structure,
-            bed=bed,
-            profile=_profile(profile),
-            api_key=caller_elevenlabs_key(),
-            return_receipt=True,
+            profile=profile,
+            sting_applied=sting_applied,
+            sting_ignored_reason=sting_ignored_reason,
         )
-    except Exception:
-        # a failed weave's partial spend rides on the exception
-        # (``exc.weave_receipt``) for the metering layer to record
+    except Exception as exc:  # noqa: BLE001 — not swallowed: carry the spend, re-raise
+        # The weave synthesized (and billed) already: a failure reporting it
+        # must still meter it, or the retry's reuse makes it free.
+        exc.weave_receipt = receipt
         raise
+
+
+def _weave_result(
+    receipt,
+    *,
+    proj,
+    project_id: str,
+    scr,
+    fmt,
+    profile: str,
+    sting_applied,
+    sting_ignored_reason,
+) -> dict:
+    """The ``weave_project`` tool's result for a finished weave."""
     episode = receipt.episode
     body = episode.body
     return {

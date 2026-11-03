@@ -2323,3 +2323,98 @@ def test_a_failed_weave_s_partial_spend_reaches_the_ledger(monkeypatch):
     assert entry["status"] == "error"
     assert entry["cost_usd_actual"] == pytest.approx(0.30)
     assert entry["cost_is_lower_bound"] is True
+
+
+def _weave_stubs(monkeypatch):
+    """Synthesis stubbed (1000 chars of narration: an estimate of $0.30)."""
+
+    def _write(out, tag=b"X"):
+        Path(out).parent.mkdir(parents=True, exist_ok=True)
+        Path(out).write_bytes(tag)
+        return Path(out)
+
+    def _narrate(text, out, *, return_cache_status=False, **kw):
+        return (_write(out), False) if return_cache_status else _write(out)
+
+    monkeypatch.setattr(braidio, "narrate", _narrate)
+    monkeypatch.setattr(braidio, "duration_s", lambda path: 3.0)
+    monkeypatch.setattr(braidio, "weave_timeline", lambda items, out, **kw: _write(out))
+    return {
+        "project_id": "demo",
+        "script": {
+            "title": "t",
+            "id_slug": "01",
+            "beats": [{"type": "narration", "text": "n" * 1000}],
+        },
+    }
+
+
+@pytest.mark.skipif(not braidio.HAS_NW, reason="nw not installed")
+def test_a_failure_after_the_weave_still_meters_its_spend(monkeypatch):
+    """The weave finished and billed, then building the result failed: the
+    error row must carry the spend, or the retry's reuse makes it free."""
+    from braidio.mcp import tools
+
+    args = _weave_stubs(monkeypatch)
+
+    def _boom(*a, **kw):
+        raise RuntimeError("retrieval claim failed")
+
+    monkeypatch.setattr(tools, "_episode_retrieval", _boom)
+    ledger = {}
+    server = _local_server(ledger=ledger)
+    _call(server, "create_project", {"project_id": "demo", "title": "Demo"})
+    with pytest.raises(Exception, match="retrieval claim failed"):
+        _call(server, "weave_project", args)
+    (entry,) = [e for e in ledger.values() if e["tool"] == "weave_project"]
+    assert entry["status"] == "error"
+    assert entry["cost_usd"] == pytest.approx(0.30)
+
+
+@pytest.mark.skipif(not braidio.HAS_NW, reason="nw not installed")
+def test_the_deployed_metering_bills_a_weave_actual_then_partial(monkeypatch):
+    """The connectors meter with enlace_metering, not braidio's local
+    middleware: through it, a weave records what it synthesized, a re-run
+    $0, and a weave that fails after synthesis its partial spend."""
+    em = pytest.importorskip("enlace_metering.middleware")
+    from enlace_metering import UsageLedger as EnlaceLedger
+    from py2mcp import mk_mcp_from_refs
+
+    from braidio.mcp import INSTRUCTIONS, TOOL_REFS
+
+    args = _weave_stubs(monkeypatch)
+    store = {}
+    server = mk_mcp_from_refs(
+        TOOL_REFS,
+        name="t",
+        instructions=INSTRUCTIONS,
+        middleware=[em.MeteringMiddleware(EnlaceLedger(store), allowed={OWNER})],
+    )
+    _mock_token(monkeypatch, OWNER)  # production: identity from the verified token
+    _call(server, "create_project", {"project_id": "demo", "title": "Demo"})
+    _call(server, "weave_project", args)
+    _call(server, "weave_project", args)
+    monkeypatch.setattr(
+        braidio,
+        "weave_timeline",
+        lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("mix")),
+    )
+    failing = {
+        **args,
+        "script": {
+            **args["script"],
+            "beats": [{"type": "narration", "text": "m" * 1000}],
+        },
+    }
+    with pytest.raises(Exception, match="mix"):
+        _call(server, "weave_project", failing)
+    rows = sorted(
+        (e for e in store.values() if e["tool"] == "weave_project"),
+        key=lambda e: e["id"],
+    )
+    assert [r["status"] for r in rows] == ["done", "done", "error"]
+    assert [r["cost_usd"] for r in rows] == [
+        pytest.approx(0.30),
+        0.0,
+        pytest.approx(0.30),
+    ]

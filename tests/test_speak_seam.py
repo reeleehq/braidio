@@ -145,7 +145,7 @@ def test_without_speak_the_render_records_elevenlabs(tmp_path, monkeypatch):
         out.write_bytes(audio)
         return out
 
-    monkeypatch.setattr(render_mod, "narrate", _narrate)
+    monkeypatch.setattr(braidio, "narrate", _narrate)
     script = braidio.Script(
         title="Plain", id_slug="plain", beats=[braidio.Narration(text="Plain words.")]
     )

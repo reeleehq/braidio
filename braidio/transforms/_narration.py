@@ -52,12 +52,7 @@ from braidio.bodies._render_nodes import (
 from braidio.cost import backend_cost_usd
 from braidio.delivery import model_supports_speed
 from braidio.render import narrate_turns, plan_beat_turns
-from braidio.tts import (
-    DEFAULT_MODEL_ID,
-    DEFAULT_VOICE_ID,
-    narrator_from_speak,
-    tts_backend,
-)
+from braidio.tts import DEFAULT_MODEL_ID, DEFAULT_VOICE_ID, voice_for
 from braidio.weave_config import WeaveConfig
 from braidio.transforms._common import (
     TIER_NARRATIVE_BEAT,
@@ -132,25 +127,20 @@ def _speak_beat(
 ) -> tuple[Path, bool]:
     """Synthesize one beat → ``(audio path, was_cached)``.
 
-    ElevenLabs through ``braidio.narrate`` (``was_cached``: mixing served it
-    from disk), or the registered backend ``tts`` through
-    :func:`braidio.tts.narrator_from_speak` (never cached; its file carries
-    the format it reported). Paced ``turns`` are one call each, concatenated
-    into ``out_path``.
+    Through :func:`braidio.tts.voice_for`: ElevenLabs (``was_cached``: mixing
+    served it from disk), or the registered backend ``tts`` (never cached; its
+    file carries the format it reported). Paced ``turns`` are one call each,
+    concatenated into ``out_path``.
     """
-    import braidio  # runtime attr access so tests can monkeypatch narrate
-
+    voice = voice_for(tts)
     cached: list[bool] = []
-    if tts:
-        synthesize = narrator_from_speak(tts_backend(tts).speak)
-    else:
 
-        def synthesize(turn_text, turn_path, **kwargs):
-            path, hit = braidio.narrate(
-                turn_text, turn_path, return_cache_status=True, **kwargs
-            )
-            cached.append(hit)
-            return path
+    def synthesize(turn_text, turn_path, **kwargs):
+        path, hit = voice.narrate(
+            turn_text, turn_path, return_cache_status=True, **kwargs
+        )
+        cached.append(hit)
+        return path
 
     kwargs = dict(api_key=api_key, voice_id=voice_id, model_id=model_id)
     if turns:  # paced: one call per turn, real silence between (braidio#118)

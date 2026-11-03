@@ -206,6 +206,96 @@ def tts_backend(name: str) -> TTSBackend:
         ) from None
 
 
+@dataclass(frozen=True)
+class ElevenLabsVoice:
+    """The default voice: ElevenLabs, with its on-disk cache and its one-pass
+    Text-to-Dialogue (braidio#137).
+
+    Both calls look ``braidio.narrate`` / ``braidio.render_dialogue`` up at
+    call time, so the whole package has **one** place a test (or a host)
+    replaces the ElevenLabs synthesis. ``return_cache_status`` is forwarded
+    only when asked for, so the plain ``narrate`` shape still works as the
+    replacement.
+    """
+
+    name: str = DEFAULT_TTS
+
+    def narrate(self, text, out_path, *, return_cache_status: bool = False, **kw):
+        import braidio
+
+        if return_cache_status:
+            return braidio.narrate(text, out_path, return_cache_status=True, **kw)
+        return braidio.narrate(text, out_path, **kw)
+
+    def render_dialogue(
+        self, turns, cast, *, out_path, return_cache_status: bool = False, **kw
+    ):
+        import braidio
+
+        if return_cache_status:
+            return braidio.render_dialogue(
+                turns, cast, out_path=out_path, return_cache_status=True, **kw
+            )
+        return braidio.render_dialogue(turns, cast, out_path=out_path, **kw)
+
+
+@dataclass(frozen=True)
+class SpeakVoice:
+    """Any other voice: a :data:`Speak` callable (a registered backend, a local
+    model, a test). Never cached, and with no one-pass dialogue, so a dialogue
+    is spoken turn by turn (:func:`braidio.conversation.render_turns_sequential`),
+    its per-turn parts removed once the exchange is assembled.
+    """
+
+    speak: Speak
+    name: str
+
+    def narrate(self, text, out_path, *, return_cache_status: bool = False, **kw):
+        path = narrator_from_speak(self.speak)(text, out_path, **kw)
+        return (path, False) if return_cache_status else path
+
+    def render_dialogue(
+        self, turns, cast, *, out_path, return_cache_status: bool = False, **kw
+    ):
+        import shutil
+
+        from braidio.conversation import render_turns_sequential
+
+        work = Path(out_path).with_suffix("")
+        try:
+            path = render_turns_sequential(
+                list(turns),
+                cast,
+                out_path=out_path,
+                work_dir=work,
+                narrate_fn=self.narrate,
+                **kw,
+            )
+        finally:
+            shutil.rmtree(work, ignore_errors=True)
+        return (path, False) if return_cache_status else path
+
+
+Voice = ElevenLabsVoice | SpeakVoice
+
+
+def voice_for(tts: str | None = None, *, speak: Speak | None = None) -> Voice:
+    """The voice a render speaks with: an explicit ``speak`` wins, else the
+    registered backend ``tts`` names, else ElevenLabs. The one place that
+    choice is made, on both render paths (braidio#137).
+
+    >>> voice_for().name
+    'elevenlabs'
+    >>> voice_for(speak=lambda text, *, voice: (b"", "wav")).name
+    'braidio.tts:<lambda>'
+    """
+    if speak is not None:
+        return SpeakVoice(speak=speak, name=tts_name(speak))
+    if tts:
+        return SpeakVoice(speak=tts_backend(tts).speak, name=tts)
+    return ElevenLabsVoice()
+
+
 def resolve_voice_id(voice_id: str | None = None) -> str:
     """Voice id from arg → :data:`VOICE_ENV_VAR` env → default."""
     return voice_id or os.environ.get(VOICE_ENV_VAR) or DEFAULT_VOICE_ID

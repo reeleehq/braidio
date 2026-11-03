@@ -35,7 +35,7 @@ def tone_narration(monkeypatch):
     def fake_narrate(text, out_path, **kw):
         return tone(Path(out_path), 440, 0.5)
 
-    monkeypatch.setattr(render_mod, "narrate", fake_narrate)
+    monkeypatch.setattr(braidio, "narrate", fake_narrate)
 
 
 @pytest.fixture

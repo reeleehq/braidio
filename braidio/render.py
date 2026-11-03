@@ -22,12 +22,7 @@ from pathlib import Path
 
 from mixing import concatenate_audio
 
-from braidio.conversation import (
-    DEFAULT_CAST,
-    ConversationCast,
-    render_dialogue,
-    render_turns_sequential,
-)
+from braidio.conversation import DEFAULT_CAST, ConversationCast
 from braidio.defaults import default_delivery
 from braidio.delivery import Delivery
 from braidio.pacing import NarrationTurn, plan_turns
@@ -42,7 +37,7 @@ from braidio.leveling import DEFAULT_TARGET_LUFS, level_part
 from braidio.script import Script
 from braidio.sources import SegmentSource
 from braidio.structure import DEFAULT_STRUCTURE, prepare_pause, prepare_sting
-from braidio.tts import Speak, narrate, narrator_from_speak, tts_backend, tts_name
+from braidio.tts import Speak, voice_for
 from braidio.sound_design import (
     SOUND_SIDECAR_SUFFIX,
     SoundDesign,
@@ -159,10 +154,11 @@ def narrate_turns(
     one) and the silence between turns is proportional to how strongly the
     boundary closes, instead of one flat arc with nothing inside it.
 
-    ``narrate_fn`` is the synthesis call (default: this module's ``narrate``);
-    a caller that wants the cache status, or a stub, passes its own.
+    ``narrate_fn`` is the synthesis call (default: the ElevenLabs voice,
+    :func:`braidio.tts.voice_for`); a caller that wants the cache status, or
+    another voice, passes its own.
     """
-    synthesize = narrate_fn or narrate
+    synthesize = narrate_fn or voice_for().narrate
     parts: list[Path] = []
     for j, turn in enumerate(turns):
         settings = dict(voice_settings)
@@ -302,12 +298,10 @@ def render_production(
     """
     if sound_design is not None:
         sound_design.require()  # before any voice is paid for
-    # the voice backend: an explicit `speak`, else the config's registered one,
-    # else ElevenLabs
-    backend_name = None
-    if speak is None and config is not None and config.tts:
-        backend_name, speak = config.tts, tts_backend(config.tts).speak
-    synthesize = narrate if speak is None else narrator_from_speak(speak)
+    # the voice: an explicit `speak`, else the config's registered one, else
+    # ElevenLabs (braidio#137: chosen once, in braidio.tts.voice_for)
+    voice = voice_for(config.tts if config is not None else None, speak=speak)
+    synthesize = voice.narrate
     publishable = rights.publishable_clip_rights if rights else PUBLISHABLE_CLIP_RIGHTS
     plan = plan_production(script, profile, publishable_clip_rights=publishable)
     target_lufs = config.target_lufs if config is not None else DEFAULT_TARGET_LUFS
@@ -427,18 +421,10 @@ def render_production(
             dlg_path = (
                 Path(tts_dir) / f"{script.id_slug}-{profile.value}-dlg{i:02d}.mp3"
             )
-            if speak is None:
-                raw = render_dialogue(
-                    list(pb.turns), cast, api_key=api_key, out_path=dlg_path
-                )
-            else:
-                raw = render_turns_sequential(
-                    list(pb.turns),
-                    cast,
-                    out_path=dlg_path,
-                    work_dir=dlg_path.with_suffix(""),
-                    narrate_fn=synthesize,
-                )
+            # one pass on ElevenLabs, turn by turn on any other voice
+            raw = voice.render_dialogue(
+                list(pb.turns), cast, api_key=api_key, out_path=dlg_path
+            )
         else:  # segment
             rs = source.resolve(pb.content)
             if rs is None:
@@ -563,7 +549,7 @@ def render_production(
                 delivery=delivery,
                 profile=profile,
                 normalize=normalize,
-                tts=backend_name or tts_name(speak),
+                tts=voice.name,
             ),
         )
         if sound_design is not None:

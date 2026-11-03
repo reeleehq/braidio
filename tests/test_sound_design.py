@@ -66,10 +66,10 @@ def tone_voices(monkeypatch):
     import braidio.render as render_mod
 
     monkeypatch.setattr(
-        render_mod, "narrate", lambda text, out, **kw: tone(Path(out), 440, 1.0)
+        braidio, "narrate", lambda text, out, **kw: tone(Path(out), 440, 1.0)
     )
     monkeypatch.setattr(
-        render_mod,
+        braidio,
         "render_dialogue",
         lambda turns, cast, out_path, **kw: tone(Path(out_path), 550, 1.5),
     )

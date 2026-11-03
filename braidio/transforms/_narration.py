@@ -55,6 +55,7 @@ from braidio.render import narrate_turns, plan_beat_turns
 from braidio.tts import DEFAULT_MODEL_ID, DEFAULT_VOICE_ID, voice_for
 from braidio.weave_config import WeaveConfig
 from braidio.transforms._common import (
+    settle_take,
     TIER_NARRATIVE_BEAT,
     TIER_VOICE_ASSIGNMENT,
     TIER_WEAVE_CONFIG,
@@ -158,7 +159,7 @@ def _speak_beat(
             leftover.unlink()  # per-turn parts and gaps: only the mix is a node
         return final, bool(cached) and all(cached)
     path = synthesize(text, out_path, voice_settings=settings, **kwargs)
-    return Path(path), bool(cached) and all(cached)
+    return settle_take(path, out_path), bool(cached) and all(cached)
 
 
 def _beat_settings(beat, config: dict) -> dict:

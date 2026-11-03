@@ -372,6 +372,33 @@ def node_ref(tier: str) -> NodeRef:
     )
 
 
+def settle_take(take, out_path: Path) -> Path:
+    """Where a voice's take belongs in the project: ``out_path``'s folder.
+
+    A voice returns the file it wrote, and may write its own format (``.wav``)
+    or hand back a file of its own cache, outside the project. A node must
+    point at bytes the project holds, so a take elsewhere is copied in beside
+    ``out_path`` (with its own suffix); one already there is used as it is.
+
+    >>> import tempfile
+    >>> with tempfile.TemporaryDirectory() as d:
+    ...     src = Path(d) / "cache" / "x.wav"; src.parent.mkdir(); _ = src.write_bytes(b"A")
+    ...     out = Path(d) / "proj" / "take.mp3"; out.parent.mkdir()
+    ...     settle_take(src, out).relative_to(d).as_posix()
+    'proj/take.wav'
+    """
+    import shutil
+
+    if take is None:
+        raise TypeError("the voice returned no take: a voice returns the file it wrote")
+    take = Path(take)
+    if take.resolve().parent == Path(out_path).resolve().parent:
+        return take
+    settled = Path(out_path).with_suffix(take.suffix)
+    shutil.copyfile(take, settled)
+    return settled
+
+
 def file_url(path: str | Path) -> str:
     """The ``file://`` URL for a local path (what render bodies store)."""
     return Path(path).resolve().as_uri()

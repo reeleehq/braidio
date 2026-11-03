@@ -50,6 +50,7 @@ from braidio.conversation import ConversationCast
 from braidio.cost import backend_cost_usd
 from braidio.tts import voice_for
 from braidio.transforms._common import (
+    settle_take,
     TIER_DIALOGUE_BEAT,
     TIER_DIALOGUE_CAST,
     TIER_DIALOGUE_RENDER,
@@ -206,8 +207,8 @@ class DialogueRenderTTS(BaseTransform):
             out_path=out_path,
             return_cache_status=True,
         )
-        # the take is where the voice wrote it (its own format, braidio#203)
-        take = Path(take)
+        # where the voice wrote it, kept inside the project (braidio#203)
+        take = settle_take(take, out_path)
         duration = safe_duration(take)
         artifact = audio_artifact(
             take,

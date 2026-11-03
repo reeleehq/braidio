@@ -177,17 +177,19 @@ TTS_BACKENDS: Mapping[str, TTSBackend] = MappingProxyType(_TTS_BACKENDS)
 
 def register_tts(
     name: str,
-    speak: "Speak | VoiceBackend",
+    speak: Speak | None = None,
     *,
+    voice: "VoiceBackend | None" = None,
     usd_per_1k_chars: float | None = None,
 ) -> TTSBackend:
     """Register ``speak`` as the voice backend ``name`` (replacing any before).
 
     ``name`` is what ``WeaveConfig(tts=name)`` selects, on either render path.
-    :data:`DEFAULT_TTS` is ElevenLabs itself and cannot be taken. ``speak`` is
-    a :data:`Speak` callable, or a ready :class:`VoiceBackend` instance (its own
-    cache, its own one-pass dialogue), which the graph path then uses whole
-    too (braidio#203).
+    :data:`DEFAULT_TTS` is ElevenLabs itself and cannot be taken. Register a
+    :data:`Speak` callable as ``speak``, or a ready :class:`VoiceBackend`
+    instance as ``voice=`` (its own cache, its own one-pass dialogue), which
+    the graph path then uses whole too (braidio#203). A voice is registered
+    under its own ``name``, so a render's record and its config agree.
 
     >>> b = register_tts("doc-tone", lambda text, *, voice: (b"", "wav"), usd_per_1k_chars=0.0)
     >>> tts_backend("doc-tone") is b, b.cost_usd("hello")
@@ -197,14 +199,18 @@ def register_tts(
     """
     if not name or name == DEFAULT_TTS:
         raise ValueError(f"{name!r} is not a registrable voice-backend name")
-    if isinstance(speak, type):
-        raise TypeError(f"register an instance, not the class {speak.__name__}")
-    whole = isinstance(speak, VoiceBackend)
-    backend = TTSBackend(
-        speak=None if whole else speak,
-        voice=speak if whole else None,
-        usd_per_1k_chars=usd_per_1k_chars,
-    )
+    if voice is not None:
+        if isinstance(voice, type) or not isinstance(voice, VoiceBackend):
+            raise TypeError(
+                "voice= must be an instance implementing braidio.tts.VoiceBackend; "
+                f"got {voice!r:.80}"
+            )
+        if voice.name != name:
+            raise ValueError(
+                f"register the voice under its own name {voice.name!r}, not {name!r}: "
+                "the render record names the voice, the config names the backend"
+            )
+    backend = TTSBackend(speak=speak, voice=voice, usd_per_1k_chars=usd_per_1k_chars)
     _TTS_BACKENDS[name] = backend
     return backend
 
@@ -324,6 +330,10 @@ class VoiceBackend(Protocol):
     def render_dialogue(
         self, turns, cast, *, out_path, return_cache_status: bool = False, **kw
     ): ...
+
+    # Both return the file they wrote (it must exist), at ``out_path`` or with
+    # its own suffix; a file elsewhere (a voice's own cache) is copied into the
+    # project by the graph path.
 
 
 def voice_for(

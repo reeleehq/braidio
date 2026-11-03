@@ -254,7 +254,7 @@ def test_a_rate_must_be_a_real_price():
 class _OnePassVoice:
     """A whole voice: its own narration and one-pass dialogue (braidio#203)."""
 
-    name = "one-pass"
+    name = "whole"
 
     def __init__(self):
         self.tone = _Tone()
@@ -276,21 +276,46 @@ class _OnePassVoice:
 
 def test_a_registered_whole_voice_renders_the_graph(tmp_path, backends):
     """The graph selects its voice by name; a name can now carry a whole
-    VoiceBackend, whose one-pass dialogue the graph then uses."""
+    VoiceBackend, whose one-pass dialogue both paths then use."""
+    import nw
+
     voice = _OnePassVoice()
-    register_tts("whole", voice, usd_per_1k_chars=0.0)
+    register_tts("whole", voice=voice, usd_per_1k_chars=0.0)
     try:
         project = braidio.Project.init(tmp_path / "p", title="p")
-        braidio.weave_project(
-            project, _script(), config=braidio.WeaveConfig(tts="whole")
+        receipt = braidio.weave_project(
+            project,
+            _script(),
+            config=braidio.WeaveConfig(tts="whole"),
+            return_receipt=True,
+        )
+        _, tl = braidio.render_production(
+            _script(),
+            source=None,
+            config=braidio.WeaveConfig(tts="whole"),
+            out_path=tmp_path / "fast.mp3",
+            tts_dir=tmp_path / "tts",
+            return_timeline=True,
         )
     finally:
         unregister_tts("whole")
-    assert voice.dialogues == [("Is that so?", "It is.")]  # one pass, not per turn
+    # one pass per dialogue on each path, never turn by turn
+    assert voice.dialogues == [("Is that so?", "It is.")] * 2
     assert voice.tone.calls  # narration went through it too
     assert _calls(backends) == 0
+    # priced at the registered rate: free, and known
+    assert receipt.cost_usd_actual == 0.0 and not receipt.has_unknown_costs
+    # the record names what the config names
+    assert tl.settings["resolved"]["tts"] == tl.settings["weave"]["tts"] == "whole"
+    # every take lives in the project
+    for tier in ("narration-renders", "dialogue-renders"):
+        for node in nw.annotations_at_tier(project.root, tier):
+            url = node.body["url"].removeprefix("file://")
+            assert project.root.resolve() in Path(url).resolve().parents
 
 
-def test_a_backend_class_is_not_a_backend():
+def test_a_voice_registers_as_itself_and_as_an_instance():
     with pytest.raises(TypeError, match="an instance"):
-        register_tts("bad", _OnePassVoice)
+        register_tts("whole", voice=_OnePassVoice)
+    with pytest.raises(ValueError, match="its own name"):
+        register_tts("other", voice=_OnePassVoice())

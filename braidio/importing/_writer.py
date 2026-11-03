@@ -471,9 +471,11 @@ def _node_ref(tier: str, ann_id: uuid.UUID):
     """
     from lacing import NodeRef, TimeInterval
 
+    from braidio.transforms._common import _RATE
+
     return NodeRef(
         scene_path=f"{tier}/{ann_id}",
-        interval=TimeInterval.from_seconds(0.0, 1.0, rate=1000),
+        interval=TimeInterval.from_seconds(0.0, 1.0, rate=_RATE),
     )
 
 

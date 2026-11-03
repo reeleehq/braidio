@@ -153,7 +153,7 @@ def test_every_graph_tier_and_reader_is_public():
     for name in picture:
         assert getattr(public, name) is getattr(_video_cut, name), name
     assert (tiers | readers | picture) <= set(public.__all__)
-    # reelee's adapter (reelee/_braidio.py) imports these private names until
-    # reeleehq/braidio#156: they must stay the very public objects, not copies.
+    # The pre-#146 private aliases are gone (braidio#156): reelee reads the
+    # public names (reeleehq/reelee#884), and a host has one name per reader.
     for private in ("_content_keyed_prepare", "_frames_dir", "_panel_source"):
-        assert getattr(_video_cut, private) is getattr(public, private[1:]), private
+        assert not hasattr(_video_cut, private), private

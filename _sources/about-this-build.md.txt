@@ -5,7 +5,7 @@ orphan: true
 
 # About this build
 
-This documentation was built on **2026-11-03 13:23 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/6967f775cfc682bee809e0ef96ee97925955a78f"><code>6967f77</code></a> on branch <code>main</code>, for **braidio 0.0.108** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-03 15:03 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/2ba8383644182158d3ec99c3fe76ad6f23aa900e"><code>2ba8383</code></a> on branch <code>main</code>, for **braidio 0.0.108** (from <code>pyproject.toml</code>).
 
 :::{note}
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -15,7 +15,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 | | |
 |---|---|
-| Commit | <a href="https://github.com/reeleehq/braidio/commit/6967f775cfc682bee809e0ef96ee97925955a78f"><code>6967f775cfc682bee809e0ef96ee97925955a78f</code></a> |
+| Commit | <a href="https://github.com/reeleehq/braidio/commit/2ba8383644182158d3ec99c3fe76ad6f23aa900e"><code>2ba8383644182158d3ec99c3fe76ad6f23aa900e</code></a> |
 | Branch | <code>main</code> |
 | Tags at this commit | none |
 | Working tree | clean |
@@ -26,9 +26,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 | | |
 |---|---|
 | Repository | <code>reeleehq/braidio</code> |
-| Run | <a href="https://github.com/reeleehq/braidio/actions/runs/41635630393">41635630393</a> |
+| Run | <a href="https://github.com/reeleehq/braidio/actions/runs/41640071425">41640071425</a> |
 | Ref | <code>refs/heads/main</code> |
-| Event commit | <code>971cdaaa3d0a4d8f02b3940cff07d3170261f0d7</code> (in the history of the built commit) |
+| Event commit | <code>43dc7684d2fdf4cb42bc353ba47b9288cd754920</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -59,7 +59,7 @@ Latest release: <a href="https://pypi.org/project/braidio/0.0.108/">0.0.108</a>,
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 6967f775cfc682bee809e0ef96ee97925955a78f
+git checkout 2ba8383644182158d3ec99c3fe76ad6f23aa900e
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

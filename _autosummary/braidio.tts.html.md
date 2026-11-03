@@ -26,20 +26,23 @@ what the renderers call.
 
 ### Functions
 
-| [`narrate`](#braidio.tts.narrate)(text, out_path, \*[, api_key, ...])       | Synthesize `text` to `out_path` (mp3).                                                                       |
-|----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|
-| [`narrator_from_speak`](#braidio.tts.narrator_from_speak)(speak, \*[, strip_tags])      | A [`narrate()`](#braidio.tts.narrate)-shaped synthesizer that speaks through `speak`. |
-| [`register_tts`](#braidio.tts.register_tts)(name, speak, \*[, usd_per_1k_chars]) | Register `speak` as the voice backend `name` (replacing any before).                                         |
-| [`resolve_voice_id`](#braidio.tts.resolve_voice_id)([voice_id])                      | Voice id from arg → `VOICE_ENV_VAR` env → default.                                                           |
-| [`text_to_dialogue`](#braidio.tts.text_to_dialogue)(turns, \*[, model_id, ...])      | Synthesize a multi-speaker exchange in ONE pass (ElevenLabs Text-to-Dialogue).                               |
-| [`tts_backend`](#braidio.tts.tts_backend)(name)                                 | The backend registered as `name`; `KeyError` naming the registered ones.                                     |
-| [`tts_name`](#braidio.tts.tts_name)(speak)                                   | The voice backend a render used, as its settings record names it.                                            |
-| [`unregister_tts`](#braidio.tts.unregister_tts)(name)                              | Remove the backend registered as `name`; returns it, or `None`.                                              |
+| [`narrate`](#braidio.tts.narrate)(text, out_path, \*[, api_key, ...])       | Synthesize `text` to `out_path` (mp3).                                                                              |
+|----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| [`narrator_from_speak`](#braidio.tts.narrator_from_speak)(speak, \*[, strip_tags])      | A [`narrate()`](#braidio.tts.narrate)-shaped synthesizer that speaks through `speak`.        |
+| [`register_tts`](#braidio.tts.register_tts)(name, speak, \*[, usd_per_1k_chars]) | Register `speak` as the voice backend `name` (replacing any before).                                                |
+| [`resolve_voice_id`](#braidio.tts.resolve_voice_id)([voice_id])                      | Voice id from arg → `VOICE_ENV_VAR` env → default.                                                                  |
+| [`text_to_dialogue`](#braidio.tts.text_to_dialogue)(turns, \*[, model_id, ...])      | Synthesize a multi-speaker exchange in ONE pass (ElevenLabs Text-to-Dialogue).                                      |
+| [`tts_backend`](#braidio.tts.tts_backend)(name)                                 | The backend registered as `name`; `KeyError` naming the registered ones.                                            |
+| [`tts_name`](#braidio.tts.tts_name)(speak)                                   | The voice backend a render used, as its settings record names it.                                                   |
+| [`unregister_tts`](#braidio.tts.unregister_tts)(name)                              | Remove the backend registered as `name`; returns it, or `None`.                                                     |
+| [`voice_for`](#braidio.tts.voice_for)([tts, speak])                           | The voice a render speaks with: an explicit `speak` wins, else the registered backend `tts` names, else ElevenLabs. |
 
 ### Classes
 
-| [`TTSBackend`](#braidio.tts.TTSBackend)(speak[, usd_per_1k_chars])   | A named voice backend: its `speak` and what it costs.   |
-|------------------------------------------------------------------------------------------|---------------------------------------------------------|
+| [`ElevenLabsVoice`](#braidio.tts.ElevenLabsVoice)()                     | The default voice: ElevenLabs, with its on-disk cache and its one-pass Text-to-Dialogue (braidio#137).                            |
+|----------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| [`SpeakVoice`](#braidio.tts.SpeakVoice)(speak, name)               | Any other voice: a [`Speak`](#braidio.tts.Speak) callable (a registered backend, a local model, a test). |
+| [`TTSBackend`](#braidio.tts.TTSBackend)(speak[, usd_per_1k_chars]) | A named voice backend: its `speak` and what it costs.                                                                             |
 
 ### braidio.tts.DEFAULT_MODEL_ID *= 'eleven_v3'*
 
@@ -54,6 +57,19 @@ word. Override per-render with `delivery=`, or persist your own in
 
 How a render’s settings record names the default voice backend (no `speak=`).
 
+### *class* braidio.tts.ElevenLabsVoice
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+The default voice: ElevenLabs, with its on-disk cache and its one-pass
+Text-to-Dialogue (braidio#137).
+
+Both calls look `braidio.narrate` / `braidio.render_dialogue` up at
+call time, so the whole package has **one** place a test (or a host)
+replaces the ElevenLabs synthesis. `return_cache_status` is forwarded
+only when asked for, so the plain `narrate` shape still works as the
+replacement.
+
 ### braidio.tts.Speak
 
 `speak(text, *, voice) -> (audio_bytes, format)`,
@@ -64,6 +80,15 @@ is the voice braidio resolved for the line (`None`: the backend’s default).
   A text-to-speech backend
 
 alias of [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[…], [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]
+
+### *class* braidio.tts.SpeakVoice(speak, name)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+Any other voice: a [`Speak`](#braidio.tts.Speak) callable (a registered backend, a local
+model, a test). Never cached, and with no one-pass dialogue, so a dialogue
+is spoken turn by turn ([`braidio.conversation.render_turns_sequential()`](braidio.conversation.html.md#braidio.conversation.render_turns_sequential)),
+its per-turn parts removed once the exchange is assembled.
 
 ### *class* braidio.tts.TTSBackend(speak, usd_per_1k_chars=None)
 
@@ -227,3 +252,19 @@ Remove the backend registered as `name`; returns it, or `None`.
 
 * **Return type:**
   [`TTSBackend`](#braidio.tts.TTSBackend) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+### braidio.tts.voice_for(tts=None, , speak=None)
+
+The voice a render speaks with: an explicit `speak` wins, else the
+registered backend `tts` names, else ElevenLabs. The one place that
+choice is made, on both render paths (braidio#137).
+
+```pycon
+>>> voice_for().name
+'elevenlabs'
+>>> voice_for(speak=lambda text, *, voice: (b"", "wav")).name
+'braidio.tts:<lambda>'
+```
+
+* **Return type:**
+  [`ElevenLabsVoice`](#braidio.tts.ElevenLabsVoice) | [`SpeakVoice`](#braidio.tts.SpeakVoice)

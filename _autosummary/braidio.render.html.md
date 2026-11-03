@@ -31,8 +31,9 @@ varies (a fresh prosodic arc per turn, a per-turn speed where the model has
 one) and the silence between turns is proportional to how strongly the
 boundary closes, instead of one flat arc with nothing inside it.
 
-`narrate_fn` is the synthesis call (default: this module’s `narrate`);
-a caller that wants the cache status, or a stub, passes its own.
+`narrate_fn` is the synthesis call (default: the ElevenLabs voice,
+[`braidio.tts.voice_for()`](braidio.tts.html.md#braidio.tts.voice_for)); a caller that wants the cache status, or
+another voice, passes its own.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)

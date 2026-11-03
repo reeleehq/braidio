@@ -19,8 +19,10 @@ braidio.sound\_design
    .. autosummary::
    
       score_mix
+      spoken_of
       spoken_text
       talk_segments
+      talk_spans
    
    .. rubric:: Classes
 

@@ -1,4 +1,4 @@
-> built 2026-11-03 13:23 UTC from 6967f77 (main) · braidio 0.0.108. Details: build_info.json
+> built 2026-11-03 15:03 UTC from 2ba8383 (main) · braidio 0.0.108. Details: build_info.json
 
 # index.html.md
 
@@ -1544,7 +1544,7 @@ Bases: [`Protocol`](https://docs.python.org/3/library/typing.html#typing.Protoco
 
 Resolve an opaque `reference` to a [`ResolvedSegment`](_autosummary/braidio.html.md#braidio.ResolvedSegment) (or None).
 
-### *class* braidio.SoundDesign(max_events=6, master='podcast', max_usd=None, allow_generate=True, designer=None)
+### *class* braidio.SoundDesign(max_events=6, master='podcast', max_usd=None, allow_generate=True, designer=None, writer=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -1557,8 +1557,10 @@ may spend (`None`: foley’s default cap); `allow_generate=False` is
 retrieval only, with no paid generation fallback (offline and CI renders).
 The licence intent is not a knob here: it follows the render’s rights
 profile ([`commercial_ok()`](_autosummary/braidio.html.md#braidio.SoundDesign.commercial_ok)). `designer` is the strategy that does the
-work, called like `foley.score()` (default: foley itself); it is not
-part of the record.
+work, called like `foley.score()` (default: foley itself), and
+`writer` the one that writes its mix, `(weave, path) -> None` (default:
+soundfile then ffmpeg to MP3); neither is part of the record, and both are
+fast-path only (the graph runs nw’s foley Transform, which records them).
 
 #### *static* commercial_ok(profile)
 
@@ -1572,6 +1574,39 @@ only commercially-licensed sounds; a personal one also non-commercial.
 
 * **Return type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
+
+#### missing_dependencies(, writes_mix=True)
+
+What this design needs and this environment lacks, by import name:
+`foley` unless a `designer` replaces it, and, when braidio writes
+the mix itself (`writes_mix`, the fast path) with no `writer`,
+`soundfile`. Checked **before** a render spends anything, so a
+missing extra fails at the door rather than after every voice is billed.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+#### require(, writes_mix=True)
+
+Raise `ModuleNotFoundError` naming the extra when
+[`missing_dependencies()`](_autosummary/braidio.html.md#braidio.SoundDesign.missing_dependencies) is not empty.
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### to_config(profile)
+
+The graph’s `sound-design-config/v1` body (nw’s schema) for a
+production rendered under `profile`: these knobs, switched on, with
+the licence intent the profile implies.
+
+```pycon
+>>> SoundDesign(max_events=2).to_config(Profile.PERSONAL)["commercial_ok"]
+False
+```
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
 #### to_dict()
 
@@ -3275,8 +3310,9 @@ varies (a fresh prosodic arc per turn, a per-turn speed where the model has
 one) and the silence between turns is proportional to how strongly the
 boundary closes, instead of one flat arc with nothing inside it.
 
-`narrate_fn` is the synthesis call (default: this module’s `narrate`);
-a caller that wants the cache status, or a stub, passes its own.
+`narrate_fn` is the synthesis call (default: the ElevenLabs voice,
+[`braidio.tts.voice_for()`](_autosummary/braidio.tts.html.md#braidio.tts.voice_for)); a caller that wants the cache status, or
+another voice, passes its own.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
@@ -3688,10 +3724,12 @@ bring its own and the tests run without foley.
 
 ### Functions
 
-| [`score_mix`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.score_mix)(audio, spans, \*, design, profile, ...)   | Sound-design the mix at `audio` and write the result to `out_path`.   |
-|------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------|
-| [`spoken_text`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.spoken_text)(text)                                   | `text` without its audio tags, whitespace collapsed.                  |
-| [`talk_segments`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.talk_segments)(spans)                                | foley's `(segments, segment_starts)` for the talk on a timeline.      |
+| [`score_mix`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.score_mix)(audio, spans, \*, design, profile, ...)   | Sound-design the mix at `audio` and write the result to `out_path`.                                                                                                                         |
+|------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`spoken_of`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.spoken_of)(beat)                                     | What a script beat says aloud: a narration's text, a dialogue's turns, `""` for anything else (a clip's words are the source's; a scene break says nothing).                                |
+| [`spoken_text`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.spoken_text)(text)                                   | `text` without its audio tags, whitespace collapsed.                                                                                                                                        |
+| [`talk_segments`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.talk_segments)(spans)                                | foley's `(segments, segment_starts)` for the talk on a timeline.                                                                                                                            |
+| [`talk_spans`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.talk_spans)(beats, texts)                            | The spoken [`TalkSpan`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.TalkSpan) of a timeline: its beat spans (anything with `start` and `duration`) zipped with what each says, silent ones left out. |
 
 ### Classes
 
@@ -3752,7 +3790,7 @@ Python numbers, so the record survives `json.dumps` as is.
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
-### *class* braidio.sound_design.SoundDesign(max_events=6, master='podcast', max_usd=None, allow_generate=True, designer=None)
+### *class* braidio.sound_design.SoundDesign(max_events=6, master='podcast', max_usd=None, allow_generate=True, designer=None, writer=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -3765,8 +3803,10 @@ may spend (`None`: foley’s default cap); `allow_generate=False` is
 retrieval only, with no paid generation fallback (offline and CI renders).
 The licence intent is not a knob here: it follows the render’s rights
 profile ([`commercial_ok()`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.SoundDesign.commercial_ok)). `designer` is the strategy that does the
-work, called like `foley.score()` (default: foley itself); it is not
-part of the record.
+work, called like `foley.score()` (default: foley itself), and
+`writer` the one that writes its mix, `(weave, path) -> None` (default:
+soundfile then ffmpeg to MP3); neither is part of the record, and both are
+fast-path only (the graph runs nw’s foley Transform, which records them).
 
 #### *static* commercial_ok(profile)
 
@@ -3780,6 +3820,39 @@ only commercially-licensed sounds; a personal one also non-commercial.
 
 * **Return type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
+
+#### missing_dependencies(, writes_mix=True)
+
+What this design needs and this environment lacks, by import name:
+`foley` unless a `designer` replaces it, and, when braidio writes
+the mix itself (`writes_mix`, the fast path) with no `writer`,
+`soundfile`. Checked **before** a render spends anything, so a
+missing extra fails at the door rather than after every voice is billed.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+#### require(, writes_mix=True)
+
+Raise `ModuleNotFoundError` naming the extra when
+[`missing_dependencies()`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.SoundDesign.missing_dependencies) is not empty.
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### to_config(profile)
+
+The graph’s `sound-design-config/v1` body (nw’s schema) for a
+production rendered under `profile`: these knobs, switched on, with
+the licence intent the profile implies.
+
+```pycon
+>>> SoundDesign(max_events=2).to_config(Profile.PERSONAL)["commercial_ok"]
+False
+```
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
 #### to_dict()
 
@@ -3795,14 +3868,14 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 One spoken beat on the episode timeline: where it starts, how long it
 lasts, and what is said in it.
 
-### braidio.sound_design.score_mix(audio, spans, , design, profile, out_path, save=None)
+### braidio.sound_design.score_mix(audio, spans, , design, profile, out_path)
 
 Sound-design the mix at `audio` and write the result to `out_path`.
 
 `spans` is the talk on the mix’s timeline ([`talk_segments()`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.talk_segments)). The
 design’s `designer` (default `foley.score()`) is called with foley’s
-keywords; `save` writes its `weave` result (default: an MP3 through
-ffmpeg). `out_path` may be `audio` itself: the mix is fully
+keywords; its `writer` writes the `weave` result (default: an MP3
+through ffmpeg). `out_path` may be `audio` itself: the mix is fully
 read before anything is written.
 
 Raises `ValueError` when there is no talk to design for, rather than
@@ -3810,6 +3883,21 @@ hand foley nothing and report an undesigned mix as designed.
 
 * **Return type:**
   [`ScoredMix`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.ScoredMix)
+
+### braidio.sound_design.spoken_of(beat)
+
+What a script beat says aloud: a narration’s text, a dialogue’s turns,
+`""` for anything else (a clip’s words are the source’s; a scene break
+says nothing).
+
+```pycon
+>>> from braidio.script import Dialogue, Narration
+>>> spoken_of(Narration("Hi.")), spoken_of(Dialogue(turns=[("a", "Yes."), ("b", "No.")]))
+('Hi.', 'Yes. No.')
+```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 ### braidio.sound_design.spoken_text(text)
 
@@ -3853,6 +3941,14 @@ beat’s start stays inside its window:
 
 * **Return type:**
   [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]]
+
+### braidio.sound_design.talk_spans(beats, texts)
+
+The spoken [`TalkSpan`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.TalkSpan) of a timeline: its beat spans (anything with
+`start` and `duration`) zipped with what each says, silent ones left out.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`TalkSpan`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.TalkSpan)]
 
 
 # _autosummary/braidio.sources.html.md
@@ -4504,20 +4600,23 @@ what the renderers call.
 
 ### Functions
 
-| [`narrate`](_autosummary/braidio.tts.html.md#braidio.tts.narrate)(text, out_path, \*[, api_key, ...])       | Synthesize `text` to `out_path` (mp3).                                                                       |
-|----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|
-| [`narrator_from_speak`](_autosummary/braidio.tts.html.md#braidio.tts.narrator_from_speak)(speak, \*[, strip_tags])      | A [`narrate()`](_autosummary/braidio.tts.html.md#braidio.tts.narrate)-shaped synthesizer that speaks through `speak`. |
-| [`register_tts`](_autosummary/braidio.tts.html.md#braidio.tts.register_tts)(name, speak, \*[, usd_per_1k_chars]) | Register `speak` as the voice backend `name` (replacing any before).                                         |
-| [`resolve_voice_id`](_autosummary/braidio.tts.html.md#braidio.tts.resolve_voice_id)([voice_id])                      | Voice id from arg → `VOICE_ENV_VAR` env → default.                                                           |
-| [`text_to_dialogue`](_autosummary/braidio.tts.html.md#braidio.tts.text_to_dialogue)(turns, \*[, model_id, ...])      | Synthesize a multi-speaker exchange in ONE pass (ElevenLabs Text-to-Dialogue).                               |
-| [`tts_backend`](_autosummary/braidio.tts.html.md#braidio.tts.tts_backend)(name)                                 | The backend registered as `name`; `KeyError` naming the registered ones.                                     |
-| [`tts_name`](_autosummary/braidio.tts.html.md#braidio.tts.tts_name)(speak)                                   | The voice backend a render used, as its settings record names it.                                            |
-| [`unregister_tts`](_autosummary/braidio.tts.html.md#braidio.tts.unregister_tts)(name)                              | Remove the backend registered as `name`; returns it, or `None`.                                              |
+| [`narrate`](_autosummary/braidio.tts.html.md#braidio.tts.narrate)(text, out_path, \*[, api_key, ...])       | Synthesize `text` to `out_path` (mp3).                                                                              |
+|----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| [`narrator_from_speak`](_autosummary/braidio.tts.html.md#braidio.tts.narrator_from_speak)(speak, \*[, strip_tags])      | A [`narrate()`](_autosummary/braidio.tts.html.md#braidio.tts.narrate)-shaped synthesizer that speaks through `speak`.        |
+| [`register_tts`](_autosummary/braidio.tts.html.md#braidio.tts.register_tts)(name, speak, \*[, usd_per_1k_chars]) | Register `speak` as the voice backend `name` (replacing any before).                                                |
+| [`resolve_voice_id`](_autosummary/braidio.tts.html.md#braidio.tts.resolve_voice_id)([voice_id])                      | Voice id from arg → `VOICE_ENV_VAR` env → default.                                                                  |
+| [`text_to_dialogue`](_autosummary/braidio.tts.html.md#braidio.tts.text_to_dialogue)(turns, \*[, model_id, ...])      | Synthesize a multi-speaker exchange in ONE pass (ElevenLabs Text-to-Dialogue).                                      |
+| [`tts_backend`](_autosummary/braidio.tts.html.md#braidio.tts.tts_backend)(name)                                 | The backend registered as `name`; `KeyError` naming the registered ones.                                            |
+| [`tts_name`](_autosummary/braidio.tts.html.md#braidio.tts.tts_name)(speak)                                   | The voice backend a render used, as its settings record names it.                                                   |
+| [`unregister_tts`](_autosummary/braidio.tts.html.md#braidio.tts.unregister_tts)(name)                              | Remove the backend registered as `name`; returns it, or `None`.                                                     |
+| [`voice_for`](_autosummary/braidio.tts.html.md#braidio.tts.voice_for)([tts, speak])                           | The voice a render speaks with: an explicit `speak` wins, else the registered backend `tts` names, else ElevenLabs. |
 
 ### Classes
 
-| [`TTSBackend`](_autosummary/braidio.tts.html.md#braidio.tts.TTSBackend)(speak[, usd_per_1k_chars])   | A named voice backend: its `speak` and what it costs.   |
-|------------------------------------------------------------------------------------------|---------------------------------------------------------|
+| [`ElevenLabsVoice`](_autosummary/braidio.tts.html.md#braidio.tts.ElevenLabsVoice)()                     | The default voice: ElevenLabs, with its on-disk cache and its one-pass Text-to-Dialogue (braidio#137).                            |
+|----------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| [`SpeakVoice`](_autosummary/braidio.tts.html.md#braidio.tts.SpeakVoice)(speak, name)               | Any other voice: a [`Speak`](_autosummary/braidio.tts.html.md#braidio.tts.Speak) callable (a registered backend, a local model, a test). |
+| [`TTSBackend`](_autosummary/braidio.tts.html.md#braidio.tts.TTSBackend)(speak[, usd_per_1k_chars]) | A named voice backend: its `speak` and what it costs.                                                                             |
 
 ### braidio.tts.DEFAULT_MODEL_ID *= 'eleven_v3'*
 
@@ -4532,6 +4631,19 @@ word. Override per-render with `delivery=`, or persist your own in
 
 How a render’s settings record names the default voice backend (no `speak=`).
 
+### *class* braidio.tts.ElevenLabsVoice
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+The default voice: ElevenLabs, with its on-disk cache and its one-pass
+Text-to-Dialogue (braidio#137).
+
+Both calls look `braidio.narrate` / `braidio.render_dialogue` up at
+call time, so the whole package has **one** place a test (or a host)
+replaces the ElevenLabs synthesis. `return_cache_status` is forwarded
+only when asked for, so the plain `narrate` shape still works as the
+replacement.
+
 ### braidio.tts.Speak
 
 `speak(text, *, voice) -> (audio_bytes, format)`,
@@ -4542,6 +4654,15 @@ is the voice braidio resolved for the line (`None`: the backend’s default).
   A text-to-speech backend
 
 alias of [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[…], [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]
+
+### *class* braidio.tts.SpeakVoice(speak, name)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+Any other voice: a [`Speak`](_autosummary/braidio.tts.html.md#braidio.tts.Speak) callable (a registered backend, a local
+model, a test). Never cached, and with no one-pass dialogue, so a dialogue
+is spoken turn by turn ([`braidio.conversation.render_turns_sequential()`](_autosummary/braidio.conversation.html.md#braidio.conversation.render_turns_sequential)),
+its per-turn parts removed once the exchange is assembled.
 
 ### *class* braidio.tts.TTSBackend(speak, usd_per_1k_chars=None)
 
@@ -4705,6 +4826,22 @@ Remove the backend registered as `name`; returns it, or `None`.
 
 * **Return type:**
   [`TTSBackend`](_autosummary/braidio.tts.html.md#braidio.tts.TTSBackend) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+### braidio.tts.voice_for(tts=None, , speak=None)
+
+The voice a render speaks with: an explicit `speak` wins, else the
+registered backend `tts` names, else ElevenLabs. The one place that
+choice is made, on both render paths (braidio#137).
+
+```pycon
+>>> voice_for().name
+'elevenlabs'
+>>> voice_for(speak=lambda text, *, voice: (b"", "wav")).name
+'braidio.tts:<lambda>'
+```
+
+* **Return type:**
+  [`ElevenLabsVoice`](_autosummary/braidio.tts.html.md#braidio.tts.ElevenLabsVoice) | [`SpeakVoice`](_autosummary/braidio.tts.html.md#braidio.tts.SpeakVoice)
 
 
 # _autosummary/braidio.video.html.md
@@ -5487,7 +5624,7 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-03 13:23 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/6967f775cfc682bee809e0ef96ee97925955a78f"><code>6967f77</code></a> on branch <code>main</code>, for **braidio 0.0.108** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-03 15:03 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/2ba8383644182158d3ec99c3fe76ad6f23aa900e"><code>2ba8383</code></a> on branch <code>main</code>, for **braidio 0.0.108** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -5496,7 +5633,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/6967f775cfc682bee809e0ef96ee97925955a78f"><code>6967f775cfc682bee809e0ef96ee97925955a78f</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/2ba8383644182158d3ec99c3fe76ad6f23aa900e"><code>2ba8383644182158d3ec99c3fe76ad6f23aa900e</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
 | Tags at this commit | none                                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
@@ -5507,9 +5644,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41635630393">41635630393</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41640071425">41640071425</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>971cdaaa3d0a4d8f02b3940cff07d3170261f0d7</code> (in the history of the built commit) |
+| Event commit | <code>43dc7684d2fdf4cb42bc353ba47b9288cd754920</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5540,7 +5677,7 @@ Latest release: <a href="https://pypi.org/project/braidio/0.0.108/">0.0.108</a>,
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 6967f775cfc682bee809e0ef96ee97925955a78f
+git checkout 2ba8383644182158d3ec99c3fe76ad6f23aa900e
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

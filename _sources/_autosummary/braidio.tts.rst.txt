@@ -25,10 +25,13 @@ braidio.tts
       tts_backend
       tts_name
       unregister_tts
+      voice_for
    
    .. rubric:: Classes
 
    .. autosummary::
    
+      ElevenLabsVoice
+      SpeakVoice
       TTSBackend
    

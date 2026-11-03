@@ -953,6 +953,13 @@ window.runMermaid = runMermaid;</script>
 <span class="c1"># lacing/nw. `HAS_GRAPH` / `HAS_NW` report what's available.</span>
 <span class="n">HAS_GRAPH</span> <span class="o">=</span> <span class="kc">False</span>
 <span class="n">HAS_NW</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="c1">#: Why a layer did not load (``None`` when it did): the ``ImportError`` the</span>
+<span class="c1">#: guards below swallow. The swallowing is right for a bare install, and the</span>
+<span class="c1">#: same guard would hide a *broken* layer (an nw below braidio's floor, a bad</span>
+<span class="c1">#: import), so CI asserts the layer loads whenever its dependencies import</span>
+<span class="c1">#: (``tests/test_optional_layers.py``, braidio#187) and names this on failure.</span>
+<span class="n">_GRAPH_IMPORT_ERROR</span><span class="p">:</span> <span class="ne">ImportError</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="n">_NW_IMPORT_ERROR</span><span class="p">:</span> <span class="ne">ImportError</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="k">try</span><span class="p">:</span>  <span class="c1"># needs lacing</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">braidio</span><span class="w"> </span><span class="kn">import</span> <span class="n">bodies</span>  <span class="c1"># noqa: F401  (registers schemas)</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.provenance</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>  <span class="c1"># noqa: F401</span>
@@ -962,8 +969,8 @@ window.runMermaid = runMermaid;</script>
     <span class="p">)</span>
 
     <span class="n">HAS_GRAPH</span> <span class="o">=</span> <span class="kc">True</span>
-<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>  <span class="c1"># pragma: no cover - optional dep</span>
-    <span class="k">pass</span>
+<span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">_exc</span><span class="p">:</span>  <span class="c1"># pragma: no cover - optional dep</span>
+    <span class="n">_GRAPH_IMPORT_ERROR</span> <span class="o">=</span> <span class="n">_exc</span>
 <span class="k">try</span><span class="p">:</span>  <span class="c1"># needs nw</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.project</span><span class="w"> </span><span class="kn">import</span> <span class="n">Project</span>  <span class="c1"># noqa: F401</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">braidio</span><span class="w"> </span><span class="kn">import</span> <span class="n">transforms</span>  <span class="c1"># noqa: F401  (registers braidio's nw.Transforms)</span>
@@ -971,8 +978,8 @@ window.runMermaid = runMermaid;</script>
     <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.genre</span><span class="w"> </span><span class="kn">import</span> <span class="n">COMMENTARY_WEAVE</span>  <span class="c1"># noqa: F401  (registers the nw.Genre)</span>
 
     <span class="n">HAS_NW</span> <span class="o">=</span> <span class="kc">True</span>
-<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>  <span class="c1"># pragma: no cover - optional dep</span>
-    <span class="k">pass</span>
+<span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">_exc</span><span class="p">:</span>  <span class="c1"># pragma: no cover - optional dep</span>
+    <span class="n">_NW_IMPORT_ERROR</span> <span class="o">=</span> <span class="n">_exc</span>
 
 
 <div class="viewcode-block" id="skills_dir">

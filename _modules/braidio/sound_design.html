@@ -795,8 +795,10 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">    retrieval only, with no paid generation fallback (offline and CI renders).</span>
 <span class="sd">    The licence intent is not a knob here: it follows the render's rights</span>
 <span class="sd">    profile (:meth:`commercial_ok`). ``designer`` is the strategy that does the</span>
-<span class="sd">    work, called like :func:`foley.score` (default: foley itself); it is not</span>
-<span class="sd">    part of the record.</span>
+<span class="sd">    work, called like :func:`foley.score` (default: foley itself), and</span>
+<span class="sd">    ``writer`` the one that writes its mix, ``(weave, path) -&gt; None`` (default:</span>
+<span class="sd">    soundfile then ffmpeg to MP3); neither is part of the record, and both are</span>
+<span class="sd">    fast-path only (the graph runs nw's foley Transform, which records them).</span>
 <span class="sd">    """</span>
 
     <span class="n">max_events</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_MAX_EVENTS</span>
@@ -804,6 +806,9 @@ window.runMermaid = runMermaid;</script>
     <span class="n">max_usd</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">allow_generate</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="n">designer</span><span class="p">:</span> <span class="n">Designer</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compare</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">writer</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compare</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
 
 <div class="viewcode-block" id="SoundDesign.commercial_ok">
 <a class="viewcode-back" href="../../_autosummary/braidio.sound_design.html#braidio.SoundDesign.commercial_ok">[docs]</a>
@@ -828,8 +833,65 @@ window.runMermaid = runMermaid;</script>
             <span class="s2">"max_usd"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_usd</span><span class="p">,</span>
             <span class="s2">"allow_generate"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">allow_generate</span><span class="p">,</span>
         <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="SoundDesign.missing_dependencies">
+<a class="viewcode-back" href="../../_autosummary/braidio.sound_design.html#braidio.SoundDesign.missing_dependencies">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">missing_dependencies</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">writes_mix</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""What this design needs and this environment lacks, by import name:</span>
+<span class="sd">        ``foley`` unless a ``designer`` replaces it, and, when braidio writes</span>
+<span class="sd">        the mix itself (``writes_mix``, the fast path) with no ``writer``,</span>
+<span class="sd">        ``soundfile``. Checked **before** a render spends anything, so a</span>
+<span class="sd">        missing extra fails at the door rather than after every voice is billed.</span>
+<span class="sd">        """</span>
+        <span class="n">needed</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">designer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[</span><span class="s2">"foley"</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">writes_mix</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">writer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">needed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"soundfile"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">m</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">needed</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">_importable</span><span class="p">(</span><span class="n">m</span><span class="p">)]</span></div>
+
+
+<div class="viewcode-block" id="SoundDesign.require">
+<a class="viewcode-back" href="../../_autosummary/braidio.sound_design.html#braidio.SoundDesign.require">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">require</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">writes_mix</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Raise ``ModuleNotFoundError`` naming the extra when</span>
+<span class="sd">        :meth:`missing_dependencies` is not empty."""</span>
+        <span class="n">missing</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">missing_dependencies</span><span class="p">(</span><span class="n">writes_mix</span><span class="o">=</span><span class="n">writes_mix</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ModuleNotFoundError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Sound design needs </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2">: pip install "</span>
+                <span class="sa">f</span><span class="s2">"'braidio[</span><span class="si">{</span><span class="n">SOUND_EXTRA</span><span class="si">}</span><span class="s2">]'."</span><span class="p">,</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">missing</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SoundDesign.to_config">
+<a class="viewcode-back" href="../../_autosummary/braidio.sound_design.html#braidio.SoundDesign.to_config">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">profile</span><span class="p">:</span> <span class="n">Profile</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The graph's ``sound-design-config/v1`` body (nw's schema) for a</span>
+<span class="sd">        production rendered under ``profile``: these knobs, switched on, with</span>
+<span class="sd">        the licence intent the profile implies.</span>
+
+<span class="sd">        &gt;&gt;&gt; SoundDesign(max_events=2).to_config(Profile.PERSONAL)["commercial_ok"]</span>
+<span class="sd">        False</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">"enabled"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(),</span>
+            <span class="s2">"commercial_ok"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">commercial_ok</span><span class="p">(</span><span class="n">profile</span><span class="p">),</span>
+        <span class="p">}</span></div>
 </div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_importable</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Whether ``import name`` would find a module (a module already imported,</span>
+<span class="sd">    or one stubbed into ``sys.modules``, counts; ``None`` there means blocked)."""</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">importlib.util</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+
+    <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
 
 
 <div class="viewcode-block" id="TalkSpan">
@@ -842,6 +904,41 @@ window.runMermaid = runMermaid;</script>
     <span class="n">start_s</span><span class="p">:</span> <span class="nb">float</span>
     <span class="n">duration_s</span><span class="p">:</span> <span class="nb">float</span>
     <span class="n">text</span><span class="p">:</span> <span class="nb">str</span></div>
+
+
+
+<div class="viewcode-block" id="spoken_of">
+<a class="viewcode-back" href="../../_autosummary/braidio.sound_design.html#braidio.spoken_of">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">spoken_of</span><span class="p">(</span><span class="n">beat</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What a script beat says aloud: a narration's text, a dialogue's turns,</span>
+<span class="sd">    ``""`` for anything else (a clip's words are the source's; a scene break</span>
+<span class="sd">    says nothing).</span>
+
+<span class="sd">    &gt;&gt;&gt; from braidio.script import Dialogue, Narration</span>
+<span class="sd">    &gt;&gt;&gt; spoken_of(Narration("Hi.")), spoken_of(Dialogue(turns=[("a", "Yes."), ("b", "No.")]))</span>
+<span class="sd">    ('Hi.', 'Yes. No.')</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.script</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dialogue</span><span class="p">,</span> <span class="n">Narration</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">beat</span><span class="p">,</span> <span class="n">Narration</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">beat</span><span class="o">.</span><span class="n">text</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">beat</span><span class="p">,</span> <span class="n">Dialogue</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">text</span> <span class="k">for</span> <span class="n">_role</span><span class="p">,</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">beat</span><span class="o">.</span><span class="n">turns</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s2">""</span></div>
+
+
+
+<div class="viewcode-block" id="talk_spans">
+<a class="viewcode-back" href="../../_autosummary/braidio.sound_design.html#braidio.talk_spans">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">talk_spans</span><span class="p">(</span><span class="n">beats</span><span class="p">,</span> <span class="n">texts</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TalkSpan</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The spoken :class:`TalkSpan` of a timeline: its beat spans (anything with</span>
+<span class="sd">    ``start`` and ``duration``) zipped with what each says, silent ones left out.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="p">[</span>
+        <span class="n">TalkSpan</span><span class="p">(</span><span class="n">start_s</span><span class="o">=</span><span class="n">beat</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="n">duration_s</span><span class="o">=</span><span class="n">beat</span><span class="o">.</span><span class="n">duration</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">beat</span><span class="p">,</span> <span class="n">text</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">beats</span><span class="p">,</span> <span class="n">texts</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">text</span>
+    <span class="p">]</span></div>
 
 
 
@@ -1002,14 +1099,13 @@ window.runMermaid = runMermaid;</script>
     <span class="n">design</span><span class="p">:</span> <span class="n">SoundDesign</span><span class="p">,</span>
     <span class="n">profile</span><span class="p">:</span> <span class="n">Profile</span><span class="p">,</span>
     <span class="n">out_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
-    <span class="n">save</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ScoredMix</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Sound-design the mix at ``audio`` and write the result to ``out_path``.</span>
 
 <span class="sd">    ``spans`` is the talk on the mix's timeline (:func:`talk_segments`). The</span>
 <span class="sd">    design's ``designer`` (default :func:`foley.score`) is called with foley's</span>
-<span class="sd">    keywords; ``save`` writes its ``weave`` result (default: an MP3 through</span>
-<span class="sd">    ffmpeg). ``out_path`` may be ``audio`` itself: the mix is fully</span>
+<span class="sd">    keywords; its ``writer`` writes the ``weave`` result (default: an MP3</span>
+<span class="sd">    through ffmpeg). ``out_path`` may be ``audio`` itself: the mix is fully</span>
 <span class="sd">    read before anything is written.</span>
 
 <span class="sd">    Raises ``ValueError`` when there is no talk to design for, rather than</span>
@@ -1035,7 +1131,7 @@ window.runMermaid = runMermaid;</script>
     <span class="k">if</span> <span class="n">woven</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"sound design: the designer returned no mix for </span><span class="si">{</span><span class="n">audio</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
     <span class="n">out</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">out_path</span><span class="p">)</span>
-    <span class="p">(</span><span class="n">save</span> <span class="ow">or</span> <span class="n">_save_mix</span><span class="p">)(</span><span class="n">woven</span><span class="p">,</span> <span class="n">out</span><span class="p">)</span>
+    <span class="p">(</span><span class="n">design</span><span class="o">.</span><span class="n">writer</span> <span class="ow">or</span> <span class="n">_save_mix</span><span class="p">)(</span><span class="n">woven</span><span class="p">,</span> <span class="n">out</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">ScoredMix</span><span class="p">(</span>
         <span class="n">path</span><span class="o">=</span><span class="n">out</span><span class="p">,</span>
         <span class="n">timeline</span><span class="o">=</span><span class="n">scored</span><span class="o">.</span><span class="n">timeline</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(),</span>

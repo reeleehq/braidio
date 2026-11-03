@@ -38,10 +38,12 @@ bring its own and the tests run without foley.
 
 ### Functions
 
-| [`score_mix`](#braidio.sound_design.score_mix)(audio, spans, \*, design, profile, ...)   | Sound-design the mix at `audio` and write the result to `out_path`.   |
-|------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------|
-| [`spoken_text`](#braidio.sound_design.spoken_text)(text)                                   | `text` without its audio tags, whitespace collapsed.                  |
-| [`talk_segments`](#braidio.sound_design.talk_segments)(spans)                                | foley's `(segments, segment_starts)` for the talk on a timeline.      |
+| [`score_mix`](#braidio.sound_design.score_mix)(audio, spans, \*, design, profile, ...)   | Sound-design the mix at `audio` and write the result to `out_path`.                                                                                                                         |
+|------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`spoken_of`](#braidio.sound_design.spoken_of)(beat)                                     | What a script beat says aloud: a narration's text, a dialogue's turns, `""` for anything else (a clip's words are the source's; a scene break says nothing).                                |
+| [`spoken_text`](#braidio.sound_design.spoken_text)(text)                                   | `text` without its audio tags, whitespace collapsed.                                                                                                                                        |
+| [`talk_segments`](#braidio.sound_design.talk_segments)(spans)                                | foley's `(segments, segment_starts)` for the talk on a timeline.                                                                                                                            |
+| [`talk_spans`](#braidio.sound_design.talk_spans)(beats, texts)                            | The spoken [`TalkSpan`](#braidio.sound_design.TalkSpan) of a timeline: its beat spans (anything with `start` and `duration`) zipped with what each says, silent ones left out. |
 
 ### Classes
 
@@ -102,7 +104,7 @@ Python numbers, so the record survives `json.dumps` as is.
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
-### *class* braidio.sound_design.SoundDesign(max_events=6, master='podcast', max_usd=None, allow_generate=True, designer=None)
+### *class* braidio.sound_design.SoundDesign(max_events=6, master='podcast', max_usd=None, allow_generate=True, designer=None, writer=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -115,8 +117,10 @@ may spend (`None`: foley’s default cap); `allow_generate=False` is
 retrieval only, with no paid generation fallback (offline and CI renders).
 The licence intent is not a knob here: it follows the render’s rights
 profile ([`commercial_ok()`](#braidio.sound_design.SoundDesign.commercial_ok)). `designer` is the strategy that does the
-work, called like `foley.score()` (default: foley itself); it is not
-part of the record.
+work, called like `foley.score()` (default: foley itself), and
+`writer` the one that writes its mix, `(weave, path) -> None` (default:
+soundfile then ffmpeg to MP3); neither is part of the record, and both are
+fast-path only (the graph runs nw’s foley Transform, which records them).
 
 #### *static* commercial_ok(profile)
 
@@ -130,6 +134,39 @@ only commercially-licensed sounds; a personal one also non-commercial.
 
 * **Return type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
+
+#### missing_dependencies(, writes_mix=True)
+
+What this design needs and this environment lacks, by import name:
+`foley` unless a `designer` replaces it, and, when braidio writes
+the mix itself (`writes_mix`, the fast path) with no `writer`,
+`soundfile`. Checked **before** a render spends anything, so a
+missing extra fails at the door rather than after every voice is billed.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+#### require(, writes_mix=True)
+
+Raise `ModuleNotFoundError` naming the extra when
+[`missing_dependencies()`](#braidio.sound_design.SoundDesign.missing_dependencies) is not empty.
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### to_config(profile)
+
+The graph’s `sound-design-config/v1` body (nw’s schema) for a
+production rendered under `profile`: these knobs, switched on, with
+the licence intent the profile implies.
+
+```pycon
+>>> SoundDesign(max_events=2).to_config(Profile.PERSONAL)["commercial_ok"]
+False
+```
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
 #### to_dict()
 
@@ -145,14 +182,14 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 One spoken beat on the episode timeline: where it starts, how long it
 lasts, and what is said in it.
 
-### braidio.sound_design.score_mix(audio, spans, , design, profile, out_path, save=None)
+### braidio.sound_design.score_mix(audio, spans, , design, profile, out_path)
 
 Sound-design the mix at `audio` and write the result to `out_path`.
 
 `spans` is the talk on the mix’s timeline ([`talk_segments()`](#braidio.sound_design.talk_segments)). The
 design’s `designer` (default `foley.score()`) is called with foley’s
-keywords; `save` writes its `weave` result (default: an MP3 through
-ffmpeg). `out_path` may be `audio` itself: the mix is fully
+keywords; its `writer` writes the `weave` result (default: an MP3
+through ffmpeg). `out_path` may be `audio` itself: the mix is fully
 read before anything is written.
 
 Raises `ValueError` when there is no talk to design for, rather than
@@ -160,6 +197,21 @@ hand foley nothing and report an undesigned mix as designed.
 
 * **Return type:**
   [`ScoredMix`](#braidio.sound_design.ScoredMix)
+
+### braidio.sound_design.spoken_of(beat)
+
+What a script beat says aloud: a narration’s text, a dialogue’s turns,
+`""` for anything else (a clip’s words are the source’s; a scene break
+says nothing).
+
+```pycon
+>>> from braidio.script import Dialogue, Narration
+>>> spoken_of(Narration("Hi.")), spoken_of(Dialogue(turns=[("a", "Yes."), ("b", "No.")]))
+('Hi.', 'Yes. No.')
+```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 ### braidio.sound_design.spoken_text(text)
 
@@ -203,3 +255,11 @@ beat’s start stays inside its window:
 
 * **Return type:**
   [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]]
+
+### braidio.sound_design.talk_spans(beats, texts)
+
+The spoken [`TalkSpan`](#braidio.sound_design.TalkSpan) of a timeline: its beat spans (anything with
+`start` and `duration`) zipped with what each says, silent ones left out.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`TalkSpan`](#braidio.sound_design.TalkSpan)]

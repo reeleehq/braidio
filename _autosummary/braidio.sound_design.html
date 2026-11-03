@@ -466,11 +466,17 @@ bring its own and the tests run without foley.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#braidio.sound_design.score_mix" title="braidio.sound_design.score_mix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">score_mix</span></code></a>(audio, spans, *, design, profile, ...)</p></td>
 <td><p>Sound-design the mix at <code class="docutils literal notranslate"><span class="pre">audio</span></code> and write the result to <code class="docutils literal notranslate"><span class="pre">out_path</span></code>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.sound_design.spoken_text" title="braidio.sound_design.spoken_text"><code class="xref py py-obj docutils literal notranslate"><span class="pre">spoken_text</span></code></a>(text)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.sound_design.spoken_of" title="braidio.sound_design.spoken_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">spoken_of</span></code></a>(beat)</p></td>
+<td><p>What a script beat says aloud: a narration's text, a dialogue's turns, <code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code> for anything else (a clip's words are the source's; a scene break says nothing).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.sound_design.spoken_text" title="braidio.sound_design.spoken_text"><code class="xref py py-obj docutils literal notranslate"><span class="pre">spoken_text</span></code></a>(text)</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">text</span></code> without its audio tags, whitespace collapsed.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.sound_design.talk_segments" title="braidio.sound_design.talk_segments"><code class="xref py py-obj docutils literal notranslate"><span class="pre">talk_segments</span></code></a>(spans)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.sound_design.talk_segments" title="braidio.sound_design.talk_segments"><code class="xref py py-obj docutils literal notranslate"><span class="pre">talk_segments</span></code></a>(spans)</p></td>
 <td><p>foley's <code class="docutils literal notranslate"><span class="pre">(segments,</span> <span class="pre">segment_starts)</span></code> for the talk on a timeline.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.sound_design.talk_spans" title="braidio.sound_design.talk_spans"><code class="xref py py-obj docutils literal notranslate"><span class="pre">talk_spans</span></code></a>(beats, texts)</p></td>
+<td><p>The spoken <a class="reference internal" href="#braidio.sound_design.TalkSpan" title="braidio.sound_design.TalkSpan"><code class="xref py py-class docutils literal notranslate"><span class="pre">TalkSpan</span></code></a> of a timeline: its beat spans (anything with <code class="docutils literal notranslate"><span class="pre">start</span></code> and <code class="docutils literal notranslate"><span class="pre">duration</span></code>) zipped with what each says, silent ones left out.</p></td>
 </tr>
 </tbody>
 </table>
@@ -565,7 +571,7 @@ Python numbers, so the record survives <code class="docutils literal notranslate
 
 <dl class="py class">
 <dt class="sig sig-object py" id="braidio.sound_design.SoundDesign">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">braidio.sound_design.</span></span><span class="sig-name descname"><span class="pre">SoundDesign</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_events</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">master</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'podcast'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_usd</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_generate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">designer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/sound_design.html#SoundDesign"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.sound_design.SoundDesign" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">braidio.sound_design.</span></span><span class="sig-name descname"><span class="pre">SoundDesign</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_events</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">master</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'podcast'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_usd</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_generate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">designer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">writer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/sound_design.html#SoundDesign"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.sound_design.SoundDesign" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>Sound design is on, with these knobs (foley’s defaults throughout).</p>
 <p><code class="docutils literal notranslate"><span class="pre">max_events</span></code> caps the sounds per <em>sentence</em>; <code class="docutils literal notranslate"><span class="pre">master</span></code> is foley’s
@@ -575,8 +581,10 @@ may spend (<code class="docutils literal notranslate"><span class="pre">None</sp
 retrieval only, with no paid generation fallback (offline and CI renders).
 The licence intent is not a knob here: it follows the render’s rights
 profile (<a class="reference internal" href="#braidio.sound_design.SoundDesign.commercial_ok" title="braidio.sound_design.SoundDesign.commercial_ok"><code class="xref py py-meth docutils literal notranslate"><span class="pre">commercial_ok()</span></code></a>). <code class="docutils literal notranslate"><span class="pre">designer</span></code> is the strategy that does the
-work, called like <code class="xref py py-func docutils literal notranslate"><span class="pre">foley.score()</span></code> (default: foley itself); it is not
-part of the record.</p>
+work, called like <code class="xref py py-func docutils literal notranslate"><span class="pre">foley.score()</span></code> (default: foley itself), and
+<code class="docutils literal notranslate"><span class="pre">writer</span></code> the one that writes its mix, <code class="docutils literal notranslate"><span class="pre">(weave,</span> <span class="pre">path)</span> <span class="pre">-&gt;</span> <span class="pre">None</span></code> (default:
+soundfile then ffmpeg to MP3); neither is part of the record, and both are
+fast-path only (the graph runs nw’s foley Transform, which records them).</p>
 <dl class="field-list simple">
 </dl>
 <dl class="py method">
@@ -591,6 +599,50 @@ only commercially-licensed sounds; a personal one also non-commercial.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="braidio.sound_design.SoundDesign.missing_dependencies">
+<span class="sig-name descname"><span class="pre">missing_dependencies</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">writes_mix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/sound_design.html#SoundDesign.missing_dependencies"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.sound_design.SoundDesign.missing_dependencies" title="Link to this definition">#</a></dt>
+<dd><p>What this design needs and this environment lacks, by import name:
+<code class="docutils literal notranslate"><span class="pre">foley</span></code> unless a <code class="docutils literal notranslate"><span class="pre">designer</span></code> replaces it, and, when braidio writes
+the mix itself (<code class="docutils literal notranslate"><span class="pre">writes_mix</span></code>, the fast path) with no <code class="docutils literal notranslate"><span class="pre">writer</span></code>,
+<code class="docutils literal notranslate"><span class="pre">soundfile</span></code>. Checked <strong>before</strong> a render spends anything, so a
+missing extra fails at the door rather than after every voice is billed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="braidio.sound_design.SoundDesign.require">
+<span class="sig-name descname"><span class="pre">require</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">writes_mix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/sound_design.html#SoundDesign.require"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.sound_design.SoundDesign.require" title="Link to this definition">#</a></dt>
+<dd><p>Raise <code class="docutils literal notranslate"><span class="pre">ModuleNotFoundError</span></code> naming the extra when
+<a class="reference internal" href="#braidio.sound_design.SoundDesign.missing_dependencies" title="braidio.sound_design.SoundDesign.missing_dependencies"><code class="xref py py-meth docutils literal notranslate"><span class="pre">missing_dependencies()</span></code></a> is not empty.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="braidio.sound_design.SoundDesign.to_config">
+<span class="sig-name descname"><span class="pre">to_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">profile</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/sound_design.html#SoundDesign.to_config"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.sound_design.SoundDesign.to_config" title="Link to this definition">#</a></dt>
+<dd><p>The graph’s <code class="docutils literal notranslate"><span class="pre">sound-design-config/v1</span></code> body (nw’s schema) for a
+production rendered under <code class="docutils literal notranslate"><span class="pre">profile</span></code>: these knobs, switched on, with
+the licence intent the profile implies.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">SoundDesign</span><span class="p">(</span><span class="n">max_events</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">to_config</span><span class="p">(</span><span class="n">Profile</span><span class="o">.</span><span class="n">PERSONAL</span><span class="p">)[</span><span class="s2">"commercial_ok"</span><span class="p">]</span>
+<span class="go">False</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -620,18 +672,36 @@ lasts, and what is said in it.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="braidio.sound_design.score_mix">
-<span class="sig-prename descclassname"><span class="pre">braidio.sound_design.</span></span><span class="sig-name descname"><span class="pre">score_mix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">audio</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spans</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">design</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/sound_design.html#score_mix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.sound_design.score_mix" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">braidio.sound_design.</span></span><span class="sig-name descname"><span class="pre">score_mix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">audio</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spans</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">design</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/sound_design.html#score_mix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.sound_design.score_mix" title="Link to this definition">#</a></dt>
 <dd><p>Sound-design the mix at <code class="docutils literal notranslate"><span class="pre">audio</span></code> and write the result to <code class="docutils literal notranslate"><span class="pre">out_path</span></code>.</p>
 <p><code class="docutils literal notranslate"><span class="pre">spans</span></code> is the talk on the mix’s timeline (<a class="reference internal" href="#braidio.sound_design.talk_segments" title="braidio.sound_design.talk_segments"><code class="xref py py-func docutils literal notranslate"><span class="pre">talk_segments()</span></code></a>). The
 design’s <code class="docutils literal notranslate"><span class="pre">designer</span></code> (default <code class="xref py py-func docutils literal notranslate"><span class="pre">foley.score()</span></code>) is called with foley’s
-keywords; <code class="docutils literal notranslate"><span class="pre">save</span></code> writes its <code class="docutils literal notranslate"><span class="pre">weave</span></code> result (default: an MP3 through
-ffmpeg). <code class="docutils literal notranslate"><span class="pre">out_path</span></code> may be <code class="docutils literal notranslate"><span class="pre">audio</span></code> itself: the mix is fully
+keywords; its <code class="docutils literal notranslate"><span class="pre">writer</span></code> writes the <code class="docutils literal notranslate"><span class="pre">weave</span></code> result (default: an MP3
+through ffmpeg). <code class="docutils literal notranslate"><span class="pre">out_path</span></code> may be <code class="docutils literal notranslate"><span class="pre">audio</span></code> itself: the mix is fully
 read before anything is written.</p>
 <p>Raises <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> when there is no talk to design for, rather than
 hand foley nothing and report an undesigned mix as designed.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#braidio.sound_design.ScoredMix" title="braidio.sound_design.ScoredMix"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScoredMix</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="braidio.sound_design.spoken_of">
+<span class="sig-prename descclassname"><span class="pre">braidio.sound_design.</span></span><span class="sig-name descname"><span class="pre">spoken_of</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">beat</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/sound_design.html#spoken_of"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.sound_design.spoken_of" title="Link to this definition">#</a></dt>
+<dd><p>What a script beat says aloud: a narration’s text, a dialogue’s turns,
+<code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code> for anything else (a clip’s words are the source’s; a scene break
+says nothing).</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">braidio.script</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dialogue</span><span class="p">,</span> <span class="n">Narration</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">spoken_of</span><span class="p">(</span><span class="n">Narration</span><span class="p">(</span><span class="s2">"Hi."</span><span class="p">)),</span> <span class="n">spoken_of</span><span class="p">(</span><span class="n">Dialogue</span><span class="p">(</span><span class="n">turns</span><span class="o">=</span><span class="p">[(</span><span class="s2">"a"</span><span class="p">,</span> <span class="s2">"Yes."</span><span class="p">),</span> <span class="p">(</span><span class="s2">"b"</span><span class="p">,</span> <span class="s2">"No."</span><span class="p">)]))</span>
+<span class="go">('Hi.', 'Yes. No.')</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -677,6 +747,18 @@ beat’s start stays inside its window:</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>], <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>]]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="braidio.sound_design.talk_spans">
+<span class="sig-prename descclassname"><span class="pre">braidio.sound_design.</span></span><span class="sig-name descname"><span class="pre">talk_spans</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">beats</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">texts</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/sound_design.html#talk_spans"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.sound_design.talk_spans" title="Link to this definition">#</a></dt>
+<dd><p>The spoken <a class="reference internal" href="#braidio.sound_design.TalkSpan" title="braidio.sound_design.TalkSpan"><code class="xref py py-class docutils literal notranslate"><span class="pre">TalkSpan</span></code></a> of a timeline: its beat spans (anything with
+<code class="docutils literal notranslate"><span class="pre">start</span></code> and <code class="docutils literal notranslate"><span class="pre">duration</span></code>) zipped with what each says, silent ones left out.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference internal" href="#braidio.sound_design.TalkSpan" title="braidio.sound_design.TalkSpan"><code class="xref py py-class docutils literal notranslate"><span class="pre">TalkSpan</span></code></a>]</span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -741,13 +823,18 @@ beat’s start stays inside its window:</p>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sound_design.SoundDesign"><code class="docutils literal notranslate"><span class="pre">SoundDesign</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sound_design.SoundDesign.commercial_ok"><code class="docutils literal notranslate"><span class="pre">SoundDesign.commercial_ok()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sound_design.SoundDesign.missing_dependencies"><code class="docutils literal notranslate"><span class="pre">SoundDesign.missing_dependencies()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sound_design.SoundDesign.require"><code class="docutils literal notranslate"><span class="pre">SoundDesign.require()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sound_design.SoundDesign.to_config"><code class="docutils literal notranslate"><span class="pre">SoundDesign.to_config()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sound_design.SoundDesign.to_dict"><code class="docutils literal notranslate"><span class="pre">SoundDesign.to_dict()</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sound_design.TalkSpan"><code class="docutils literal notranslate"><span class="pre">TalkSpan</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sound_design.score_mix"><code class="docutils literal notranslate"><span class="pre">score_mix()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sound_design.spoken_of"><code class="docutils literal notranslate"><span class="pre">spoken_of()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sound_design.spoken_text"><code class="docutils literal notranslate"><span class="pre">spoken_text()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sound_design.talk_segments"><code class="docutils literal notranslate"><span class="pre">talk_segments()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sound_design.talk_spans"><code class="docutils literal notranslate"><span class="pre">talk_spans()</span></code></a></li>
 </ul>
   </nav></div>
 

@@ -472,7 +472,7 @@ Bases: [`Protocol`](https://docs.python.org/3/library/typing.html#typing.Protoco
 
 Resolve an opaque `reference` to a [`ResolvedSegment`](#braidio.ResolvedSegment) (or None).
 
-### *class* braidio.SoundDesign(max_events=6, master='podcast', max_usd=None, allow_generate=True, designer=None)
+### *class* braidio.SoundDesign(max_events=6, master='podcast', max_usd=None, allow_generate=True, designer=None, writer=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -485,8 +485,10 @@ may spend (`None`: foley’s default cap); `allow_generate=False` is
 retrieval only, with no paid generation fallback (offline and CI renders).
 The licence intent is not a knob here: it follows the render’s rights
 profile ([`commercial_ok()`](#braidio.SoundDesign.commercial_ok)). `designer` is the strategy that does the
-work, called like `foley.score()` (default: foley itself); it is not
-part of the record.
+work, called like `foley.score()` (default: foley itself), and
+`writer` the one that writes its mix, `(weave, path) -> None` (default:
+soundfile then ffmpeg to MP3); neither is part of the record, and both are
+fast-path only (the graph runs nw’s foley Transform, which records them).
 
 #### *static* commercial_ok(profile)
 
@@ -500,6 +502,39 @@ only commercially-licensed sounds; a personal one also non-commercial.
 
 * **Return type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
+
+#### missing_dependencies(, writes_mix=True)
+
+What this design needs and this environment lacks, by import name:
+`foley` unless a `designer` replaces it, and, when braidio writes
+the mix itself (`writes_mix`, the fast path) with no `writer`,
+`soundfile`. Checked **before** a render spends anything, so a
+missing extra fails at the door rather than after every voice is billed.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+#### require(, writes_mix=True)
+
+Raise `ModuleNotFoundError` naming the extra when
+[`missing_dependencies()`](#braidio.SoundDesign.missing_dependencies) is not empty.
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### to_config(profile)
+
+The graph’s `sound-design-config/v1` body (nw’s schema) for a
+production rendered under `profile`: these knobs, switched on, with
+the licence intent the profile implies.
+
+```pycon
+>>> SoundDesign(max_events=2).to_config(Profile.PERSONAL)["commercial_ok"]
+False
+```
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
 #### to_dict()
 

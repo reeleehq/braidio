@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "built_at": "2026-11-03T13:23:40Z",
+  "built_at": "2026-11-03T15:03:12Z",
   "package": {
     "name": "braidio",
     "version": "0.0.108",
@@ -9,24 +9,24 @@
   },
   "git": {
     "available": true,
-    "commit": "6967f775cfc682bee809e0ef96ee97925955a78f",
-    "short_commit": "6967f77",
+    "commit": "2ba8383644182158d3ec99c3fe76ad6f23aa900e",
+    "short_commit": "2ba8383",
     "branch": "main",
     "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/reeleehq/braidio",
-    "commit_url": "https://github.com/reeleehq/braidio/commit/6967f775cfc682bee809e0ef96ee97925955a78f",
+    "commit_url": "https://github.com/reeleehq/braidio/commit/2ba8383644182158d3ec99c3fe76ad6f23aa900e",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "reeleehq/braidio",
-    "sha": "971cdaaa3d0a4d8f02b3940cff07d3170261f0d7",
+    "sha": "43dc7684d2fdf4cb42bc353ba47b9288cd754920",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "41635630393",
-    "run_url": "https://github.com/reeleehq/braidio/actions/runs/41635630393",
+    "run_id": "41640071425",
+    "run_url": "https://github.com/reeleehq/braidio/actions/runs/41640071425",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -56,7 +56,7 @@
   },
   "site": {
     "modules_documented": 29,
-    "objects_documented": 318
+    "objects_documented": 329
   },
   "pypi": {
     "checked": true,
@@ -64,7 +64,7 @@
     "relation": "same",
     "error": null
   },
-  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout 6967f775cfc682bee809e0ef96ee97925955a78f\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout 2ba8383644182158d3ec99c3fe76ad6f23aa900e\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
     "aligned": true,

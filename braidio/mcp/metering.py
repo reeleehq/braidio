@@ -25,6 +25,8 @@ Design (all **fail-closed**):
 
 from __future__ import annotations
 
+import math
+
 import itertools
 import time
 from collections.abc import MutableMapping
@@ -99,6 +101,69 @@ class UsageLedger:
         key = f"{email}/{entry['month']}/{entry['id']}.json"
         self.store[key] = entry
         return key
+
+
+#: How far down an exception's cause chain to look (enlace_metering's bound).
+_MAX_CHAIN = 16
+
+
+def partial_receipt(exc: BaseException):
+    """The ``weave_receipt`` a failed weave carries, through any wrapping.
+
+    The host sees the tool's exception wrapped (fastmcp raises a ``ToolError``
+    from it), so the chain of causes is walked; ``None`` when no link carries one.
+
+    This is the local/stdio path only. The deployed connectors meter with
+    ``enlace_metering``, whose ``partial_spend`` reads the same
+    ``exc.weave_receipt`` (i2mint/enlace_metering#11) and is the rule of
+    record; :func:`_partial_fields` mirrors its bounds (unknown or non-finite
+    is a lower bound, never free).
+    """
+    seen: set[int] = set()
+    while exc is not None and id(exc) not in seen and len(seen) < _MAX_CHAIN:
+        seen.add(id(exc))
+        receipt = getattr(exc, "weave_receipt", None)
+        if receipt is not None:
+            return receipt
+        exc = exc.__cause__ or exc.__context__
+    return None
+
+
+def _partial_fields(receipt) -> dict:
+    """The ledger fields for what a failed weave spent: none, or its cost.
+
+    A cost that is not a finite, non-negative number records ``0.0`` flagged as
+    a lower bound, as does a receipt that says its costs are unknown.
+
+    >>> from types import SimpleNamespace as R
+    >>> _partial_fields(R(cost_usd_actual=0.4, has_unknown_costs=False))
+    {'cost_usd': 0.4, 'cost_usd_actual': 0.4, 'cost_is_lower_bound': False}
+    >>> _partial_fields(R(cost_usd_actual=float("nan"), has_unknown_costs=False))["cost_is_lower_bound"]
+    True
+    >>> _partial_fields(None)
+    {}
+    """
+    if receipt is None:
+        return {}
+    cost = getattr(receipt, "cost_usd_actual", None)
+    unknown = getattr(receipt, "has_unknown_costs", False) is True
+    usable = _is_amount(cost)
+    spent = float(cost) if usable else 0.0
+    return {
+        "cost_usd": spent,
+        "cost_usd_actual": spent,
+        "cost_is_lower_bound": unknown or not usable,
+    }
+
+
+def _is_amount(value) -> bool:
+    """A finite, non-negative number of dollars (a bool is not one)."""
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+        and value >= 0
+    )
 
 
 class MeteringMiddleware(Middleware):
@@ -182,17 +247,26 @@ class MeteringMiddleware(Middleware):
             if isinstance(out, dict):
                 for k in (
                     "cost_usd",
+                    "cost_usd_actual",
                     "cache_hit_savings_usd",
                     "characters",
                     "cost_basis",
                 ):
                     entry[k] = out.get(k)
                 entry["artifact_ref"] = out.get("url") or out.get("path")
+                # what the call spent, actual first, as enlace_metering records
+                # it: a re-run that reused every take costs 0.0, not the estimate
+                if _is_amount(out.get("cost_usd_actual")):
+                    entry["cost_usd_estimate"] = entry["cost_usd"]
+                    entry["cost_usd"] = out["cost_usd_actual"]
             entry["status"] = "done"
             entry["elapsed_s"] = (time.time_ns() - t0) / 1e9
             return result
         except Exception as exc:  # noqa: BLE001 — record the failure, then re-raise
             entry["status"] = "error"
+            # a costed call can spend and THEN fail (a weave synthesizes, then
+            # the mix fails): record what it spent, or the retry's reuse hides it
+            entry.update(_partial_fields(partial_receipt(exc)))
             # A provider echoes the key back on a 401, and this row is
             # persistent per user — redact while the request (and so the
             # caller's key) is still in flight (braidio#58 review).

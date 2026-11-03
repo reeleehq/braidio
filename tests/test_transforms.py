@@ -2206,3 +2206,32 @@ def test_a_voice_never_woven_names_the_newest_fresh_mix(
     b = braidio.weave_project(project, script, source=source)
     monkeypatch.setenv("BRAIDIO_TTS_VOICE", "voiceC")  # no mix is voiced so
     assert project.current_episode().id == b.id
+
+
+def test_segment_with_non_binary_exact_timings_weaves(
+    project, tmp_path, monkeypatch, patched_synthesis
+):
+    """Real timings (LRCLIB's two-decimal seconds) are not binary-exact:
+    ``3.48`` used to raise ``LossyTimeConversionError`` at ingest (braidio#181).
+    The window is quantized to the graph's tick, and the extraction cuts
+    exactly the window the graph recorded."""
+    cuts = []
+
+    def _extract(asset, start, end, out, **kw):
+        cuts.append((start, end))
+        Path(out).parent.mkdir(parents=True, exist_ok=True)
+        Path(out).write_bytes(b"CLIP")
+        return Path(out)
+
+    monkeypatch.setattr(braidio, "extract_padded", _extract)
+    song = tmp_path / "lrclib.mp3"
+    song.write_bytes(b"SONG")
+    script = braidio.Script(
+        title="Real timings",
+        id_slug="real",
+        beats=[braidio.SegmentBeat(reference="a lyric line", label="line")],
+    )
+    braidio.weave_project(
+        project, script, source=_FakeSource(song, start_s=3.48, end_s=7.31)
+    )
+    assert cuts == [(3.48, 7.31)]

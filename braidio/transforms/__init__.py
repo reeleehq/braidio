@@ -286,7 +286,25 @@ def resolve_config(project, fmt=None, *, config=None, voice_id=None, delivery=No
     nodes = nw.annotations_at_tier(project.root, "weave-configs")
     recorded = dict(nodes[0].body.get("config", {})) if nodes else {}
     kept = {key: recorded[key] for key in VOICE_KEYS if key in recorded}
-    return (resolved or WeaveConfig()).with_(**kept)
+    final = (resolved or WeaveConfig()).with_(**kept)
+    if delivery is not None and _voice_of(final) != _voice_of(resolved):
+        import warnings
+
+        warnings.warn(
+            f"delivery {getattr(delivery, 'name', delivery)!r} was not applied: "
+            "this project is already voiced, and keeping its model and settings "
+            "is what stops a re-weave from re-billing every narration beat "
+            "(braidio#135). Pass config= to re-voice it on purpose.",
+            UserWarning,
+            stacklevel=3,
+        )
+    return final
+
+
+def _voice_of(config) -> dict:
+    """The :data:`VOICE_KEYS` a weave-config voices narration with."""
+    snapshot = config.to_dict() if config is not None else {}
+    return {key: snapshot.get(key) for key in VOICE_KEYS}
 
 
 def weave_project(
@@ -408,9 +426,12 @@ def weave_project(
     if sound_design is not None:
         # before any voice is paid for; nw's Transform writes the mix itself
         sound_design.require(writes_mix=False)
+    requested = format_config(fmt, config=config, voice_id=voice_id, delivery=delivery)
     config = resolve_config(
         project, fmt, config=config, voice_id=voice_id, delivery=delivery
     )
+    # a named delivery the re-bill protection did not apply (braidio#192)
+    delivery_kept = delivery is not None and _voice_of(config) != _voice_of(requested)
     if fmt is not None:
         structure = structure if structure is not None else fmt.structure
         cast = cast if cast is not None else fmt.cast
@@ -487,7 +508,9 @@ def weave_project(
             raise
     if not return_receipt:
         return woven
-    return WeaveReceipt.of(woven, results, sound_design=designed)
+    return WeaveReceipt.of(
+        woven, results, sound_design=designed, delivery_kept=delivery_kept
+    )
 
 
 @dataclass(frozen=True)
@@ -513,9 +536,21 @@ class WeaveReceipt:
     #: (``weave_project(sound_design=...)``, braidio#161); ``None`` otherwise.
     sound_design: Annotation | None = None
 
+    #: ``True`` when ``weave_project(delivery=...)`` named a delivery that was
+    #: not applied, because the project was already voiced and keeping its
+    #: model and settings is what stops a re-bill (braidio#135, #192).
+    #: ``config=`` re-voices on purpose.
+    delivery_kept: bool = False
+
     @classmethod
     def of(
-        cls, episode, results, *, failed: bool = False, sound_design=None
+        cls,
+        episode,
+        results,
+        *,
+        failed: bool = False,
+        sound_design=None,
+        delivery_kept: bool = False,
     ) -> "WeaveReceipt":
         """The receipt of ``episode`` over the stages' ``results``.
 
@@ -531,6 +566,7 @@ class WeaveReceipt:
             cache_hit_savings_usd=total.cache_hit_savings_usd,
             has_unknown_costs=total.has_unknown_costs,
             sound_design=sound_design,
+            delivery_kept=delivery_kept,
         )
 
 

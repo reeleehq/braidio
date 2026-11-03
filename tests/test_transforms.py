@@ -694,9 +694,45 @@ def test_a_new_delivery_does_not_re_bill_a_voiced_project(
     script, source = script_and_source
     braidio.weave_project(project, script, source=source, delivery=braidio.V2_TUNED)
     voiced = len(calls)
-    braidio.weave_project(project, script, source=source, delivery=braidio.V3_NARRATOR)
+    with pytest.warns(UserWarning, match="was not applied"):
+        braidio.weave_project(
+            project, script, source=source, delivery=braidio.V3_NARRATOR
+        )
     assert len(calls) == voiced
     assert set(calls) == {braidio.V2_TUNED.model_id}
+
+
+def test_a_named_delivery_kept_off_a_voiced_project_says_so(
+    project, script_and_source, patched_synthesis
+):
+    """braidio#192: the re-bill protection keeps the project's voice; a caller
+    who named another delivery is told, not silently ignored."""
+    script, source = script_and_source
+    first = braidio.weave_project(
+        project, script, source=source, delivery=braidio.V2_TUNED, return_receipt=True
+    )
+    assert not first.delivery_kept
+    with pytest.warns(UserWarning, match="was not applied"):
+        kept = braidio.weave_project(
+            project,
+            script,
+            source=source,
+            delivery=braidio.V3_NARRATOR,
+            return_receipt=True,
+        )
+    assert kept.delivery_kept  # on the receipt, which a long-running host keeps
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # the same delivery again: nothing to say
+        same = braidio.weave_project(
+            project,
+            script,
+            source=source,
+            delivery=braidio.V2_TUNED,
+            return_receipt=True,
+        )
+    assert not same.delivery_kept
 
 
 def test_an_unknown_delivery_name_is_refused_before_anything_is_written(project):

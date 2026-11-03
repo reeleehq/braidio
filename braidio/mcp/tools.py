@@ -216,8 +216,9 @@ def estimate_cost(
     """
     if format_id is not None and delivery is not None:
         raise ToolError(
-            f"estimate_cost: pass format_id or delivery, not both — format "
-            f"{format_id!r} fixes its own delivery (render_format takes none)"
+            f"estimate_cost: pass format_id or delivery, not both — no render "
+            f"tool takes both (format {format_id!r} renders with its own delivery), "
+            "and an estimate prices what a render will submit"
         )
     model_id, dialogue_model_id = _render_models(_format(format_id), delivery)
     roll = braidio.estimate_cost(

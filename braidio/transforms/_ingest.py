@@ -55,7 +55,7 @@ import uuid
 from collections import defaultdict
 from dataclasses import dataclass
 
-from lacing import Annotation, MediaRef, RationalTime, TimeInterval
+from lacing import Annotation, MediaRef
 
 from braidio.conversation import DEFAULT_CAST, ConversationCast
 from braidio.rights import (
@@ -107,6 +107,7 @@ from braidio.transforms._common import (
     node_identity,
     node_ref,
     _RATE,
+    quantized_interval,
 )
 
 #: ``PlannedBeat.kind`` → the tier its authoring node lives at.
@@ -557,7 +558,7 @@ def _segment_nodes(
         # segment-extraction Transform reads start/end from here.
         reference=MediaRef(
             asset_id=str(resolved.asset_path),
-            interval=_quantized_interval(resolved.start_s, resolved.end_s),
+            interval=quantized_interval(resolved.start_s, resolved.end_s),
         ),
         body=_json(
             AudioClipBodyV1(
@@ -573,27 +574,6 @@ def _segment_nodes(
         link=("source_node_id", TIER_SOURCE_MEDIA, beat_id),
     )
     return src, clip
-
-
-def _quantized_interval(
-    start_s: float, end_s: float, *, rate: int = _RATE
-) -> TimeInterval:
-    """The ``[start_s, end_s]`` window at ``rate``, rounded to the nearest tick.
-
-    A resolved segment's times are computed floats (LRCLIB timings are
-    two-decimal seconds), and ``TimeInterval.from_seconds`` is exact in
-    *binary*: ``3.48`` is not ``348/1000`` and raises
-    ``LossyTimeConversionError`` (braidio#181). One tick at the default rate is
-    1 ms, below anything audible, and the extraction reads its window back
-    from this interval, so the recorded and the cut window stay identical.
-
-    >>> _quantized_interval(3.48, 7.31)
-    TimeInterval(RationalTime(3480, 1000), RationalTime(7310, 1000))
-    """
-    return TimeInterval(
-        RationalTime.from_seconds_lossy(start_s, rate=rate),
-        RationalTime.from_seconds_lossy(end_s, rate=rate),
-    )
 
 
 def _json(body) -> dict:

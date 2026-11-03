@@ -238,7 +238,7 @@ def test_render_production_interrupts_on_a_voice_change(monkeypatch, tmp_path):
     from braidio.weave import duration_s
 
     monkeypatch.setattr(
-        render_mod,
+        braidio,
         "narrate",
         lambda text, out_path, **kw: tone(Path(out_path), 440, 1.0),
     )
@@ -376,7 +376,7 @@ def _starts_both_ways(monkeypatch, tmp_path, script, config, **kw):
         path = tone(Path(out), 440, 1.0)
         return (path, False) if return_cache_status else path
 
-    monkeypatch.setattr(render_mod, "narrate", fake)
+    monkeypatch.setattr(braidio, "narrate", fake)
     monkeypatch.setattr(braidio, "narrate", fake)
     _, fast = braidio.render_production(
         script,

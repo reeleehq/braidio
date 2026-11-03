@@ -423,10 +423,11 @@ def test_paced_seed_is_the_script_position_on_both_paths(
 
         return planner
 
-    def fast_narrate(text, out, **kw):  # the fast path calls render's own `narrate`
-        return tone(Path(out), 220, 1.0)
+    def one_narrate(text, out, *, return_cache_status=False, **kw):  # both paths
+        path = tone(Path(out), 220, 1.0)
+        return (path, False) if return_cache_status else path
 
-    monkeypatch.setattr(render_mod, "narrate", fast_narrate)
+    monkeypatch.setattr(braidio, "narrate", one_narrate)
     real = render_mod.plan_beat_turns
     monkeypatch.setattr(render_mod, "plan_beat_turns", spy("fast", real))
     monkeypatch.setattr(narration_mod, "plan_beat_turns", spy("graph", real))

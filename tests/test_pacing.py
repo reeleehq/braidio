@@ -161,7 +161,7 @@ def tone_narration(monkeypatch):
         calls.append({"text": text, "settings": dict(kw.get("voice_settings") or {})})
         return tone(Path(out_path), 440, 0.5)
 
-    monkeypatch.setattr(render_mod, "narrate", fake_narrate)
+    monkeypatch.setattr(braidio, "narrate", fake_narrate)
     return calls
 
 
@@ -305,11 +305,13 @@ def test_graph_narration_render_paces_like_the_fast_path(
         path = tone(Path(out_path), 440, 0.5)
         return (path, False) if return_cache_status else path
 
-    monkeypatch.setattr(braidio, "narrate", graph_narrate)
     cfg = WeaveConfig(
         segmentation_unit="sentence", min_turn=1, max_turn=1, gap_turn_s=0.2
     )
     fast = _render(script, tmp_path, config=cfg, name="fast")
+    # both paths synthesize through braidio.narrate (braidio#137): swap the
+    # recorder only once the fast path has rendered
+    monkeypatch.setattr(braidio, "narrate", graph_narrate)
 
     project = braidio.Project.init(tmp_path / "proj", title="t")
     braidio.transforms.ingest_script(project, script, source=None, config=cfg)

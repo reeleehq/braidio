@@ -41,6 +41,7 @@ from dataclasses import dataclass
 
 from lacing import Annotation
 from nw import TransformInputs
+from nw.transforms import total_cost
 
 from braidio.transforms._common import (
     ELEVENLABS_SECRET,
@@ -422,7 +423,8 @@ class WeaveReceipt:
     (:mod:`braidio.cost`; ``0.0`` for a stage that reused its render or hit the
     synthesis cache), not an ElevenLabs invoice. ``has_unknown_costs`` is
     ``True`` when some executed stage could not be priced (an unpriced rate,
-    even on a reuse, or a stage that failed), so ``cost_usd_actual`` is then a
+    even on a reuse, a stage that failed, or a non-finite total), so
+    ``cost_usd_actual`` is then a
     lower bound, never a reading of "free". ``episode`` is ``None`` only on
     the partial receipt a failed run attaches to its exception.
     """
@@ -437,14 +439,16 @@ class WeaveReceipt:
         """The receipt of ``episode`` over the stages' ``results``.
 
         ``failed``: a stage raised after these ``results``; what it spent is
-        not in them, so the total is a lower bound.
+        not in them, so the total is a lower bound. The totalling rule is nw's
+        (``nw.transforms.total_cost``), which also reads a non-finite sum as
+        unknown.
         """
-        results = list(results)
+        total = total_cost(results, failed=failed)
         return cls(
             episode=episode,
-            cost_usd_actual=sum((r.cost_usd_actual for r in results), 0.0),
-            cache_hit_savings_usd=sum((r.cache_hit_savings_usd for r in results), 0.0),
-            has_unknown_costs=failed or any(r.has_unknown_costs for r in results),
+            cost_usd_actual=total.cost_usd_actual,
+            cache_hit_savings_usd=total.cache_hit_savings_usd,
+            has_unknown_costs=total.has_unknown_costs,
         )
 
 

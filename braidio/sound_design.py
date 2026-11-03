@@ -76,8 +76,10 @@ class SoundDesign:
     retrieval only, with no paid generation fallback (offline and CI renders).
     The licence intent is not a knob here: it follows the render's rights
     profile (:meth:`commercial_ok`). ``designer`` is the strategy that does the
-    work, called like :func:`foley.score` (default: foley itself); it is not
-    part of the record.
+    work, called like :func:`foley.score` (default: foley itself), and
+    ``writer`` the one that writes its mix, ``(weave, path) -> None`` (default:
+    soundfile then ffmpeg to MP3); neither is part of the record, and both are
+    fast-path only (the graph runs nw's foley Transform, which records them).
     """
 
     max_events: int = DFLT_MAX_EVENTS
@@ -85,6 +87,9 @@ class SoundDesign:
     max_usd: float | None = None
     allow_generate: bool = True
     designer: Designer | None = field(default=None, compare=False, repr=False)
+    writer: Callable[[Any, Path], None] | None = field(
+        default=None, compare=False, repr=False
+    )
 
     @staticmethod
     def commercial_ok(profile: Profile) -> bool:
@@ -105,6 +110,54 @@ class SoundDesign:
             "allow_generate": self.allow_generate,
         }
 
+    def missing_dependencies(self, *, writes_mix: bool = True) -> list[str]:
+        """What this design needs and this environment lacks, by import name:
+        ``foley`` unless a ``designer`` replaces it, and, when braidio writes
+        the mix itself (``writes_mix``, the fast path) with no ``writer``,
+        ``soundfile``. Checked **before** a render spends anything, so a
+        missing extra fails at the door rather than after every voice is billed.
+        """
+        needed = [] if self.designer is not None else ["foley"]
+        if writes_mix and self.writer is None:
+            needed.append("soundfile")
+        return [m for m in needed if not _importable(m)]
+
+    def require(self, *, writes_mix: bool = True) -> None:
+        """Raise ``ModuleNotFoundError`` naming the extra when
+        :meth:`missing_dependencies` is not empty."""
+        missing = self.missing_dependencies(writes_mix=writes_mix)
+        if missing:
+            raise ModuleNotFoundError(
+                f"Sound design needs {', '.join(missing)}: pip install "
+                f"'braidio[{SOUND_EXTRA}]'.",
+                name=missing[0],
+            )
+
+    def to_config(self, profile: Profile) -> dict:
+        """The graph's ``sound-design-config/v1`` body (nw's schema) for a
+        production rendered under ``profile``: these knobs, switched on, with
+        the licence intent the profile implies.
+
+        >>> SoundDesign(max_events=2).to_config(Profile.PERSONAL)["commercial_ok"]
+        False
+        """
+        return {
+            "enabled": True,
+            **self.to_dict(),
+            "commercial_ok": self.commercial_ok(profile),
+        }
+
+
+def _importable(name: str) -> bool:
+    """Whether ``import name`` would find a module (a module already imported,
+    or one stubbed into ``sys.modules``, counts; ``None`` there means blocked)."""
+    import importlib.util
+    import sys
+
+    if name in sys.modules:
+        return sys.modules[name] is not None
+    return importlib.util.find_spec(name) is not None
+
 
 @dataclass(frozen=True)
 class TalkSpan:
@@ -114,6 +167,35 @@ class TalkSpan:
     start_s: float
     duration_s: float
     text: str
+
+
+def spoken_of(beat) -> str:
+    """What a script beat says aloud: a narration's text, a dialogue's turns,
+    ``""`` for anything else (a clip's words are the source's; a scene break
+    says nothing).
+
+    >>> from braidio.script import Dialogue, Narration
+    >>> spoken_of(Narration("Hi.")), spoken_of(Dialogue(turns=[("a", "Yes."), ("b", "No.")]))
+    ('Hi.', 'Yes. No.')
+    """
+    from braidio.script import Dialogue, Narration
+
+    if isinstance(beat, Narration):
+        return beat.text
+    if isinstance(beat, Dialogue):
+        return " ".join(text for _role, text in beat.turns)
+    return ""
+
+
+def talk_spans(beats, texts: Iterable[str]) -> list[TalkSpan]:
+    """The spoken :class:`TalkSpan` of a timeline: its beat spans (anything with
+    ``start`` and ``duration``) zipped with what each says, silent ones left out.
+    """
+    return [
+        TalkSpan(start_s=beat.start, duration_s=beat.duration, text=text)
+        for beat, text in zip(beats, texts)
+        if text
+    ]
 
 
 def spoken_text(text: str) -> str:
@@ -259,14 +341,13 @@ def score_mix(
     design: SoundDesign,
     profile: Profile,
     out_path: str | Path,
-    save: Callable[[Any, Path], None] | None = None,
 ) -> ScoredMix:
     """Sound-design the mix at ``audio`` and write the result to ``out_path``.
 
     ``spans`` is the talk on the mix's timeline (:func:`talk_segments`). The
     design's ``designer`` (default :func:`foley.score`) is called with foley's
-    keywords; ``save`` writes its ``weave`` result (default: an MP3 through
-    ffmpeg). ``out_path`` may be ``audio`` itself: the mix is fully
+    keywords; its ``writer`` writes the ``weave`` result (default: an MP3
+    through ffmpeg). ``out_path`` may be ``audio`` itself: the mix is fully
     read before anything is written.
 
     Raises ``ValueError`` when there is no talk to design for, rather than
@@ -292,7 +373,7 @@ def score_mix(
     if woven is None:
         raise RuntimeError(f"sound design: the designer returned no mix for {audio}.")
     out = Path(out_path)
-    (save or _save_mix)(woven, out)
+    (design.writer or _save_mix)(woven, out)
     return ScoredMix(
         path=out,
         timeline=scored.timeline.to_dict(),

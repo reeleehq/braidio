@@ -50,12 +50,14 @@ class _Designer:
         return SimpleNamespace(timeline=timeline, weave=weave)
 
 
+def _mark(woven, dst):
+    """A mix writer that marks the file it replaces (no soundfile needed)."""
+    Path(dst).write_bytes(b"DESIGNED")
+
+
 @pytest.fixture
-def designer(monkeypatch):
-    """The fake designer, and a mix writer that marks the file it replaces."""
-    monkeypatch.setattr(
-        sd, "_save_mix", lambda woven, dst: Path(dst).write_bytes(b"DESIGNED")
-    )
+def designer():
+    """The fake designer."""
     return _Designer()
 
 
@@ -125,7 +127,9 @@ def test_off_never_calls_the_designer(tmp_path, tone_voices, designer):
 def test_on_designs_only_the_spoken_beats_at_their_timeline_starts(
     tmp_path, tone_voices, designer
 ):
-    out, tl = _render(tmp_path, sound_design=SoundDesign(designer=designer))
+    out, tl = _render(
+        tmp_path, sound_design=SoundDesign(designer=designer, writer=_mark)
+    )
     ((segments, kwargs),) = designer.calls
     assert segments == [
         "The door creaked.",
@@ -154,7 +158,7 @@ def test_the_licence_intent_follows_the_profile(
 ):
     _render(
         tmp_path,
-        sound_design=SoundDesign(designer=designer),
+        sound_design=SoundDesign(designer=designer, writer=_mark),
         profile=braidio.Profile(profile),
     )
     ((_, kwargs),) = designer.calls
@@ -163,7 +167,9 @@ def test_the_licence_intent_follows_the_profile(
 
 @needs_ffmpeg
 def test_the_credits_ship_with_the_episode(tmp_path, tone_voices, designer):
-    design = SoundDesign(designer=designer, allow_generate=False, max_usd=0.5)
+    design = SoundDesign(
+        designer=designer, writer=_mark, allow_generate=False, max_usd=0.5
+    )
     out, tl = _render(tmp_path, sound_design=design)
     sidecar = json.loads(out.with_suffix(SOUND_SIDECAR_SUFFIX).read_text())
     assert sidecar["credits"]["sounds"][0]["license"] == "CC0"
@@ -196,7 +202,7 @@ def test_a_production_with_nothing_spoken_is_refused(tmp_path, designer):
         sd.score_mix(
             tmp_path / "x.mp3",
             [TalkSpan(0.0, 1.0, "[laughs]")],
-            design=SoundDesign(designer=designer),
+            design=SoundDesign(designer=designer, writer=_mark),
             profile=braidio.Profile.PUBLISHED,
             out_path=tmp_path / "y.mp3",
         )
@@ -238,7 +244,7 @@ def test_the_record_is_plain_json_even_with_numpy_scalars(tmp_path, designer):
     scored = sd.score_mix(
         tmp_path / "in.mp3",
         [TalkSpan(0.0, 1.0, "Hello.")],
-        design=SoundDesign(designer=_numpy_designer),
+        design=SoundDesign(designer=_numpy_designer, writer=_mark),
         profile=braidio.Profile.PUBLISHED,
         out_path=tmp_path / "out.mp3",
     )
@@ -246,3 +252,23 @@ def test_the_record_is_plain_json_even_with_numpy_scalars(tmp_path, designer):
     assert record["credits"] == {"gain": 0.25}
     assert (record["cost_usd"], record["cost_basis"]) == (None, "unknown")
     json.dumps(record)
+
+
+def test_a_missing_extra_is_refused_before_anything_is_spent(
+    tmp_path, tone_voices, monkeypatch
+):
+    """foley absent: the render refuses at the door, not after the voices."""
+    import sys
+
+    import braidio.render as render_mod
+
+    spoken = []
+    monkeypatch.setattr(
+        braidio, "narrate", lambda text, out, **kw: spoken.append(text) or out
+    )
+    monkeypatch.setitem(sys.modules, "foley", None)
+    with pytest.raises(ModuleNotFoundError, match=r"braidio\[sound\]"):
+        _render(tmp_path, sound_design=SoundDesign())
+    assert spoken == []
+    assert SoundDesign(designer=_Designer(), writer=_mark).missing_dependencies() == []
+    assert render_mod  # the fast path module stays importable without foley

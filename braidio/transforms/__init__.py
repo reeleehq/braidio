@@ -66,6 +66,8 @@ from braidio.transforms._common import (
     TIER_VIDEO_PANEL,
     TIER_VIDEO_CUT,
     TIER_LABEL_TRACK,
+    TIER_SOUND_DESIGN,
+    TIER_SOUND_DESIGN_CONFIG,
     graph_index,
     node_ref,
 )
@@ -80,6 +82,11 @@ from braidio.transforms import (  # noqa: F401
     _episode,
     _video_panels,
     _video_cut,
+    _sound,
+)
+from braidio.transforms._sound import (
+    NAME as SOUND_DESIGN_TRANSFORM,
+    sound_design_of,
 )
 from braidio.transforms._episode import (
     MemberSpan,
@@ -134,6 +141,8 @@ VIDEO_CUT_FINISH_TRANSFORM = _video_cut.FINISH_NAME
 video_cut_reuses_existing = _video_cut.reuses_existing_cut
 
 __all__ = [
+    "SOUND_DESIGN_TRANSFORM",
+    "sound_design_of",
     "format_config",
     "resolve_config",
     "ingest_script",
@@ -190,6 +199,8 @@ __all__ = [
     "TIER_VIDEO_PANEL",
     "TIER_VIDEO_CUT",
     "TIER_LABEL_TRACK",
+    "TIER_SOUND_DESIGN",
+    "TIER_SOUND_DESIGN_CONFIG",
     "VOICE_ASSIGNMENT_TRANSFORM",
     "NARRATION_RENDER_TRANSFORM",
     "DIALOGUE_RENDER_TRANSFORM",
@@ -292,6 +303,7 @@ def weave_project(
     cast=None,
     voice_id=None,
     delivery=None,
+    sound_design=None,
     api_key=None,
     return_receipt: bool = False,
 ):
@@ -360,6 +372,16 @@ def weave_project(
     the previous episode stays in the graph as history, stale; the returned
     one is current (thorwhalen/braidio#51).
 
+    ``sound_design`` (a :class:`~braidio.sound_design.SoundDesign`) asks foley
+    to design sound effects over the finished episode (braidio#161), through
+    nw's ``narration_to_sound_design.foley`` Transform: the episode itself is
+    unchanged, and the design is its own ``sound-design/v1`` node derived from
+    it (the mix in falaw's content store, its credits and timeline in the
+    body), on the receipt as ``sound_design`` and read back with
+    :func:`sound_design_of`. Its spend is unknown, so a receipt that ran it
+    says ``has_unknown_costs``. ``None`` writes nothing, and a later weave
+    without it removes the design's config, so its design reads stale.
+
     ``api_key`` is the caller's ElevenLabs key, and means exactly what it
     means on :func:`braidio.render.render_production`: ``None`` (default)
     resolves from the process environment. It reaches the two synthesis
@@ -383,6 +405,9 @@ def weave_project(
     """
     import nw
 
+    if sound_design is not None:
+        # before any voice is paid for; nw's Transform writes the mix itself
+        sound_design.require(writes_mix=False)
     config = resolve_config(
         project, fmt, config=config, voice_id=voice_id, delivery=delivery
     )
@@ -400,6 +425,7 @@ def weave_project(
         profile=profile,
         rights=rights,
         cast=cast,
+        sound_design=sound_design,
     )
     voice = nw.get_transform(VOICE_ASSIGNMENT_TRANSFORM)
     narration = nw.get_transform(NARRATION_RENDER_TRANSFORM)
@@ -413,13 +439,18 @@ def weave_project(
 
     results = []
 
-    def run(transform, *primary, secrets=None):
-        results.append(_execute(transform, project, *primary, secrets=secrets))
+    def run(transform, *primary, secrets=None, context=None):
+        results.append(
+            _execute(transform, project, *primary, secrets=secrets, context=context)
+        )
+        if not results[-1].annotations:
+            raise RuntimeError(f"{transform.name} produced nothing to weave on")
         out = results[-1].annotations[0]
         note_output(project, out)  # a node the held walk did not know: walk again
         return out
 
     render_by_authoring_id = {}
+    woven = None
     # one freshness walk per write, not ~two per beat (braidio#171): nw's pass
     # for the reuse lookups (dropped by nw's own writers), braidio's for the
     # "current node" readers (fresh_ids, dropped by note_output)
@@ -441,10 +472,22 @@ def weave_project(
                 for kind, auth in ing.ordered
             )
             woven = run(episode, *members)
+            designed = (
+                None
+                if ing.sound_design is None
+                else run(
+                    nw.get_transform(SOUND_DESIGN_TRANSFORM),
+                    woven,
+                    context={ing.sound_design.body_schema_uri: (ing.sound_design,)},
+                )
+            )
         except Exception as exc:  # annotated and re-raised, never swallowed
-            exc.weave_receipt = WeaveReceipt.of(None, results, failed=True)
+            # the episode, when the failure came after it (the sound design)
+            exc.weave_receipt = WeaveReceipt.of(woven, results, failed=True)
             raise
-    return WeaveReceipt.of(woven, results) if return_receipt else woven
+    if not return_receipt:
+        return woven
+    return WeaveReceipt.of(woven, results, sound_design=designed)
 
 
 @dataclass(frozen=True)
@@ -466,9 +509,14 @@ class WeaveReceipt:
     cost_usd_actual: float = 0.0
     cache_hit_savings_usd: float = 0.0
     has_unknown_costs: bool = False
+    #: The episode's ``sound-design/v1`` node when the run designed one
+    #: (``weave_project(sound_design=...)``, braidio#161); ``None`` otherwise.
+    sound_design: Annotation | None = None
 
     @classmethod
-    def of(cls, episode, results, *, failed: bool = False) -> "WeaveReceipt":
+    def of(
+        cls, episode, results, *, failed: bool = False, sound_design=None
+    ) -> "WeaveReceipt":
         """The receipt of ``episode`` over the stages' ``results``.
 
         ``failed``: a stage raised after these ``results``; what it spent is
@@ -482,16 +530,19 @@ class WeaveReceipt:
             cost_usd_actual=total.cost_usd_actual,
             cache_hit_savings_usd=total.cache_hit_savings_usd,
             has_unknown_costs=total.has_unknown_costs,
+            sound_design=sound_design,
         )
 
 
-def _execute(transform, project, *primary, secrets=None):
+def _execute(transform, project, *primary, secrets=None, context=None):
     """``plan`` then ``execute`` one transform over ``primary``; its ``TransformResult``.
 
     ``secrets`` is offered only when there is one — the Transform's ``execute``
     then declares the keyword or it is a caller bug worth a ``TypeError``.
+    ``context`` is for a Transform that reads its context from its inputs
+    rather than from the graph (nw's sound design reads its config there).
     """
-    inputs = TransformInputs(primary=tuple(primary))
+    inputs = TransformInputs(primary=tuple(primary), context=context or {})
     plan, skeleton = transform.plan(project, inputs)
     kwargs = {} if secrets is None else {"secrets": secrets}
     return transform.execute(project, plan, skeleton, **kwargs)

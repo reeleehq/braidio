@@ -25,6 +25,7 @@ from urllib.parse import urlparse
 from urllib.request import url2pathname
 
 from lacing import Annotation, Artifact, NodeRef, RationalTime, TimeInterval
+from nw.bodies.sound_design import SOUND_DESIGN_CONFIG_TIER, SOUND_DESIGN_TIER
 
 # Tier names (must match braidio.bodies._tiers).
 TIER_WEAVE_CONFIG = "weave-configs"
@@ -46,6 +47,10 @@ TIER_STILL = "stills"
 TIER_VIDEO_PANEL = "video-panels"
 TIER_VIDEO_CUT = "video-cuts"
 TIER_LABEL_TRACK = "label-tracks"
+#: Sound design (braidio#161) uses nw's own tiers and schemas: the singleton
+#: switch + knobs, and the designed mix nw's foley Transform produces.
+TIER_SOUND_DESIGN_CONFIG = SOUND_DESIGN_CONFIG_TIER
+TIER_SOUND_DESIGN = SOUND_DESIGN_TIER
 
 #: Rate for the (incidental) NodeRef intervals on non-media nodes.
 _RATE = 1000
@@ -113,6 +118,7 @@ SINGLETON_TIERS = frozenset(
         TIER_PRODUCTION_STRUCTURE,
         TIER_RENDER_PROFILE,
         TIER_DIALOGUE_CAST,
+        TIER_SOUND_DESIGN_CONFIG,
     }
 )
 
@@ -128,6 +134,7 @@ AUTHORING_TIERS = (
     TIER_PRODUCTION_STRUCTURE,
     TIER_RENDER_PROFILE,
     TIER_DIALOGUE_CAST,
+    TIER_SOUND_DESIGN_CONFIG,
     TIER_NARRATIVE_BEAT,
     TIER_DIALOGUE_BEAT,
     TIER_SCENE_BREAK,

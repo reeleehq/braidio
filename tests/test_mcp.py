@@ -1507,7 +1507,9 @@ def test_weave_project_reports_sting_applied_in_result(monkeypatch):
             "body": {"url": "file:///x.mp3"},
         },
     )()
-    monkeypatch.setattr(braidio, "weave_project", lambda proj, scr, **kw: braidio.WeaveReceipt(episode))
+    monkeypatch.setattr(
+        braidio, "weave_project", lambda proj, scr, **kw: braidio.WeaveReceipt(episode)
+    )
     server = _local_server(ledger={})
     _call(server, "create_project", {"project_id": "st2", "title": "ST2"})
 
@@ -2065,7 +2067,11 @@ def test_weave_project_is_priced_at_the_weave_config_s_model(
     server = _local_server(ledger={})
     _call(server, "create_project", {"project_id": "demo", "title": "Demo"})
     with monkeypatch.context() as m:
-        m.setattr(braidio, "weave_project", lambda proj, scr, **kw: braidio.WeaveReceipt(episode))
+        m.setattr(
+            braidio,
+            "weave_project",
+            lambda proj, scr, **kw: braidio.WeaveReceipt(episode),
+        )
         r = _call(server, "weave_project", {"project_id": "demo", "script": _THOUSAND})
     assert braidio.WeaveConfig().model_id == _V2
     assert r.structured_content["cost_usd"] == pytest.approx(0.11)
@@ -2090,7 +2096,9 @@ def test_weave_project_is_priced_at_the_weave_config_s_model(
         proj, script_from_json(_THOUSAND), config=braidio.WeaveConfig(model_id=_V3)
     )
 
-    monkeypatch.setattr(braidio, "weave_project", lambda proj, scr, **kw: braidio.WeaveReceipt(episode))
+    monkeypatch.setattr(
+        braidio, "weave_project", lambda proj, scr, **kw: braidio.WeaveReceipt(episode)
+    )
     r = _call(server, "weave_project", {"project_id": "demo", "script": _THOUSAND})
     assert r.structured_content["cost_usd"] == pytest.approx(0.33)
 
@@ -2212,7 +2220,9 @@ def test_estimate_cost_equals_a_first_weave_s_cost(
         (),
         {"id": "9a23da78-0a3e-4acf-a557-48bd6e519038", "body": {"url": "file:///x"}},
     )()
-    monkeypatch.setattr(braidio, "weave_project", lambda proj, scr, **kw: braidio.WeaveReceipt(episode))
+    monkeypatch.setattr(
+        braidio, "weave_project", lambda proj, scr, **kw: braidio.WeaveReceipt(episode)
+    )
     server = _local_server(ledger={})
     _call(server, "create_project", {"project_id": "demo", "title": "Demo"})
     for chosen in [{}, *({"format_id": f} for f in braidio.FORMATS)]:
@@ -2259,7 +2269,9 @@ def test_weave_project_reports_actual_spend_and_a_rerun_as_savings(monkeypatch):
     assert first["cost_usd_actual"] == pytest.approx(0.30)
     assert again["cost_usd_actual"] == 0.0
     assert again["cache_hit_savings_usd"] == pytest.approx(0.30)
-    recorded = [e["cost_usd_actual"] for e in ledger.values() if e["tool"] == "weave_project"]
+    recorded = [
+        e["cost_usd_actual"] for e in ledger.values() if e["tool"] == "weave_project"
+    ]
     assert recorded == [pytest.approx(0.30), 0.0]
 
 

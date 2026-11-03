@@ -25,6 +25,8 @@ Design (all **fail-closed**):
 
 from __future__ import annotations
 
+import math
+
 import itertools
 import time
 from collections.abc import MutableMapping
@@ -106,6 +108,12 @@ def partial_receipt(exc: BaseException):
 
     The host sees the tool's exception wrapped (fastmcp raises a ``ToolError``
     from it), so the chain of causes is walked; ``None`` when no link carries one.
+
+    This is the local/stdio path only. The deployed connectors meter with
+    ``enlace_metering``, whose ``partial_spend`` reads the same
+    ``exc.weave_receipt`` (i2mint/enlace_metering#11) and is the rule of
+    record; :func:`_partial_fields` mirrors its bounds (unknown or non-finite
+    is a lower bound, never free).
     """
     seen: set[int] = set()
     while exc is not None and id(exc) not in seen:
@@ -115,6 +123,36 @@ def partial_receipt(exc: BaseException):
             return receipt
         exc = exc.__cause__ or exc.__context__
     return None
+
+
+def _partial_fields(receipt) -> dict:
+    """The ledger fields for what a failed weave spent: none, or its cost.
+
+    A cost that is not a finite, non-negative number records ``0.0`` flagged as
+    a lower bound, as does a receipt that says its costs are unknown.
+
+    >>> from types import SimpleNamespace as R
+    >>> _partial_fields(R(cost_usd_actual=0.4, has_unknown_costs=False))
+    {'cost_usd_actual': 0.4, 'cost_is_lower_bound': False}
+    >>> _partial_fields(R(cost_usd_actual=float("nan"), has_unknown_costs=False))
+    {'cost_usd_actual': 0.0, 'cost_is_lower_bound': True}
+    >>> _partial_fields(None)
+    {}
+    """
+    if receipt is None:
+        return {}
+    cost = getattr(receipt, "cost_usd_actual", None)
+    unknown = getattr(receipt, "has_unknown_costs", False) is True
+    usable = (
+        isinstance(cost, (int, float))
+        and not isinstance(cost, bool)
+        and math.isfinite(cost)
+        and cost >= 0
+    )
+    return {
+        "cost_usd_actual": float(cost) if usable else 0.0,
+        "cost_is_lower_bound": unknown or not usable,
+    }
 
 
 class MeteringMiddleware(Middleware):
@@ -212,10 +250,7 @@ class MeteringMiddleware(Middleware):
             entry["status"] = "error"
             # a costed call can spend and THEN fail (a weave synthesizes, then
             # the mix fails): record what it spent, or the retry's reuse hides it
-            partial = partial_receipt(exc)
-            if partial is not None:
-                entry["cost_usd_actual"] = partial.cost_usd_actual
-                entry["cost_is_lower_bound"] = partial.has_unknown_costs
+            entry.update(_partial_fields(partial_receipt(exc)))
             # A provider echoes the key back on a 401, and this row is
             # persistent per user — redact while the request (and so the
             # caller's key) is still in flight (braidio#58 review).

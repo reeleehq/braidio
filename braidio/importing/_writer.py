@@ -471,22 +471,24 @@ def _node_ref(tier: str, ann_id: uuid.UUID):
     """
     from lacing import NodeRef, TimeInterval
 
+    from braidio.transforms._common import _RATE
+
     return NodeRef(
         scene_path=f"{tier}/{ann_id}",
-        interval=TimeInterval.from_seconds(0.0, 1.0, rate=1000),
+        interval=TimeInterval.from_seconds(0.0, 1.0, rate=_RATE),
     )
 
 
 def _media_ref(asset_id: str, start: float, end: float):
-    from lacing import MediaRef, RationalTime, TimeInterval
+    """A ``MediaRef`` over ``[start, end]`` seconds, rounded to the graph's tick
+    by lacing's one rule (braidio#184)."""
+    from lacing import MediaRef, TimeInterval
 
-    rate = 1000
+    from braidio.transforms._common import _RATE
+
     return MediaRef(
         asset_id=str(asset_id),
-        interval=TimeInterval(
-            RationalTime(int(round(start * rate)), rate),
-            RationalTime(int(round(end * rate)), rate),
-        ),
+        interval=TimeInterval.from_seconds_lossy(start, end, rate=_RATE),
     )
 
 

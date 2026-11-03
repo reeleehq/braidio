@@ -2361,3 +2361,20 @@ def test_segment_with_non_binary_exact_timings_weaves(
         project, script, source=_FakeSource(song, start_s=3.4804, end_s=7.3096)
     )
     assert cuts == [(3.48, 7.31)]
+
+
+@pytest.mark.parametrize("x", [0.0005, 0.0025, 0.0055, 3.48, 22.8866])
+def test_every_float_window_rounds_by_one_rule(x):
+    """braidio#184/#189: the ingest's clip window, the video panels' spans and
+    the importer's media refs round a float second to the tick the same way
+    (lacing's ``TimeInterval.from_seconds_lossy``); two rules disagreed on
+    ties such as 0.0005 before."""
+    from lacing import TimeInterval
+
+    from braidio.importing._writer import _media_ref
+    from braidio.transforms._common import _RATE
+    from braidio.transforms._video_panels import span_interval
+
+    expected = TimeInterval.from_seconds_lossy(x, x + 1, rate=_RATE)
+    assert span_interval(x, x + 1) == expected
+    assert _media_ref("a", x, x + 1).interval == expected

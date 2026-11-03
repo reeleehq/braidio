@@ -55,7 +55,7 @@ import uuid
 from collections import defaultdict
 from dataclasses import dataclass
 
-from lacing import Annotation, MediaRef
+from lacing import Annotation, MediaRef, TimeInterval
 
 from braidio.conversation import DEFAULT_CAST, ConversationCast
 from braidio.rights import (
@@ -109,7 +109,6 @@ from braidio.transforms._common import (
     node_identity,
     node_ref,
     _RATE,
-    quantized_interval,
 )
 
 #: ``PlannedBeat.kind`` → the tier its authoring node lives at.
@@ -598,7 +597,11 @@ def _segment_nodes(
         # segment-extraction Transform reads start/end from here.
         reference=MediaRef(
             asset_id=str(resolved.asset_path),
-            interval=quantized_interval(resolved.start_s, resolved.end_s),
+            # a computed float window (LRCLIB's 3.48 s is not binary-exact),
+            # rounded to the tick by lacing's one rule (braidio#181, #189)
+            interval=TimeInterval.from_seconds_lossy(
+                resolved.start_s, resolved.end_s, rate=_RATE
+            ),
         ),
         body=_json(
             AudioClipBodyV1(

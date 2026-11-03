@@ -83,7 +83,7 @@ from dataclasses import dataclass
 from typing import Mapping, Optional
 
 from falaw import Plan
-from lacing import Annotation, MediaRef, RationalTime, TimeInterval
+from lacing import Annotation, MediaRef, TimeInterval
 from nw import BaseTransform, TransformInputs, TransformResult, register_transform
 from nw.transforms._provenance import derive_provenance
 
@@ -224,16 +224,15 @@ def span_interval(start_s: float, end_s: float) -> TimeInterval:
     lacing's time is rational and refuses a lossy float; a span edge from
     ``plan_spans`` is a float (a beat divided in three lands on 22.88…), so it
     is rounded to the tick here, once, and consecutive spans stay gapless
-    because they round the same shared edge the same way.
+    because they round the same shared edge the same way. The rounding is
+    lacing's (``TimeInterval.from_seconds_lossy``), the one rule every braidio
+    float window uses (braidio#184, #189).
 
     >>> iv = span_interval(0.0, 22.8866)
     >>> (iv.start.value, iv.end.value, iv.end.rate)
     (0, 22887, 1000)
     """
-    return TimeInterval(
-        RationalTime(int(round(start_s * _RATE)), _RATE),
-        RationalTime(int(round(end_s * _RATE)), _RATE),
-    )
+    return TimeInterval.from_seconds_lossy(start_s, end_s, rate=_RATE)
 
 
 def mint_seed(beat_id: str | None, k: int) -> int:

@@ -73,7 +73,10 @@ docs = [
 # The nw-app layer (graph body schemas, render provenance, partial re-render, an
 # nw.Project). `import braidio` never needs these — the layer loads only when
 # present (braidio.HAS_GRAPH / HAS_NW).
-graph = ["lacing"]
+# lacing>=0.0.89: `TimeInterval.from_seconds_lossy` (lacing#145), the one rule
+# braidio rounds every computed float window to the graph's tick with
+# (braidio#181, #184, #189); checked on the published wheel (0.0.88 lacks it).
+graph = ["lacing>=0.0.89"]
 # The markdown reader (`braidio.script_from_markdown`): a markdown document ->
 # narration beats. Imported only when a document is converted.
 markdown = ["markdown-it-py", "mdit-py-plugins"]
@@ -155,7 +158,7 @@ sound = ["foley[audio]>=0.0.127"]
 # published wheel) and `nw.freshness_pass` (nw#209, 0.0.124): `fresh_equivalent`
 # delegates to the first, with braidio's per-node references left out of the
 # identity, and `weave_project` opens the second (braidio#180).
-nw-app = ["lacing", "nw>=0.0.125", "falaw[fal]"]
+nw-app = ["lacing>=0.0.89", "nw>=0.0.125", "falaw[fal]"]
 # The MCP server (`braidio.mcp`): a Claude.ai connector's tool surface + usage
 # metering. `fastmcp` + `py2mcp` build and serve it; the nw-app powers the project
 # and weave tools. The usage-ledger store is dependency-injected by the connector
@@ -168,7 +171,7 @@ nw-app = ["lacing", "nw>=0.0.125", "falaw[fal]"]
 #   asset-ref declarations, nw#55; tolerant trace readers, nw#184; total_cost,
 #   nw#189; fresh_equivalents(reference_of=) + freshness_pass, nw#203/#209/#218;
 #   the sound-design Transform, nw#190/#203).
-mcp = ["fastmcp", "py2mcp>=0.1.9", "pypdf", "dol>=0.3.57", "lacing", "nw>=0.0.125", "falaw[fal]", "yb[download]>=0.1.24", "graze>=0.1.47", "markdown-it-py", "mdit-py-plugins"]
+mcp = ["fastmcp", "py2mcp>=0.1.9", "pypdf", "dol>=0.3.57", "lacing>=0.0.89", "nw>=0.0.125", "falaw[fal]", "yb[download]>=0.1.24", "graze>=0.1.47", "markdown-it-py", "mdit-py-plugins"]
 # The importer (`braidio.importing`): a finished commentary production ->
 # a real project graph. Needs the nw-app layer (it writes annotations) plus
 # `illustration` for licence normalization.
@@ -185,7 +188,7 @@ mcp = ["fastmcp", "py2mcp>=0.1.9", "pypdf", "dol>=0.3.57", "lacing", "nw>=0.0.12
 # changelog — the same wads caveat noted for nw and burns above (the version
 # bump lands in a commit AFTER the feature, so the git log reads one release
 # early).
-importing = ["illustration>=0.0.11", "lacing", "nw>=0.0.125", "falaw"]
+importing = ["illustration>=0.0.11", "lacing>=0.0.89", "nw>=0.0.125", "falaw"]
 
 # Packaging. The two shipped skills live at braidio/data/skills/<name>/ with
 # relative symlinks from .claude/skills/. hatchling walks the tree with

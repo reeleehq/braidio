@@ -101,6 +101,22 @@ class UsageLedger:
         return key
 
 
+def partial_receipt(exc: BaseException):
+    """The ``weave_receipt`` a failed weave carries, through any wrapping.
+
+    The host sees the tool's exception wrapped (fastmcp raises a ``ToolError``
+    from it), so the chain of causes is walked; ``None`` when no link carries one.
+    """
+    seen: set[int] = set()
+    while exc is not None and id(exc) not in seen:
+        seen.add(id(exc))
+        receipt = getattr(exc, "weave_receipt", None)
+        if receipt is not None:
+            return receipt
+        exc = exc.__cause__ or exc.__context__
+    return None
+
+
 class MeteringMiddleware(Middleware):
     """FastMCP middleware: resolve + authorize the caller, then meter every call.
 
@@ -182,6 +198,7 @@ class MeteringMiddleware(Middleware):
             if isinstance(out, dict):
                 for k in (
                     "cost_usd",
+                    "cost_usd_actual",
                     "cache_hit_savings_usd",
                     "characters",
                     "cost_basis",
@@ -193,6 +210,12 @@ class MeteringMiddleware(Middleware):
             return result
         except Exception as exc:  # noqa: BLE001 — record the failure, then re-raise
             entry["status"] = "error"
+            # a costed call can spend and THEN fail (a weave synthesizes, then
+            # the mix fails): record what it spent, or the retry's reuse hides it
+            partial = partial_receipt(exc)
+            if partial is not None:
+                entry["cost_usd_actual"] = partial.cost_usd_actual
+                entry["cost_is_lower_bound"] = partial.has_unknown_costs
             # A provider echoes the key back on a 401, and this row is
             # persistent per user — redact while the request (and so the
             # caller's key) is still in flight (braidio#58 review).

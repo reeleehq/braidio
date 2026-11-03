@@ -731,6 +731,33 @@ def _render_cost(scr, profile: str, *, model_id: str, dialogue_model_id: str) ->
     }
 
 
+def _weave_spend(receipt) -> dict:
+    """What a weave actually synthesized, for the spend ledger (braidio#159).
+
+    ``cost_usd`` stays the estimate of every beat the script renders;
+    ``cost_usd_actual`` is what *this* run synthesized (``0.0`` on a re-run
+    that reused every render), which a metering ledger reads first. When some
+    stage could not be priced it is ``None``, so the ledger falls back to the
+    estimate rather than recording an unknown spend as free. A run that fails
+    part-way reports nothing here: its partial spend is on the exception
+    (``exc.weave_receipt``), for the metering layer's error path.
+    """
+    return {
+        "cost_usd_actual": (
+            None if receipt.has_unknown_costs else round(receipt.cost_usd_actual, 6)
+        ),
+        "cache_hit_savings_usd": round(receipt.cache_hit_savings_usd, 6),
+        "cost_note": _COST_NOTE,
+    }
+
+
+#: What the two spend figures mean, for whoever reads the result.
+_COST_NOTE = (
+    "cost_usd estimates synthesizing the whole script; cost_usd_actual is what "
+    "this run synthesized (0 when every take was reused)"
+)
+
+
 def _delivery(name: str):
     """Resolve a delivery/register preset name to its :class:`braidio.Delivery`."""
     if name not in braidio.DELIVERIES:
@@ -1023,16 +1050,23 @@ def weave_project(
         tool="weave_project",
     )
     proj = ws.open_project(project_id)
-    episode = braidio.weave_project(
-        proj,
-        scr,
-        source=src,
-        fmt=fmt,
-        structure=structure,
-        bed=bed,
-        profile=_profile(profile),
-        api_key=caller_elevenlabs_key(),
-    )
+    try:
+        receipt = braidio.weave_project(
+            proj,
+            scr,
+            source=src,
+            fmt=fmt,
+            structure=structure,
+            bed=bed,
+            profile=_profile(profile),
+            api_key=caller_elevenlabs_key(),
+            return_receipt=True,
+        )
+    except Exception:
+        # a failed weave's partial spend rides on the exception
+        # (``exc.weave_receipt``) for the metering layer to record
+        raise
+    episode = receipt.episode
     body = episode.body
     return {
         "episode": to_json(body),
@@ -1050,6 +1084,7 @@ def weave_project(
             # the default cast — as the graph's dialogue-cast node resolves it
             dialogue_model_id=_render_models(fmt)[1],
         ),
+        **_weave_spend(receipt),
         "sting_applied": sting_applied,
         "sting_ignored_reason": sting_ignored_reason,
     }

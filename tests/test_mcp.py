@@ -760,7 +760,11 @@ def test_weave_project_records_cost(monkeypatch):
             },
         },
     )()
-    monkeypatch.setattr(braidio, "weave_project", lambda proj, scr, **kw: episode)
+    monkeypatch.setattr(
+        braidio,
+        "weave_project",
+        lambda proj, scr, **kw: braidio.WeaveReceipt(episode, cost_usd_actual=0.3),
+    )
     ledger = {}
     server2 = _local_server(ledger=ledger)
     r = _call(
@@ -776,6 +780,7 @@ def test_weave_project_records_cost(monkeypatch):
         },
     )
     assert r.structured_content["cost_usd"] == pytest.approx(0.30)
+    assert r.structured_content["cost_usd_actual"] == pytest.approx(0.30)
     assert r.structured_content["url"] == "file:///x.mp3"
     retrieval = r.structured_content["retrieval"]
     assert retrieval["download"] == {
@@ -1244,7 +1249,7 @@ def test_weave_project_costs_the_profile_it_was_given(monkeypatch):
 
     def _weave(proj, scr, **kw):
         captured.update(kw)
-        return episode
+        return braidio.WeaveReceipt(episode)
 
     monkeypatch.setattr(braidio, "weave_project", _weave)
     server = _local_server(ledger={})
@@ -1502,7 +1507,7 @@ def test_weave_project_reports_sting_applied_in_result(monkeypatch):
             "body": {"url": "file:///x.mp3"},
         },
     )()
-    monkeypatch.setattr(braidio, "weave_project", lambda proj, scr, **kw: episode)
+    monkeypatch.setattr(braidio, "weave_project", lambda proj, scr, **kw: braidio.WeaveReceipt(episode))
     server = _local_server(ledger={})
     _call(server, "create_project", {"project_id": "st2", "title": "ST2"})
 
@@ -2060,7 +2065,7 @@ def test_weave_project_is_priced_at_the_weave_config_s_model(
     server = _local_server(ledger={})
     _call(server, "create_project", {"project_id": "demo", "title": "Demo"})
     with monkeypatch.context() as m:
-        m.setattr(braidio, "weave_project", lambda proj, scr, **kw: episode)
+        m.setattr(braidio, "weave_project", lambda proj, scr, **kw: braidio.WeaveReceipt(episode))
         r = _call(server, "weave_project", {"project_id": "demo", "script": _THOUSAND})
     assert braidio.WeaveConfig().model_id == _V2
     assert r.structured_content["cost_usd"] == pytest.approx(0.11)
@@ -2085,7 +2090,7 @@ def test_weave_project_is_priced_at_the_weave_config_s_model(
         proj, script_from_json(_THOUSAND), config=braidio.WeaveConfig(model_id=_V3)
     )
 
-    monkeypatch.setattr(braidio, "weave_project", lambda proj, scr, **kw: episode)
+    monkeypatch.setattr(braidio, "weave_project", lambda proj, scr, **kw: braidio.WeaveReceipt(episode))
     r = _call(server, "weave_project", {"project_id": "demo", "script": _THOUSAND})
     assert r.structured_content["cost_usd"] == pytest.approx(0.33)
 
@@ -2207,10 +2212,102 @@ def test_estimate_cost_equals_a_first_weave_s_cost(
         (),
         {"id": "9a23da78-0a3e-4acf-a557-48bd6e519038", "body": {"url": "file:///x"}},
     )()
-    monkeypatch.setattr(braidio, "weave_project", lambda proj, scr, **kw: episode)
+    monkeypatch.setattr(braidio, "weave_project", lambda proj, scr, **kw: braidio.WeaveReceipt(episode))
     server = _local_server(ledger={})
     _call(server, "create_project", {"project_id": "demo", "title": "Demo"})
     for chosen in [{}, *({"format_id": f} for f in braidio.FORMATS)]:
         args = {"project_id": "demo", "script": _TALK, **chosen}
         woven = _call(server, "weave_project", args).structured_content["cost_usd"]
         assert _usd(server, _TALK, **chosen) == pytest.approx(woven), chosen
+
+
+# --- weave_project reports what the run synthesized (braidio#159) ----------------
+
+
+@pytest.mark.skipif(not braidio.HAS_NW, reason="nw not installed")
+def test_weave_project_reports_actual_spend_and_a_rerun_as_savings(monkeypatch):
+    """The first weave synthesizes the narration; an unchanged re-run reuses it.
+    ``cost_usd`` stays the script's estimate both times, while ``cost_usd_actual``
+    (what a metering ledger reads first) is the spend, then ``0.0``."""
+
+    def _write(out, tag=b"X"):
+        Path(out).parent.mkdir(parents=True, exist_ok=True)
+        Path(out).write_bytes(tag)
+        return Path(out)
+
+    def _narrate(text, out, *, return_cache_status=False, **kw):
+        return (_write(out), False) if return_cache_status else _write(out)
+
+    monkeypatch.setattr(braidio, "narrate", _narrate)
+    monkeypatch.setattr(braidio, "weave_timeline", lambda items, out, **kw: _write(out))
+    monkeypatch.setattr(braidio, "duration_s", lambda path: 3.0)
+    ledger = {}
+    server = _local_server(ledger=ledger)
+    _call(server, "create_project", {"project_id": "demo", "title": "Demo"})
+    args = {
+        "project_id": "demo",
+        "script": {
+            "title": "t",
+            "id_slug": "01",
+            "beats": [{"type": "narration", "text": "n" * 1000}],
+        },
+    }
+    first = _call(server, "weave_project", args).structured_content
+    again = _call(server, "weave_project", args).structured_content
+
+    assert first["cost_usd"] == again["cost_usd"] == pytest.approx(0.30)
+    assert first["cost_usd_actual"] == pytest.approx(0.30)
+    assert again["cost_usd_actual"] == 0.0
+    assert again["cache_hit_savings_usd"] == pytest.approx(0.30)
+    recorded = [e["cost_usd_actual"] for e in ledger.values() if e["tool"] == "weave_project"]
+    assert recorded == [pytest.approx(0.30), 0.0]
+
+
+@_NW
+def test_an_unpriced_weave_leaves_cost_usd_actual_unknown():
+    """An unknown spend is ``None``, never ``0.0``: a ledger reading
+    ``cost_usd_actual`` first then falls back to the estimate."""
+    from braidio.mcp.tools import _weave_spend
+
+    receipt = braidio.WeaveReceipt(None, cost_usd_actual=0.0, has_unknown_costs=True)
+    assert _weave_spend(receipt)["cost_usd_actual"] is None
+
+
+@_NW
+def test_a_failed_weave_s_partial_spend_reaches_the_ledger(monkeypatch):
+    """A weave can synthesize and then fail (the mix): the call errors, so its
+    result carries no cost, and the retry reuses the takes at $0. The ledger's
+    error path records what the failed run spent, read off the exception."""
+
+    def _write(out, tag=b"X"):
+        Path(out).parent.mkdir(parents=True, exist_ok=True)
+        Path(out).write_bytes(tag)
+        return Path(out)
+
+    def _narrate(text, out, *, return_cache_status=False, **kw):
+        return (_write(out), False) if return_cache_status else _write(out)
+
+    def _broken_mix(items, out, **kw):
+        raise RuntimeError("mix failed")
+
+    monkeypatch.setattr(braidio, "narrate", _narrate)
+    monkeypatch.setattr(braidio, "duration_s", lambda path: 3.0)
+    monkeypatch.setattr(braidio, "weave_timeline", _broken_mix)
+    ledger = {}
+    server = _local_server(ledger=ledger)
+    _call(server, "create_project", {"project_id": "demo", "title": "Demo"})
+    args = {
+        "project_id": "demo",
+        "script": {
+            "title": "t",
+            "id_slug": "01",
+            "beats": [{"type": "narration", "text": "n" * 1000}],
+        },
+    }
+    with pytest.raises(Exception, match="mix failed"):
+        _call(server, "weave_project", args)
+
+    (entry,) = [e for e in ledger.values() if e["tool"] == "weave_project"]
+    assert entry["status"] == "error"
+    assert entry["cost_usd_actual"] == pytest.approx(0.30)
+    assert entry["cost_is_lower_bound"] is True

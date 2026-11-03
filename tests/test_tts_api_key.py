@@ -81,7 +81,7 @@ def test_render_multivoice_threads_api_key(tmp_path, monkeypatch):
         Path(out_path).write_bytes(b"x")
         return Path(out_path)
 
-    monkeypatch.setattr(mv, "narrate", fake_narrate)
+    monkeypatch.setattr(braidio, "narrate", fake_narrate)  # the one name (#199)
     monkeypatch.setattr(mv, "level_part", lambda src, dst, **kw: src)
     monkeypatch.setattr(
         mv, "concatenate_audio", lambda *a, output, **kw: Path(output).write_bytes(b"x")

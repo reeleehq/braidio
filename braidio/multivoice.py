@@ -25,7 +25,7 @@ from mixing import concatenate_audio
 
 from braidio.conversation import concat_with_gaps
 from braidio.leveling import DEFAULT_TARGET_LUFS, level_part
-from braidio.tts import narrate
+from braidio.tts import voice_for
 
 _MARKUP_RE = re.compile(r"<[^>]*>|\[[^\]]*\]")
 _SENT_SPLIT = re.compile(r"(?<=[.?!])\s+(?=[\"“']?[A-Z])")
@@ -140,6 +140,7 @@ def render_multivoice(
     crossfade_s: float = 0.1,
     gap_s: float = 0.0,
     target_lufs: float = DEFAULT_TARGET_LUFS,
+    narrate_fn=None,
 ) -> list[tuple[Voice, str]]:
     """Render ``segments`` cycling ``pool`` → ``out_path``.
 
@@ -150,7 +151,9 @@ def render_multivoice(
 
     ``api_key`` is an optional per-request ElevenLabs key threaded to every
     :func:`braidio.tts.narrate` call; ``None`` (default) keeps the
-    ``$ELEVENLABS_API_KEY`` fallback.
+    ``$ELEVENLABS_API_KEY`` fallback. ``narrate_fn`` is the per-turn
+    synthesizer (default: the ElevenLabs voice, :func:`braidio.tts.voice_for`,
+    so replacing ``braidio.narrate`` reaches this path too, braidio#199).
 
     NOTE: overlapping/interrupting speakers and clip ducking are separate,
     upcoming parameters (tracked as issues) — this renders turns sequentially.
@@ -164,9 +167,10 @@ def render_multivoice(
     work = Path(work_dir)
     work.mkdir(parents=True, exist_ok=True)
     parts: list[Path] = []
+    synthesize = narrate_fn or voice_for().narrate
     for i, (turn, v) in enumerate(zip(turns, voices)):
         speed = round(speed_base + rng.uniform(-speed_jitter, speed_jitter), 3)
-        raw = narrate(
+        raw = synthesize(
             turn,
             work / f"turn{i:03d}-{v.name}.mp3",
             api_key=api_key,

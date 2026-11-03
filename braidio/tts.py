@@ -23,7 +23,7 @@ import os
 import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import ClassVar, Protocol, runtime_checkable
 from types import MappingProxyType
 from pathlib import Path
 
@@ -286,19 +286,44 @@ class SpeakVoice:
         return (path, False) if return_cache_status else path
 
 
-Voice = ElevenLabsVoice | SpeakVoice
+@runtime_checkable
+class Voice(Protocol):
+    """What a render speaks through (braidio#137, #199): a ``name`` for the
+    render record and cache keys, and the two calls, both with
+    :func:`narrate`'s ``return_cache_status`` convention. A voice with no
+    one-pass dialogue renders it turn by turn through its own ``narrate``
+    (as :class:`SpeakVoice` does). :class:`ElevenLabsVoice` and
+    :class:`SpeakVoice` are the two shipped; pass your own as ``voice=``.
+    """
+
+    name: str
+
+    def narrate(self, text, out_path, *, return_cache_status: bool = False, **kw): ...
+
+    def render_dialogue(
+        self, turns, cast, *, out_path, return_cache_status: bool = False, **kw
+    ): ...
 
 
-def voice_for(tts: str | None = None, *, speak: Speak | None = None) -> Voice:
-    """The voice a render speaks with: an explicit ``speak`` wins, else the
-    registered backend ``tts`` names, else ElevenLabs. The one place that
-    choice is made, on both render paths (braidio#137).
+def voice_for(
+    tts: str | None = None, *, speak: Speak | None = None, voice: Voice | None = None
+) -> Voice:
+    """The voice a render speaks with: a ready ``voice`` wins, then an explicit
+    ``speak``, then the registered backend ``tts`` names, then ElevenLabs. The
+    one place that choice is made, on every render path (braidio#137, #199).
 
     >>> voice_for().name
     'elevenlabs'
     >>> voice_for(speak=lambda text, *, voice: (b"", "wav")).name
     'braidio.tts:<lambda>'
     """
+    if voice is not None:
+        if not isinstance(voice, Voice):
+            raise TypeError(
+                f"voice must implement braidio.tts.Voice (name, narrate, "
+                f"render_dialogue); got {type(voice).__name__}"
+            )
+        return voice
     if speak is not None:
         return SpeakVoice(speak=speak, name=tts_name(speak))
     if tts:

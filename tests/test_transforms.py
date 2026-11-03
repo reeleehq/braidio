@@ -2221,15 +2221,22 @@ def test_a_noop_reweave_walks_freshness_once(
     project, script_and_source, patched_synthesis, monkeypatch
 ):
     """braidio#171: freshness changes only through a write, so a re-weave that
-    writes nothing needs one walk of the graph, not about two per beat."""
-    import nw
+    writes nothing needs one walk of the graph, not about two per beat.
+
+    Counted at nw's one walk primitive, which both of its entry points use
+    (``stale_verdicts_all`` for braidio's "current node" readers, and
+    ``fresh_equivalents`` for reuse since braidio#180), so a second walk
+    through either would show."""
+    import nw.freshness
 
     script, source = script_and_source
     first = braidio.weave_project(project, script, source=source)
     walks = []
-    real = nw.stale_verdicts_all
+    real = nw.freshness._verdicts_for
     monkeypatch.setattr(
-        nw, "stale_verdicts_all", lambda root: walks.append(root) or real(root)
+        nw.freshness,
+        "_verdicts_for",
+        lambda *a, **kw: walks.append(1) or real(*a, **kw),
     )
     again = braidio.weave_project(project, script, source=source)
     assert again.id == first.id

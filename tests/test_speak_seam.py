@@ -242,11 +242,19 @@ def test_a_ready_voice_renders_narration_and_one_pass_dialogue(tmp_path, no_elev
 
 
 def test_voice_for_refuses_what_is_not_a_voice():
-    with pytest.raises(TypeError, match="braidio.tts.Voice"):
+    with pytest.raises(TypeError, match="braidio.tts.VoiceBackend"):
         braidio.tts.voice_for(voice=lambda text, *, voice: (b"", "wav"))
+    with pytest.raises(TypeError, match="an instance"):
+        braidio.tts.voice_for(voice=braidio.tts.ElevenLabsVoice)  # the class
+    with pytest.raises(TypeError, match="not both"):
+        braidio.tts.voice_for(
+            voice=_OnePassVoice(), speak=lambda t, *, voice: (b"", "wav")
+        )
 
 
-def test_replacing_braidio_narrate_reaches_every_elevenlabs_path(tmp_path, monkeypatch):
+def test_replacing_braidio_narrate_reaches_every_elevenlabs_path(
+    tmp_path, monkeypatch, no_elevenlabs
+):
     """The one replacement point (braidio#199): multivoice and the per-line
     dialogue baseline no longer bind ``narrate`` at import."""
     from braidio.conversation import DEFAULT_CAST, render_turns_sequential

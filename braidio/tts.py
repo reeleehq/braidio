@@ -287,13 +287,15 @@ class SpeakVoice:
 
 
 @runtime_checkable
-class Voice(Protocol):
+class VoiceBackend(Protocol):
     """What a render speaks through (braidio#137, #199): a ``name`` for the
     render record and cache keys, and the two calls, both with
     :func:`narrate`'s ``return_cache_status`` convention. A voice with no
     one-pass dialogue renders it turn by turn through its own ``narrate``
     (as :class:`SpeakVoice` does). :class:`ElevenLabsVoice` and
     :class:`SpeakVoice` are the two shipped; pass your own as ``voice=``.
+    (Not :class:`braidio.multivoice.Voice`, ``braidio.Voice``: that is one
+    voice of a narration pool, an ElevenLabs id and name.)
     """
 
     name: str
@@ -306,8 +308,11 @@ class Voice(Protocol):
 
 
 def voice_for(
-    tts: str | None = None, *, speak: Speak | None = None, voice: Voice | None = None
-) -> Voice:
+    tts: str | None = None,
+    *,
+    speak: Speak | None = None,
+    voice: VoiceBackend | None = None,
+) -> VoiceBackend:
     """The voice a render speaks with: a ready ``voice`` wins, then an explicit
     ``speak``, then the registered backend ``tts`` names, then ElevenLabs. The
     one place that choice is made, on every render path (braidio#137, #199).
@@ -318,10 +323,13 @@ def voice_for(
     'braidio.tts:<lambda>'
     """
     if voice is not None:
-        if not isinstance(voice, Voice):
+        if speak is not None:
+            raise TypeError("pass voice= or speak=, not both: they name two voices")
+        if isinstance(voice, type) or not isinstance(voice, VoiceBackend):
             raise TypeError(
-                f"voice must implement braidio.tts.Voice (name, narrate, "
-                f"render_dialogue); got {type(voice).__name__}"
+                "voice must be an instance implementing braidio.tts.VoiceBackend "
+                "(name, narrate, render_dialogue), e.g. ElevenLabsVoice() or "
+                f"SpeakVoice(speak, name=...); got {voice!r:.80}"
             )
         return voice
     if speak is not None:

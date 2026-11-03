@@ -37,7 +37,7 @@ from braidio.leveling import DEFAULT_TARGET_LUFS, level_part
 from braidio.script import Script
 from braidio.sources import SegmentSource
 from braidio.structure import DEFAULT_STRUCTURE, prepare_pause, prepare_sting
-from braidio.tts import Speak, Voice, voice_for
+from braidio.tts import Speak, VoiceBackend, voice_for
 from braidio.sound_design import (
     SOUND_SIDECAR_SUFFIX,
     SoundDesign,
@@ -240,7 +240,7 @@ def render_production(
     end_silence_s: float = 0.7,
     return_timeline: bool = False,  # also return a TimelineBreakdown of the render
     sound_design: SoundDesign | None = None,
-    voice: Voice | None = None,
+    voice: VoiceBackend | None = None,
     tts_dir: str | Path = "data/tts",
     clips_dir: str | Path = "data/clips",
     episodes_dir: str | Path = "data/episodes",
@@ -296,7 +296,7 @@ def render_production(
     ``None`` (default) is the ElevenLabs path, exactly as before, unless
     ``config.tts`` names a registered backend (:func:`braidio.tts.register_tts`),
     which is how the graph path selects one too; an explicit ``speak`` wins.
-    ``voice`` (a :class:`braidio.tts.Voice`) wins over both: a whole strategy,
+    ``voice`` (a :class:`braidio.tts.VoiceBackend`) wins over both: a whole strategy,
     for a backend with its own cache or its own one-pass dialogue
     (braidio#199).
     """

@@ -19,6 +19,7 @@ from __future__ import annotations
 import random
 import re
 from dataclasses import dataclass
+from collections.abc import Callable
 from pathlib import Path
 
 from mixing import concatenate_audio
@@ -140,7 +141,7 @@ def render_multivoice(
     crossfade_s: float = 0.1,
     gap_s: float = 0.0,
     target_lufs: float = DEFAULT_TARGET_LUFS,
-    narrate_fn=None,
+    narrate_fn: Callable[..., Path] | None = None,
 ) -> list[tuple[Voice, str]]:
     """Render ``segments`` cycling ``pool`` → ``out_path``.
 

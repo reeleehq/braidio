@@ -1054,6 +1054,38 @@ def test_docs_fetch_pins_the_address_it_validated():
     assert hops == ["93.184.216.34"] and len(lookups) == 1
 
 
+@pytest.mark.parametrize(
+    "disposition, attachment",
+    [
+        (b'Content-Disposition: attachment; filename="essay.md"\r\n', True),
+        (b"Content-Disposition: inline\r\n", False),
+        (b"", False),
+    ],
+)
+def test_docs_fetch_reports_whether_the_body_came_as_a_download(
+    disposition, attachment
+):
+    """braidio#166: the response, not the URL, says a body is the file."""
+    from braidio.mcp import _docs
+
+    body = (
+        b"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n"
+        + disposition
+        + b"Content-Length: 2\r\n\r\nhi"
+    )
+    fetched = _docs.fetch_uri(
+        "http://public.example/x",
+        resolver=lambda host, port: ["93.184.216.34"],
+        connector=_scripted_connector([body], []),
+    )
+    data, ctype = fetched  # still a 2-tuple
+    assert (data, ctype, _docs.is_attachment(fetched)) == (
+        b"hi",
+        "text/html",
+        attachment,
+    )
+
+
 def test_docs_fetch_enforces_the_byte_cap(monkeypatch):
     from braidio.mcp import _docs
 
@@ -1913,6 +1945,72 @@ def test_ingest_document_refuses_a_share_host_s_sign_in_page(monkeypatch):
         server, "ingest_document", {"project_id": "d", "uri": "https://example.com/a"}
     ).structured_content
     assert "Sign in" in plain["text"]
+
+
+@pytest.mark.parametrize(
+    "share",
+    [
+        # pasted already in download form: graze does not rewrite these
+        "https://www.dropbox.com/scl/fi/abc/essay.pdf?rlkey=x&dl=1",
+        "https://dl.dropboxusercontent.com/s/abc/essay.pdf",
+        "https://drive.google.com/uc?export=download&id=1AbC",
+        "https://drive.google.com/u/0/uc?export=download&id=1AbC",
+        "https://drive.usercontent.google.com/download?id=1AbC&export=download",
+        "https://docs.google.com/uc?export=download&id=1AbC",
+    ],
+)
+def test_ingest_document_refuses_a_sign_in_page_from_a_download_link(
+    monkeypatch, share
+):
+    """braidio#166: a private link pasted already in download form is not
+    rewritten, but its HTML is still the host's sign-in page."""
+    from fastmcp.exceptions import ToolError
+
+    from braidio.mcp import _docs
+
+    page = (b"<!DOCTYPE html><html><body>Sign in</body></html>", "text/html")
+    monkeypatch.setattr(_docs, "fetch_uri", lambda uri: page)
+    server = _local_server(ledger={})
+    _call(server, "create_project", {"project_id": "d", "title": "D"})
+    with pytest.raises(ToolError, match="expected document bytes"):
+        _call(server, "ingest_document", {"project_id": "d", "uri": share})
+
+
+@pytest.mark.parametrize(
+    "body, ctype, uri, expected",
+    [
+        # a shared web page: its download IS html
+        (
+            b"<html><body><p>The essay, as a page.</p></body></html>",
+            "text/html",
+            "https://drive.google.com/uc?export=download&id=1AbC",
+            "The essay, as a page.",
+        ),
+        # a README whose first bytes are markup sniffs as html too
+        (
+            b'<p align="center">Title</p>\n\n# The essay\n\nBody text.',
+            "text/plain",
+            "https://www.dropbox.com/s/a1/README.md?dl=1",
+            None,
+        ),
+    ],
+)
+def test_ingest_document_reads_a_file_that_came_as_a_download(
+    monkeypatch, body, ctype, uri, expected
+):
+    """A share host sends the file as an attachment and never its sign-in page:
+    so markup in a downloaded file is the document, not the host's page."""
+    from braidio.mcp import _docs
+
+    monkeypatch.setattr(
+        _docs, "fetch_uri", lambda u: _docs.Fetched(body, ctype, attachment=True)
+    )
+    server = _local_server(ledger={})
+    _call(server, "create_project", {"project_id": "d", "title": "D"})
+    out = _call(
+        server, "ingest_document", {"project_id": "d", "uri": uri}
+    ).structured_content
+    assert out["text"] == expected if expected else "Body text." in out["text"]
 
 
 @pytest.mark.parametrize(

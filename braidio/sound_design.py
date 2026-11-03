@@ -26,6 +26,7 @@ bring its own and the tests run without foley.
 
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import subprocess
@@ -50,6 +51,15 @@ _AUDIO_TAG = re.compile(r"\[[^\[\]]*\]")
 
 #: The intermediate container foley's mix is written in before the MP3 encode.
 _INTERMEDIATE_SUFFIX = ".flac"
+
+#: Beside a sound-designed episode: what was designed, and the credits that must
+#: ship with it (``episode.mp3`` → ``episode.sound.json``).
+SOUND_SIDECAR_SUFFIX = ".sound.json"
+
+#: What a design run spent is not known: foley reports no spend yet
+#: (reeleehq/foley#280), though it may pay for an LLM rung or a generated
+#: sound, capped by ``SoundDesign.max_usd``. Unknown, never ``0.0``.
+COST_UNKNOWN = {"cost_usd": None, "cost_basis": "unknown"}
 
 #: The designer: ``foley.score``'s signature (segments, then keyword options).
 Designer = Callable[..., Any]
@@ -121,21 +131,40 @@ def talk_segments(spans: Iterable[TalkSpan]) -> tuple[list[str], list[float]]:
     Each span's sentences start where the span starts, then advance in
     proportion to the characters spoken before them. That is an estimate (the
     beat's start is exact, the sentence's is not), and it only has to put
-    foley's aligner in the right stretch of audio. Spans are taken in start
-    order, so the starts are non-decreasing as foley requires.
+    foley's aligner in the right stretch of audio.
+
+    foley needs every worded segment to start strictly after the previous one.
+    The weave crossfades consecutive beats, so a beat can start before the
+    previous one ends: each span's sentences are therefore spread over its
+    *window*, from its start to the next span's start (or its own end when
+    that comes first), never over its full duration.
 
     >>> talk_segments([TalkSpan(0.0, 3.0, "One. Two two two."), TalkSpan(5.0, 1.0, "")])
     (['One.', 'Two two two.'], [0.0, 0.75])
+
+    A long beat whose short last sentence would land after the crossfaded next
+    beat's start stays inside its window:
+
+    >>> talk_segments([TalkSpan(0.0, 12.0, "x" * 98 + ". No."), TalkSpan(11.88, 2.0, "Next.")])[1]
+    [0.0, 11.531, 11.88]
     """
+    worded = [
+        (span, [s for para in split_units(spoken_text(span.text)) for s in para])
+        for span in sorted(spans, key=lambda s: s.start_s)
+    ]
+    worded = [(span, sentences) for span, sentences in worded if sentences]
     segments: list[str] = []
     starts: list[float] = []
-    for span in sorted(spans, key=lambda s: s.start_s):
-        sentences = [s for para in split_units(spoken_text(span.text)) for s in para]
+    for i, (span, sentences) in enumerate(worded):
+        later = worded[i + 1][0].start_s if i + 1 < len(worded) else None
+        window = span.duration_s
+        if later is not None and later > span.start_s:
+            window = min(window, later - span.start_s)
         total = sum(len(s) for s in sentences)
         offset = 0
         for sentence in sentences:
             segments.append(sentence)
-            starts.append(round(span.start_s + span.duration_s * offset / total, 3))
+            starts.append(round(span.start_s + window * offset / total, 3))
             offset += len(sentence)
     return segments, starts
 
@@ -156,13 +185,28 @@ class ScoredMix:
     notes: tuple[str, ...] = ()
 
     def to_dict(self) -> dict:
-        """Plain JSON (everything but the path)."""
-        return {
-            "timeline": dict(self.timeline),
-            "credits": dict(self.credits),
-            "captions_vtt": self.captions_vtt,
-            "notes": list(self.notes),
-        }
+        """Plain JSON (everything but the path); foley's numpy scalars become
+        Python numbers, so the record survives ``json.dumps`` as is."""
+        return json.loads(
+            json.dumps(
+                {
+                    "timeline": dict(self.timeline),
+                    "credits": dict(self.credits),
+                    "captions_vtt": self.captions_vtt,
+                    "notes": list(self.notes),
+                    **COST_UNKNOWN,
+                },
+                default=_jsonable,
+            )
+        )
+
+
+def _jsonable(value):
+    """``json.dumps`` fallback for numpy scalars and arrays (``item``/``tolist``)."""
+    for attr in ("tolist", "item"):
+        if hasattr(value, attr):
+            return getattr(value, attr)()
+    raise TypeError(f"not JSON-serializable: {type(value).__name__}")
 
 
 def _foley_score(segments, **kwargs):
@@ -183,14 +227,24 @@ def _foley_score(segments, **kwargs):
 
 
 def _save_mix(woven, dst: Path) -> None:
-    """Write foley's mastered array to ``dst`` (an MP3, through ffmpeg)."""
-    import foley
-
+    """Write a designer's mastered array (``woven.audio`` at ``woven.sr``) to
+    ``dst``, an MP3 through ffmpeg. Needs soundfile, not foley, so a host's own
+    designer works without foley installed."""
+    try:
+        import soundfile
+    except ModuleNotFoundError as exc:
+        if exc.name != "soundfile":
+            raise
+        raise ModuleNotFoundError(
+            f"Writing a sound-designed mix needs soundfile: pip install "
+            f"'braidio[{SOUND_EXTRA}]'.",
+            name="soundfile",
+        ) from exc
     if shutil.which("ffmpeg") is None:
         raise RuntimeError("ffmpeg not found on PATH (brew install ffmpeg).")
     with tempfile.TemporaryDirectory() as tmp:
         lossless = Path(tmp) / f"mix{_INTERMEDIATE_SUFFIX}"
-        foley.audio.save(woven.audio, woven.sr, lossless)
+        soundfile.write(lossless, woven.audio, woven.sr)
         subprocess.run(
             ["ffmpeg", "-y", "-i", str(lossless), str(dst)],
             check=True,

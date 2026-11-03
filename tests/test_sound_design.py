@@ -25,7 +25,7 @@ import pytest
 
 import braidio
 import braidio.sound_design as sd
-from braidio.render import SOUND_SIDECAR_SUFFIX
+from braidio.sound_design import SOUND_SIDECAR_SUFFIX
 from braidio.sound_design import SoundDesign, TalkSpan, talk_segments
 
 from _audio import needs_ffmpeg, tone
@@ -66,6 +66,11 @@ def tone_voices(monkeypatch):
     monkeypatch.setattr(
         render_mod, "narrate", lambda text, out, **kw: tone(Path(out), 440, 1.0)
     )
+    monkeypatch.setattr(
+        render_mod,
+        "render_dialogue",
+        lambda turns, cast, out_path, **kw: tone(Path(out_path), 550, 1.5),
+    )
 
 
 class _ToneSource:
@@ -87,6 +92,9 @@ def _render(tmp_path, *, sound_design=None, profile=braidio.Profile.PERSONAL):
             braidio.Narration("[dryly] The door creaked. Rain fell."),
             braidio.SegmentBeat(reference="a lyric about thunder", rights="owned"),
             braidio.Narration("Then silence."),
+            braidio.Dialogue(
+                turns=[("host", "Did you hear that?"), ("guest", "Thunder.")]
+            ),
         ],
     )
     return braidio.render_production(
@@ -119,12 +127,19 @@ def test_on_designs_only_the_spoken_beats_at_their_timeline_starts(
 ):
     out, tl = _render(tmp_path, sound_design=SoundDesign(designer=designer))
     ((segments, kwargs),) = designer.calls
-    assert segments == ["The door creaked.", "Rain fell.", "Then silence."]
+    assert segments == [
+        "The door creaked.",
+        "Rain fell.",
+        "Then silence.",
+        "Did you hear that?",
+        "Thunder.",
+    ]
     talk = [b for b in tl.beats if b.kind != "clip"]
     starts = kwargs["segment_starts"]
     assert starts[0] == pytest.approx(talk[0].start, abs=1e-3)
     assert starts[2] == pytest.approx(talk[1].start, abs=1e-3)
     assert talk[0].start < starts[1] < talk[0].end
+    assert all(a < b for a, b in zip(starts, starts[1:]))  # foley's requirement
     assert kwargs["audio"] == str(out)
     assert (kwargs["max_events"], kwargs["master"]) == (6, "podcast")
     assert out.read_bytes() == b"DESIGNED"
@@ -153,6 +168,8 @@ def test_the_credits_ship_with_the_episode(tmp_path, tone_voices, designer):
     sidecar = json.loads(out.with_suffix(SOUND_SIDECAR_SUFFIX).read_text())
     assert sidecar["credits"]["sounds"][0]["license"] == "CC0"
     assert sidecar["timeline"] == {"events": [{"cue": "door"}]}
+    assert sidecar["cost_usd"] is None  # unknown, never free
+    assert tl.settings["resolved"]["master"] == "podcast"
     assert sidecar["design"] == {
         "max_events": 6,
         "master": "podcast",
@@ -192,3 +209,40 @@ def test_without_foley_the_error_names_the_extra(monkeypatch):
     monkeypatch.setitem(sys.modules, "foley", None)
     with pytest.raises(ModuleNotFoundError, match=r"braidio\[sound\]"):
         sd._foley_score(["x"])
+
+
+def test_crossfaded_beats_keep_every_start_strictly_increasing():
+    """A beat starts before the previous one ends (the weave's crossfade); the
+    estimates must still increase, or foley refuses the whole design after
+    every voice has been paid for."""
+    spans = [
+        TalkSpan(0.0, 12.0, "A long opening sentence that goes on and on. No."),
+        TalkSpan(11.88, 5.0, "Short. Then a longer second sentence."),
+        TalkSpan(16.76, 1.0, "End."),
+    ]
+    _, starts = talk_segments(spans)
+    assert all(a < b for a, b in zip(starts, starts[1:]))
+    assert starts[2] == 11.88 and starts[4] == 16.76
+
+
+def test_the_record_is_plain_json_even_with_numpy_scalars(tmp_path, designer):
+    class _Scalar:  # what numpy hands back: not a float, but has .item()
+        def item(self):
+            return 0.25
+
+    def _numpy_designer(segments, **kwargs):
+        result = designer(segments, **kwargs)
+        result.weave.credits = {"gain": _Scalar()}
+        return result
+
+    scored = sd.score_mix(
+        tmp_path / "in.mp3",
+        [TalkSpan(0.0, 1.0, "Hello.")],
+        design=SoundDesign(designer=_numpy_designer),
+        profile=braidio.Profile.PUBLISHED,
+        out_path=tmp_path / "out.mp3",
+    )
+    record = scored.to_dict()
+    assert record["credits"] == {"gain": 0.25}
+    assert (record["cost_usd"], record["cost_basis"]) == (None, "unknown")
+    json.dumps(record)

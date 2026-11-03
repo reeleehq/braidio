@@ -43,7 +43,12 @@ from braidio.script import Script
 from braidio.sources import SegmentSource
 from braidio.structure import DEFAULT_STRUCTURE, prepare_pause, prepare_sting
 from braidio.tts import Speak, narrate, narrator_from_speak, tts_backend, tts_name
-from braidio.sound_design import SoundDesign, TalkSpan, score_mix
+from braidio.sound_design import (
+    SOUND_SIDECAR_SUFFIX,
+    SoundDesign,
+    TalkSpan,
+    score_mix,
+)
 from braidio.weave import TimelineItem, extract_padded, weave_timeline
 from braidio.weave_config import WeaveConfig, speaker_key
 
@@ -60,10 +65,6 @@ def _require_ffmpeg() -> None:
 #: per-file, so a render dies two thirds of the way through. ``aresample``
 #: rebuilds the frames and costs nothing audible.
 _RESAMPLE = "aresample=44100"
-
-#: Beside a sound-designed episode: what was designed, and the credits that must
-#: ship with it (``episode.mp3`` → ``episode.sound.json``).
-SOUND_SIDECAR_SUFFIX = ".sound.json"
 
 
 def _lead_gap(src: Path, dst: Path, *, gap_s: float) -> Path:
@@ -587,7 +588,9 @@ def _sound_design(out: Path, tl, spoken, *, design: SoundDesign, profile):
     at the starts the timeline laid them out at. The credits and foley's
     timeline are also written beside the episode (``<out>.sound.json``),
     because they must ship with it whether or not the caller asked for a
-    timeline back.
+    timeline back. foley masters the result to ``design.master``, so the
+    record's resolved block says so (its ``target_lufs`` is the level the mix
+    had before the design).
     """
     import json
     from dataclasses import replace
@@ -600,4 +603,6 @@ def _sound_design(out: Path, tl, spoken, *, design: SoundDesign, profile):
     scored = score_mix(out, spans, design=design, profile=profile, out_path=out)
     record = {"design": design.to_dict(), **scored.to_dict()}
     out.with_suffix(SOUND_SIDECAR_SUFFIX).write_text(json.dumps(record, indent=2))
-    return replace(tl, settings={**(tl.settings or {}), "sound_design": record})
+    settings = dict(tl.settings or {})
+    settings["resolved"] = {**settings.get("resolved", {}), "master": design.master}
+    return replace(tl, settings={**settings, "sound_design": record})

@@ -278,10 +278,18 @@ not a contract.
 from the authored script plus the render's own timeline is strictly better than
 running ASR over a mix whose words you already have.
 
-## Money: ElevenLabs is the only spend
+## Money: ElevenLabs is the only *priced* spend
 
 Everything else — extraction, weaving, loudness, mastering — is local ffmpeg and
-free. ElevenLabs bills **per character of submitted text** (including `eleven_v3`
+free, with one opt-in exception: **sound design** (`SoundDesign`, braidio#161)
+runs `foley.score`, which may pay for an LLM rung or a generated sound. It is off
+unless a caller passes a `SoundDesign`, capped by `SoundDesign.max_usd` (foley's
+own default cap otherwise), retrieval-only with `allow_generate=False`, and its
+spend is recorded as **unknown** (`cost_usd: None`), never `0.0`, until foley
+reports it (reeleehq/foley#280). No MCP tool exposes it yet; one that does is a
+costed tool.
+
+ElevenLabs bills **per character of submitted text** (including `eleven_v3`
 `[audio tags]`), which is why `braidio.cost.billable_chars` is just `len(text)`
 behind a named function.
 

@@ -664,6 +664,68 @@ def test_a_format_narrates_with_its_delivery_on_the_graph(
     assert seen and set(seen) == {braidio.DEEP_DIVE.narration_delivery.model_id}
 
 
+def test_a_delivery_without_a_format_voices_the_graph(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """braidio#182: ``weave_project(delivery=)`` is the fast path's
+    ``delivery=``, by object or by name, with no format and no hand-built
+    config."""
+    seen = []
+    real = braidio.narrate
+
+    def _narrate(text, out, **kw):
+        seen.append((kw["model_id"], kw["voice_settings"]))
+        return real(text, out, **kw)
+
+    monkeypatch.setattr(braidio, "narrate", _narrate)
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source, delivery="v3-narrator")
+    expected = braidio.DELIVERIES["v3-narrator"]
+    assert seen and set(m for m, _ in seen) == {expected.model_id}
+    assert all(v == dict(expected.voice_settings) for _, v in seen)
+
+
+def test_a_new_delivery_does_not_re_bill_a_voiced_project(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """The delivery is protected exactly as a format's is (braidio#135): it sets
+    a project's first render; ``config=`` is how to change a later one."""
+    calls = _counting_narrate(monkeypatch)
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source, delivery=braidio.V2_TUNED)
+    voiced = len(calls)
+    braidio.weave_project(project, script, source=source, delivery=braidio.V3_NARRATOR)
+    assert len(calls) == voiced
+    assert set(calls) == {braidio.V2_TUNED.model_id}
+
+
+def test_an_unknown_delivery_name_is_refused_before_anything_is_written(project):
+    import nw
+
+    with pytest.raises(ValueError, match="unknown delivery 'v9'"):
+        braidio.weave_project(
+            project, braidio.Script(title="t", id_slug="t", beats=[]), delivery="v9"
+        )
+    assert not nw.annotations_at_tier(project.root, "weave-configs")
+
+
+def test_a_delivery_applies_over_a_format_and_over_an_explicit_config():
+    from braidio.transforms import format_config
+
+    over_fmt = format_config(braidio.DEEP_DIVE, delivery=braidio.V3_NARRATOR)
+    assert over_fmt.model_id == braidio.V3_NARRATOR.model_id
+    assert over_fmt.crossfade_s == braidio.DEEP_DIVE.weave.crossfade_s  # format's knobs
+    cfg = braidio.WeaveConfig(crossfade_s=0.3)
+    both = format_config(config=cfg, delivery=braidio.V3_NARRATOR)
+    assert (both.crossfade_s, both.model_id) == (0.3, braidio.V3_NARRATOR.model_id)
+    assert format_config(config=cfg) is cfg  # unchanged without a delivery
+    # an explicit config keeps its own voice over the format's delivery
+    mine = braidio.WeaveConfig(model_id="eleven_multilingual_v2")
+    assert format_config(braidio.DEEP_DIVE, config=mine).model_id == mine.model_id
+    with pytest.raises(TypeError, match="Delivery or its name"):
+        format_config(delivery={"model_id": "x"})
+
+
 def _counting_narrate(monkeypatch):
     """Count synthesis calls over the patched stub (the re-bill measure)."""
     calls = []

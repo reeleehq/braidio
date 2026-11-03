@@ -207,7 +207,7 @@ __all__ = [
 VOICE_KEYS = ("model_id", "voice_settings")
 
 
-def format_config(fmt=None, *, config=None, voice_id=None):
+def format_config(fmt=None, *, config=None, voice_id=None, delivery=None):
     """The weave-config a production asks for: one rule for every writer.
 
     ``config`` else the format's ``weave``, carrying the narration voice —
@@ -217,10 +217,29 @@ def format_config(fmt=None, *, config=None, voice_id=None):
     settings: what the fast path renders with (braidio#120). An explicit
     ``config`` is used as given. Pure: :func:`resolve_config` is what applies
     it to a project.
+
+    ``delivery`` (a :class:`~braidio.delivery.Delivery` or the name of one)
+    is what the narrator speaks with when the caller names it rather than a
+    format, the fast path's ``delivery=`` (braidio#182): it replaces the
+    format's ``narration_delivery`` and, with neither a format nor a
+    ``config``, applies to a default :class:`~braidio.weave_config.WeaveConfig`.
+    With an explicit ``config`` too, the delivery's model and settings are
+    applied on top of it: naming both means both.
+
+    >>> format_config(delivery="v3-narrator").model_id
+    'eleven_v3'
+    >>> format_config() is None
+    True
     """
-    if config is None and fmt is not None:
+    if delivery is not None:
+        from braidio.delivery import as_delivery
+
+        delivery = as_delivery(delivery)
+    if delivery is None and config is None and fmt is not None:
         delivery = fmt.narration_delivery
-        config = fmt.weave.with_(
+    if delivery is not None:
+        base = config if config is not None else (fmt.weave if fmt else WeaveConfig())
+        config = base.with_(
             model_id=delivery.model_id, voice_settings=dict(delivery.voice_settings)
         )
     if voice_id is None and fmt is not None:
@@ -230,7 +249,7 @@ def format_config(fmt=None, *, config=None, voice_id=None):
     return config
 
 
-def resolve_config(project, fmt=None, *, config=None, voice_id=None):
+def resolve_config(project, fmt=None, *, config=None, voice_id=None, delivery=None):
     """The weave-config to ingest into ``project``: :func:`format_config`, minus
     any change to what its narration was already synthesized with.
 
@@ -243,10 +262,12 @@ def resolve_config(project, fmt=None, *, config=None, voice_id=None):
     saved, not yet woven) there is nothing to re-bill, and the format's
     delivery applies. ``weave_project`` and ``save_script`` both resolve
     through here, so saving and then weaving never rewrites the config node.
+    A ``delivery`` is protected exactly like a format's: it sets the model and
+    settings of a project's first render, not of a later one.
     """
     import nw
 
-    resolved = format_config(fmt, config=config, voice_id=voice_id)
+    resolved = format_config(fmt, config=config, voice_id=voice_id, delivery=delivery)
     if config is not None or not nw.annotations_at_tier(
         project.root, "narration-renders"
     ):
@@ -270,6 +291,7 @@ def weave_project(
     rights=None,
     cast=None,
     voice_id=None,
+    delivery=None,
     api_key=None,
     return_receipt: bool = False,
 ):
@@ -309,6 +331,13 @@ def weave_project(
     else the config's pool. It is recorded in the weave-config, so changing it
     re-stales (and re-bills) every narration render that did not name its own
     voice. Left unset it writes nothing (thorwhalen/braidio#115).
+
+    ``delivery`` (a :class:`~braidio.delivery.Delivery` or its name) is what
+    the narrator speaks with when the caller names one without a format: it
+    wins over the format's ``narration_delivery`` and goes through
+    :func:`resolve_config` like one, so a project already voiced keeps its
+    model and settings (braidio#182). Unlike the fast path, ``None`` does not
+    read the env or user-config default delivery (braidio#191).
 
     ``profile`` (a :class:`~braidio.rights.Profile`) and ``rights`` (a
     :class:`~braidio.rights.RightsPolicy`) are the rights seam, and they mean
@@ -354,7 +383,9 @@ def weave_project(
     """
     import nw
 
-    config = resolve_config(project, fmt, config=config, voice_id=voice_id)
+    config = resolve_config(
+        project, fmt, config=config, voice_id=voice_id, delivery=delivery
+    )
     if fmt is not None:
         structure = structure if structure is not None else fmt.structure
         cast = cast if cast is not None else fmt.cast

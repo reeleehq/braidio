@@ -157,3 +157,25 @@ def test_every_graph_tier_and_reader_is_public():
     # public names (reeleehq/reelee#884), and a host has one name per reader.
     for private in ("_content_keyed_prepare", "_frames_dir", "_panel_source"):
         assert not hasattr(_video_cut, private), private
+
+
+def test_open_or_create_project_at_opens_creates_and_refuses(tmp_path):
+    """braidio#182: one call a host makes per production, without nw's marker
+    file; a folder holding something that is not a project is never overwritten."""
+    pytest.importorskip("nw")
+    from braidio.project import Project, open_or_create_project_at
+
+    made = open_or_create_project_at(tmp_path, "ep", title="Ep")
+    assert isinstance(made, Project)
+    (made.root / "data").mkdir(exist_ok=True)
+    assert open_or_create_project_at(tmp_path, "ep").root == made.root
+    stray = tmp_path / "stray"
+    stray.mkdir()
+    (stray / "notes.txt").write_text("mine")
+    with pytest.raises(FileNotFoundError):
+        open_or_create_project_at(tmp_path, "stray")
+    assert (stray / "notes.txt").read_text() == "mine"
+    with pytest.raises(ValueError):
+        open_or_create_project_at(tmp_path, "../escape")
+    (tmp_path / "empty").mkdir()  # an empty folder is a place to create one
+    assert isinstance(open_or_create_project_at(tmp_path, "empty"), Project)

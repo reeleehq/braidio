@@ -24,7 +24,7 @@ from typing import Optional
 from urllib.parse import urlparse
 from urllib.request import url2pathname
 
-from lacing import Annotation, Artifact, NodeRef, RationalTime, TimeInterval
+from lacing import Annotation, Artifact, NodeRef, TimeInterval
 from nw.bodies.sound_design import SOUND_DESIGN_CONFIG_TIER, SOUND_DESIGN_TIER
 
 # Tier names (must match braidio.bodies._tiers).
@@ -54,29 +54,6 @@ TIER_SOUND_DESIGN = SOUND_DESIGN_TIER
 
 #: Rate for the (incidental) NodeRef intervals on non-media nodes.
 _RATE = 1000
-
-
-def quantized_interval(
-    start_s: float, end_s: float, *, rate: int = _RATE
-) -> TimeInterval:
-    """The ``[start_s, end_s]`` window at ``rate``, each end rounded to the nearest tick.
-
-    A computed time (a resolved segment's LRCLIB timing, two-decimal seconds)
-    is a binary float, and ``TimeInterval.from_seconds`` is exact in *binary*:
-    ``3.48`` is not ``348/1000`` and raises ``LossyTimeConversionError``
-    (braidio#181). One tick at the default rate is 1 ms, below anything
-    audible. Rounding is lacing's own exact rule
-    (``RationalTime.from_seconds_lossy``), so it is the same one every caller
-    gets; ``span_interval`` (video panels) and the importer's ``_media_ref``
-    still round in float arithmetic and should move here (braidio#184).
-
-    >>> quantized_interval(3.4804, 7.3096)
-    TimeInterval(RationalTime(3480, 1000), RationalTime(7310, 1000))
-    """
-    return TimeInterval(
-        RationalTime.from_seconds_lossy(start_s, rate=rate),
-        RationalTime.from_seconds_lossy(end_s, rate=rate),
-    )
 
 
 #: The provider name braidio's two paid Transforms read from

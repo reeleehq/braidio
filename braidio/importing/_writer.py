@@ -478,15 +478,15 @@ def _node_ref(tier: str, ann_id: uuid.UUID):
 
 
 def _media_ref(asset_id: str, start: float, end: float):
-    from lacing import MediaRef, RationalTime, TimeInterval
+    """A ``MediaRef`` over ``[start, end]`` seconds, rounded to the graph's tick
+    by lacing's one rule (braidio#184)."""
+    from lacing import MediaRef, TimeInterval
 
-    rate = 1000
+    from braidio.transforms._common import _RATE
+
     return MediaRef(
         asset_id=str(asset_id),
-        interval=TimeInterval(
-            RationalTime(int(round(start * rate)), rate),
-            RationalTime(int(round(end * rate)), rate),
-        ),
+        interval=TimeInterval.from_seconds_lossy(start, end, rate=_RATE),
     )
 
 

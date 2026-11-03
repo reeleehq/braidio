@@ -23,6 +23,7 @@ import os
 import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from typing import ClassVar
 from types import MappingProxyType
 from pathlib import Path
 
@@ -218,7 +219,7 @@ class ElevenLabsVoice:
     replacement.
     """
 
-    name: str = DEFAULT_TTS
+    name: ClassVar[str] = DEFAULT_TTS
 
     def narrate(self, text, out_path, *, return_cache_status: bool = False, **kw):
         import braidio
@@ -250,18 +251,27 @@ class SpeakVoice:
     speak: Speak
     name: str
 
+    def __post_init__(self) -> None:
+        # built once: a paced beat calls narrate once per turn
+        object.__setattr__(self, "_narrator", narrator_from_speak(self.speak))
+
     def narrate(self, text, out_path, *, return_cache_status: bool = False, **kw):
-        path = narrator_from_speak(self.speak)(text, out_path, **kw)
+        path = self._narrator(text, out_path, **kw)
         return (path, False) if return_cache_status else path
 
     def render_dialogue(
         self, turns, cast, *, out_path, return_cache_status: bool = False, **kw
     ):
         import shutil
+        import tempfile
 
         from braidio.conversation import render_turns_sequential
 
-        work = Path(out_path).with_suffix("")
+        out = Path(out_path)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        # a directory of its own, never one derived from the caller's path:
+        # only what this call created is removed
+        work = Path(tempfile.mkdtemp(dir=out.parent, prefix=f"{out.stem}-turns-"))
         try:
             path = render_turns_sequential(
                 list(turns),

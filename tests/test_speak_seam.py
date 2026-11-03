@@ -79,6 +79,33 @@ def test_deep_dive_renders_narration_and_dialogue_through_speak(
     assert [voice for _, voice in speak.calls] == [GEORGE, JESSICA, CHRIS]
     assert out.exists() and braidio.duration_s(out) > 1.0
     assert timeline.settings["resolved"]["tts"].endswith("_ToneSpeaker")
+    # the turn-by-turn dialogue cleans up its per-turn parts (braidio#137)
+    leftovers = [
+        d
+        for d in (tmp_path / "tts").iterdir()
+        if d.is_dir() and not d.name.startswith("_render_")  # the render's own
+    ]
+    assert leftovers == []
+
+
+def test_an_explicit_speak_wins_over_the_config_s_backend(tmp_path, no_elevenlabs):
+    """``speak=`` beats ``config.tts`` (braidio#137's one resolver)."""
+    registered, explicit = _ToneSpeaker(), _ToneSpeaker()
+    braidio.tts.register_tts("test-registered", registered)
+    try:
+        braidio.render_production(
+            braidio.Script(
+                title="t", id_slug="w", beats=[braidio.Narration(text="Hello.")]
+            ),
+            source=None,
+            config=braidio.WeaveConfig(tts="test-registered"),
+            speak=explicit,
+            out_path=tmp_path / "ep.mp3",
+            tts_dir=tmp_path / "tts",
+        )
+    finally:
+        braidio.tts.unregister_tts("test-registered")
+    assert explicit.calls and not registered.calls
 
 
 def test_a_paced_format_speaks_every_turn_through_speak(tmp_path, no_elevenlabs):

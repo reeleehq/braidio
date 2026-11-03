@@ -30,6 +30,8 @@ download). Then each guards the bytes for what it expects:
 
 from __future__ import annotations
 
+from typing import NamedTuple
+
 import io
 import ipaddress
 import urllib.parse
@@ -101,8 +103,35 @@ def _validate_target(uri: str) -> None:
         raise ValueError(f"refusing to fetch a non-public host: {parts.hostname!r}")
 
 
-def fetch_uri(uri: str, **fetch_options) -> tuple[bytes, str]:
-    """Fetch a public http(s) URI (SSRF-hardened). Returns ``(bytes, content_type)``.
+class Fetched(tuple):
+    """``(data, content_type)``, plus whether the response was a download.
+
+    Still a 2-tuple (``data, ctype = fetch_uri(...)`` unpacks as before), with
+    ``attachment``: the response said ``Content-Disposition: attachment``,
+    which a share host sends with the file and never with its sign-in,
+    preview or virus-scan page.
+    """
+
+    attachment: bool
+
+    def __new__(cls, data: bytes, ctype: str, *, attachment: bool = False):
+        fetched = super().__new__(cls, (data, ctype))
+        fetched.attachment = attachment
+        return fetched
+
+
+def is_attachment(fetched) -> bool:
+    """Whether ``fetched`` came as a download (a plain tuple: not known, so no).
+
+    >>> is_attachment(Fetched(b"x", "text/html", attachment=True)), is_attachment((b"x", "text/html"))
+    (True, False)
+    """
+    return bool(getattr(fetched, "attachment", False))
+
+
+def fetch_uri(uri: str, **fetch_options) -> Fetched:
+    """Fetch a public http(s) URI (SSRF-hardened). Returns ``(bytes, content_type)``
+    as a :class:`Fetched`, which also says whether it was an attachment.
 
     ``fetch_options`` go to ``graze.guarded_open`` (``resolver``, ``connector``,
     ``is_allowed_address``, ...), overriding braidio's bounds; they are the test seam.
@@ -118,6 +147,7 @@ def fetch_uri(uri: str, **fetch_options) -> tuple[bytes, str]:
     try:
         with graze.guarded_open(uri, **{**options, **fetch_options}) as resp:
             ctype = (resp.headers.get("Content-Type") or "").split(";")[0].strip()
+            disposition = resp.headers.get("Content-Disposition") or ""
             data = resp.read()
     except graze.UnsafeTarget as err:
         raise ValueError(str(err)) from err
@@ -125,7 +155,11 @@ def fetch_uri(uri: str, **fetch_options) -> tuple[bytes, str]:
         raise ValueError(f"fetch failed: HTTP {err.status}") from err
     except graze.GuardedFetchError as err:
         raise ValueError(f"fetch failed: {err}") from err
-    return data, ctype.lower() or "application/octet-stream"
+    return Fetched(
+        data,
+        ctype.lower() or "application/octet-stream",
+        attachment=disposition.split(";")[0].strip().lower() == "attachment",
+    )
 
 
 #: What a fetched file is refused as: a web page (a share link that is not
@@ -135,30 +169,33 @@ def fetch_uri(uri: str, **fetch_options) -> tuple[bytes, str]:
 PAGE_OR_ARCHIVE_FAMILIES = frozenset({"html", "archive"})
 
 
-def resolve_file_link(uri: str) -> tuple[str, bool]:
-    """``(direct_url, html_is_the_host_s)`` for a pasted ``uri``.
+class FileLink(NamedTuple):
+    """What a pasted link is fetched as: ``url`` (whose body is the file), and
+    whether it is the provider's raw-download ``endpoint``, where an HTML body
+    that did not come as an attachment is the host's sign-in, preview or
+    virus-scan page."""
 
-    ``direct_url`` is the URL whose body is the file: a Dropbox ``dl=0`` or
-    Google Drive ``/view`` link is a web page about the file, and
-    :func:`graze.share_links.resolve_share_url` turns it into the download (a
-    plain URL, or one that already names a download or export, passes through).
-    ``html_is_the_host_s`` says an HTML body from it is the host's sign-in,
-    preview or virus-scan page, never the document: the URL is the provider's
-    raw-download endpoint (graze's ``download_endpoint``, thorwhalen/graze#19),
-    whether graze rewrote the link to get there or it was pasted in download
-    form already (braidio#166), and it does not name an ``.html`` file (the
-    one case where a download's HTML is the document). A published page
-    (Docs ``/pub``, ``/export``) or a plain URL is never refused for being
-    HTML. A folder link is refused: it is many files, and what is asked for is
-    one. ``ValueError`` names why.
+    url: str
+    endpoint: bool
+
+
+def resolve_file_link(uri: str) -> FileLink:
+    """The :class:`FileLink` for a pasted ``uri``.
+
+    A Dropbox ``dl=0`` or Google Drive ``/view`` link is a web page about the
+    file, and :func:`graze.share_links.resolve_share_url` turns it into the
+    download (a plain URL, or one that already names a download or export,
+    passes through). ``endpoint`` is graze's ``download_endpoint``
+    (thorwhalen/graze#19): set whether graze rewrote the link or it was pasted
+    in download form already (braidio#166); a published page (Docs ``/pub``,
+    ``/export``) or a plain URL is not one. A folder link is refused: it is
+    many files, and what is asked for is one. ``ValueError`` names why.
 
     >>> resolve_file_link('https://drive.google.com/file/d/1AbC/view')
-    ('https://drive.google.com/uc?export=download&id=1AbC', True)
-    >>> resolve_file_link('https://www.dropbox.com/scl/fi/a/x.pdf?rlkey=k&dl=1')[1]
+    FileLink(url='https://drive.google.com/uc?export=download&id=1AbC', endpoint=True)
+    >>> resolve_file_link('https://www.dropbox.com/scl/fi/a/x.pdf?rlkey=k&dl=1').endpoint
     True
-    >>> resolve_file_link('https://docs.google.com/document/d/1X/pub')
-    ('https://docs.google.com/document/d/1X/pub', False)
-    >>> resolve_file_link('https://www.dropbox.com/s/a1/page.html?dl=0')[1]
+    >>> resolve_file_link('https://docs.google.com/document/d/1X/pub').endpoint
     False
     """
     from graze.share_links import ShareLinkKind, resolve_share_url
@@ -173,24 +210,22 @@ def resolve_file_link(uri: str) -> tuple[str, bool]:
         raise ValueError(
             f"{resolved.provider} link cannot be downloaded directly: {resolved.reason}"
         )
-    return resolved.direct_url, (
-        resolved.download_endpoint and not _names_an_html_file(resolved.url)
-    )
+    return FileLink(resolved.direct_url, resolved.download_endpoint)
 
 
-#: A file the user shared that is itself a web page: its download is HTML.
-_HTML_SUFFIXES = (".html", ".htm")
+def is_host_page(link: FileLink, fetched) -> bool:
+    """Whether ``fetched``, read from ``link``, is the share host's own page
+    rather than the file: a download endpoint that did not send the body as an
+    attachment. A shared ``.html`` or Markdown file downloads as an attachment,
+    so its markup is never mistaken for a sign-in page.
 
-
-def _names_an_html_file(url: str) -> bool:
-    """Whether ``url``'s path ends in an HTML file name.
-
-    >>> _names_an_html_file("https://www.dropbox.com/s/a1/Page.HTML?dl=1")
+    >>> link = FileLink("https://www.dropbox.com/s/a/x.md?dl=1", endpoint=True)
+    >>> is_host_page(link, (b"<html>Sign in</html>", "text/html"))
     True
+    >>> is_host_page(link, Fetched(b"<p>Doc</p>", "text/markdown", attachment=True))
+    False
     """
-    from urllib.parse import urlsplit
-
-    return urlsplit(url).path.lower().endswith(_HTML_SUFFIXES)
+    return link.endpoint and not is_attachment(fetched)
 
 
 def refuse_page_or_archive(

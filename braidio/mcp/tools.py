@@ -406,10 +406,11 @@ def ingest_document(
         raise ToolError(f"no project {project_id!r} — call create_project first")
     try:
         if uri:
-            direct_url, html_is_the_host_s = _docs.resolve_file_link(uri)
-            data, ctype = _docs.fetch_uri(direct_url)
+            link = _docs.resolve_file_link(uri)
+            fetched = _docs.fetch_uri(link.url)
+            data, ctype = fetched
             _docs.refuse_archive_document(data)
-            if html_is_the_host_s:  # a download endpoint's page: sign-in, not doc
+            if _docs.is_host_page(link, fetched):  # sign-in page, not the document
                 _docs.refuse_page_or_archive(data, uri=uri, kind="document")
             src = uri
         elif text is not None:

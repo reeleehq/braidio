@@ -66,6 +66,8 @@ from braidio.transforms._common import (
     TIER_VIDEO_PANEL,
     TIER_VIDEO_CUT,
     TIER_LABEL_TRACK,
+    TIER_SOUND_DESIGN,
+    TIER_SOUND_DESIGN_CONFIG,
     graph_index,
     node_ref,
 )
@@ -197,6 +199,8 @@ __all__ = [
     "TIER_VIDEO_PANEL",
     "TIER_VIDEO_CUT",
     "TIER_LABEL_TRACK",
+    "TIER_SOUND_DESIGN",
+    "TIER_SOUND_DESIGN_CONFIG",
     "VOICE_ASSIGNMENT_TRANSFORM",
     "NARRATION_RENDER_TRANSFORM",
     "DIALOGUE_RENDER_TRANSFORM",

@@ -242,3 +242,31 @@ DELIVERIES: dict[str, Delivery] = {
         CONVERSATIONAL,
     )
 }
+
+
+def as_delivery(delivery: "Delivery | str") -> Delivery:
+    """``delivery`` as a :class:`Delivery`: one passes through, a name is looked
+    up in :data:`DELIVERIES`. Strict: an unknown name raises ``ValueError``
+    naming the known ones, anything else ``TypeError``. (The env and user
+    config defaults are read leniently by :func:`braidio.defaults.default_delivery`;
+    an explicit argument never is: a silent fallback would voice, and bill, a
+    whole production with a delivery nobody asked for.)
+
+    >>> as_delivery("v3-narrator").model_id
+    'eleven_v3'
+    >>> as_delivery("v9")
+    Traceback (most recent call last):
+        ...
+    ValueError: unknown delivery 'v9'; use one of [...]
+    """
+    if isinstance(delivery, Delivery):
+        return delivery
+    if not isinstance(delivery, str):
+        raise TypeError(
+            f"delivery must be a Delivery or its name, not {type(delivery).__name__}"
+        )
+    if delivery not in DELIVERIES:
+        raise ValueError(
+            f"unknown delivery {delivery!r}; use one of {sorted(DELIVERIES)}"
+        )
+    return DELIVERIES[delivery]

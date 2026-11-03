@@ -213,7 +213,7 @@ def open_or_create_project_at(
     What every host keeping one project per production needs (braidio#182),
     without knowing nw's on-disk marker. ``title`` names a *new* project only;
     an existing one keeps its own. A folder that holds something but no
-    project is refused rather than overwritten.
+    project is refused (nw's ``FileNotFoundError``) rather than overwritten.
 
     >>> import tempfile
     >>> with tempfile.TemporaryDirectory() as d:
@@ -225,13 +225,9 @@ def open_or_create_project_at(
     from braidio._paths import safe_component
 
     root = Path(projects_dir) / safe_component(project_id, label="project_id")
+    if root.is_dir() and any(root.iterdir()):
+        return Project(root)  # not a project: nw says so, and nothing is written
     try:
-        return Project(root)
-    except FileNotFoundError as missing:
-        try:
-            return create_project_at(projects_dir, project_id, title=title)
-        except FileExistsError:
-            raise FileExistsError(
-                f"{root} exists but is not a braidio project (and is not empty); "
-                "refusing to create one over it."
-            ) from missing
+        return create_project_at(projects_dir, project_id, title=title)
+    except FileExistsError:
+        return Project(root)  # another host created it between the check and here

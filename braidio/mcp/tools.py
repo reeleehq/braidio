@@ -733,12 +733,12 @@ def _render_cost(scr, profile: str, *, model_id: str, dialogue_model_id: str) ->
 
 def _delivery(name: str):
     """Resolve a delivery/register preset name to its :class:`braidio.Delivery`."""
-    if name not in braidio.DELIVERIES:
-        raise ToolError(
-            f"unknown delivery {name!r}; use one of {sorted(braidio.DELIVERIES)} "
-            "(list_deliveries describes them)"
-        )
-    return braidio.DELIVERIES[name]
+    from braidio.delivery import as_delivery
+
+    try:
+        return as_delivery(name)
+    except (TypeError, ValueError) as exc:
+        raise ToolError(f"{exc} (list_deliveries describes them)") from exc
 
 
 def _episode_retrieval(project_id: str, episode_id: str) -> dict:

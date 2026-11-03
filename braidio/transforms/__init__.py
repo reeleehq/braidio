@@ -231,7 +231,10 @@ def format_config(fmt=None, *, config=None, voice_id=None, delivery=None):
     >>> format_config() is None
     True
     """
-    delivery = _as_delivery(delivery)
+    if delivery is not None:
+        from braidio.delivery import as_delivery
+
+        delivery = as_delivery(delivery)
     if delivery is None and config is None and fmt is not None:
         delivery = fmt.narration_delivery
     if delivery is not None:
@@ -244,21 +247,6 @@ def format_config(fmt=None, *, config=None, voice_id=None, delivery=None):
     if voice_id is not None:
         config = (config or WeaveConfig()).with_(narration_voice=voice_id)
     return config
-
-
-def _as_delivery(delivery):
-    """``delivery`` as a :class:`~braidio.delivery.Delivery`: one passes through,
-    a name is looked up, an unknown name is refused (a silent fallback would
-    voice, and bill, a whole production with a delivery nobody asked for)."""
-    if delivery is None or not isinstance(delivery, str):
-        return delivery
-    from braidio.delivery import DELIVERIES
-
-    if delivery not in DELIVERIES:
-        raise ValueError(
-            f"unknown delivery {delivery!r}; use one of {sorted(DELIVERIES)}"
-        )
-    return DELIVERIES[delivery]
 
 
 def resolve_config(project, fmt=None, *, config=None, voice_id=None, delivery=None):
@@ -345,10 +333,11 @@ def weave_project(
     voice. Left unset it writes nothing (thorwhalen/braidio#115).
 
     ``delivery`` (a :class:`~braidio.delivery.Delivery` or its name) is what
-    the narrator speaks with, as on the fast path, without a format: it wins
-    over the format's ``narration_delivery`` and goes through
+    the narrator speaks with when the caller names one without a format: it
+    wins over the format's ``narration_delivery`` and goes through
     :func:`resolve_config` like one, so a project already voiced keeps its
-    model and settings (braidio#182).
+    model and settings (braidio#182). Unlike the fast path, ``None`` does not
+    read the env or user-config default delivery (braidio#191).
 
     ``profile`` (a :class:`~braidio.rights.Profile`) and ``rights`` (a
     :class:`~braidio.rights.RightsPolicy`) are the rights seam, and they mean

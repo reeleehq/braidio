@@ -172,8 +172,10 @@ def test_open_or_create_project_at_opens_creates_and_refuses(tmp_path):
     stray = tmp_path / "stray"
     stray.mkdir()
     (stray / "notes.txt").write_text("mine")
-    with pytest.raises(FileExistsError, match="not a braidio project"):
+    with pytest.raises(FileNotFoundError):
         open_or_create_project_at(tmp_path, "stray")
     assert (stray / "notes.txt").read_text() == "mine"
     with pytest.raises(ValueError):
         open_or_create_project_at(tmp_path, "../escape")
+    (tmp_path / "empty").mkdir()  # an empty folder is a place to create one
+    assert isinstance(open_or_create_project_at(tmp_path, "empty"), Project)

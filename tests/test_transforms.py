@@ -719,6 +719,11 @@ def test_a_delivery_applies_over_a_format_and_over_an_explicit_config():
     both = format_config(config=cfg, delivery=braidio.V3_NARRATOR)
     assert (both.crossfade_s, both.model_id) == (0.3, braidio.V3_NARRATOR.model_id)
     assert format_config(config=cfg) is cfg  # unchanged without a delivery
+    # an explicit config keeps its own voice over the format's delivery
+    mine = braidio.WeaveConfig(model_id="eleven_multilingual_v2")
+    assert format_config(braidio.DEEP_DIVE, config=mine).model_id == mine.model_id
+    with pytest.raises(TypeError, match="Delivery or its name"):
+        format_config(delivery={"model_id": "x"})
 
 
 def _counting_narrate(monkeypatch):

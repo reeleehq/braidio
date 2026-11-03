@@ -136,20 +136,30 @@ PAGE_OR_ARCHIVE_FAMILIES = frozenset({"html", "archive"})
 
 
 def resolve_file_link(uri: str) -> tuple[str, bool]:
-    """``(direct_url, rewritten)`` for a pasted ``uri``.
+    """``(direct_url, html_is_the_host_s)`` for a pasted ``uri``.
 
     ``direct_url`` is the URL whose body is the file: a Dropbox ``dl=0`` or
     Google Drive ``/view`` link is a web page about the file, and
     :func:`graze.share_links.resolve_share_url` turns it into the download (a
     plain URL, or one that already names a download or export, passes through).
-    ``rewritten`` says whether it did: only then is an HTML body known to be the
-    host's page rather than the file. A folder link is refused: it is many
-    files, and what is asked for is one. ``ValueError`` names why.
+    ``html_is_the_host_s`` says an HTML body from it is the host's sign-in,
+    preview or virus-scan page, never the document: the URL is the provider's
+    raw-download endpoint (graze's ``download_endpoint``, thorwhalen/graze#19),
+    whether graze rewrote the link to get there or it was pasted in download
+    form already (braidio#166), and it does not name an ``.html`` file (the
+    one case where a download's HTML is the document). A published page
+    (Docs ``/pub``, ``/export``) or a plain URL is never refused for being
+    HTML. A folder link is refused: it is many files, and what is asked for is
+    one. ``ValueError`` names why.
 
     >>> resolve_file_link('https://drive.google.com/file/d/1AbC/view')
     ('https://drive.google.com/uc?export=download&id=1AbC', True)
+    >>> resolve_file_link('https://www.dropbox.com/scl/fi/a/x.pdf?rlkey=k&dl=1')[1]
+    True
     >>> resolve_file_link('https://docs.google.com/document/d/1X/pub')
     ('https://docs.google.com/document/d/1X/pub', False)
+    >>> resolve_file_link('https://www.dropbox.com/s/a1/page.html?dl=0')[1]
+    False
     """
     from graze.share_links import ShareLinkKind, resolve_share_url
 
@@ -163,8 +173,24 @@ def resolve_file_link(uri: str) -> tuple[str, bool]:
         raise ValueError(
             f"{resolved.provider} link cannot be downloaded directly: {resolved.reason}"
         )
-    # ``resolved.url`` is the input as resolved (whitespace-stripped)
-    return resolved.direct_url, resolved.direct_url != resolved.url
+    return resolved.direct_url, (
+        resolved.download_endpoint and not _names_an_html_file(resolved.url)
+    )
+
+
+#: A file the user shared that is itself a web page: its download is HTML.
+_HTML_SUFFIXES = (".html", ".htm")
+
+
+def _names_an_html_file(url: str) -> bool:
+    """Whether ``url``'s path ends in an HTML file name.
+
+    >>> _names_an_html_file("https://www.dropbox.com/s/a1/Page.HTML?dl=1")
+    True
+    """
+    from urllib.parse import urlsplit
+
+    return urlsplit(url).path.lower().endswith(_HTML_SUFFIXES)
 
 
 def refuse_page_or_archive(

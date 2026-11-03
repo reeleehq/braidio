@@ -168,7 +168,7 @@ nw-app = ["lacing", "nw>=0.0.125", "falaw[fal]"]
 #   asset-ref declarations, nw#55; tolerant trace readers, nw#184; total_cost,
 #   nw#189; fresh_equivalents(reference_of=) + freshness_pass, nw#203/#209/#218;
 #   the sound-design Transform, nw#190/#203).
-mcp = ["fastmcp", "py2mcp>=0.1.9", "pypdf", "dol>=0.3.57", "lacing", "nw>=0.0.125", "falaw[fal]", "yb[download]>=0.1.24", "graze>=0.1.45", "markdown-it-py", "mdit-py-plugins"]
+mcp = ["fastmcp", "py2mcp>=0.1.9", "pypdf", "dol>=0.3.57", "lacing", "nw>=0.0.125", "falaw[fal]", "yb[download]>=0.1.24", "graze>=0.1.47", "markdown-it-py", "mdit-py-plugins"]
 # The importer (`braidio.importing`): a finished commentary production ->
 # a real project graph. Needs the nw-app layer (it writes annotations) plus
 # `illustration` for licence normalization.

@@ -1916,6 +1916,51 @@ def test_ingest_document_refuses_a_share_host_s_sign_in_page(monkeypatch):
 
 
 @pytest.mark.parametrize(
+    "share",
+    [
+        # pasted already in download form: graze does not rewrite these
+        "https://www.dropbox.com/scl/fi/abc/essay.pdf?rlkey=x&dl=1",
+        "https://www.dropbox.com/scl/fi/abc/essay.pdf?dl=1&rlkey=x",
+        "https://dl.dropboxusercontent.com/s/abc/essay.pdf",
+        "https://drive.google.com/uc?export=download&id=1AbC",
+        "https://drive.usercontent.google.com/download?id=1AbC&export=download",
+    ],
+)
+def test_ingest_document_refuses_a_sign_in_page_from_a_download_link(
+    monkeypatch, share
+):
+    """braidio#166: a private link pasted already in download form is not
+    rewritten, but its HTML is still the host's sign-in page."""
+    from fastmcp.exceptions import ToolError
+
+    from braidio.mcp import _docs
+
+    page = (b"<!DOCTYPE html><html><body>Sign in</body></html>", "text/html")
+    monkeypatch.setattr(_docs, "fetch_uri", lambda uri: page)
+    server = _local_server(ledger={})
+    _call(server, "create_project", {"project_id": "d", "title": "D"})
+    with pytest.raises(ToolError, match="expected document bytes"):
+        _call(server, "ingest_document", {"project_id": "d", "uri": share})
+
+
+def test_ingest_document_reads_a_shared_html_file(monkeypatch):
+    """A shared file that is itself a web page downloads as HTML: that is the
+    document, not a sign-in page."""
+    from braidio.mcp import _docs
+
+    page = (b"<html><body><p>The essay, as a page.</p></body></html>", "text/html")
+    monkeypatch.setattr(_docs, "fetch_uri", lambda uri: page)
+    server = _local_server(ledger={})
+    _call(server, "create_project", {"project_id": "d", "title": "D"})
+    out = _call(
+        server,
+        "ingest_document",
+        {"project_id": "d", "uri": "https://www.dropbox.com/s/a1/essay.html?dl=1"},
+    ).structured_content
+    assert out["text"] == "The essay, as a page."
+
+
+@pytest.mark.parametrize(
     "uri",
     [
         "https://docs.google.com/document/d/1X/pub",

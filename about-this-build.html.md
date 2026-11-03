@@ -2,7 +2,7 @@
 
 # About this build
 
-This documentation was built on **2026-11-03 15:28 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/626f4bb602117f332b376f3fbf06860cf1f0a59b"><code>626f4bb</code></a> on branch <code>main</code>, for **braidio 0.0.110** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-03 15:39 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/3e50c0a8e2de25565f86d969c00b24aad0bd9bed"><code>3e50c0a</code></a> on branch <code>main</code>, for **braidio 0.0.111** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -11,7 +11,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/626f4bb602117f332b376f3fbf06860cf1f0a59b"><code>626f4bb602117f332b376f3fbf06860cf1f0a59b</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/3e50c0a8e2de25565f86d969c00b24aad0bd9bed"><code>3e50c0a8e2de25565f86d969c00b24aad0bd9bed</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
 | Tags at this commit | none                                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
@@ -22,9 +22,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41649126870">41649126870</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41657795510">41657795510</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>4ce0905b1b670b7a301f27c9e0b91b5a0ea3e61d</code> (in the history of the built commit) |
+| Event commit | <code>9192e3a96a188619d83dd2ed77c101515b8482c3</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -33,7 +33,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 | epythet  | 0.2.22  |
 | Sphinx   | 9.1.1   |
 | docutils | 0.22.4  |
-| Python   | 3.12.15 |
+| Python   | 3.12.16 |
 
 ## Configuration as resolved
 
@@ -49,13 +49,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.110/">0.0.110</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/braidio/0.0.111/">0.0.111</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 626f4bb602117f332b376f3fbf06860cf1f0a59b
+git checkout 3e50c0a8e2de25565f86d969c00b24aad0bd9bed
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

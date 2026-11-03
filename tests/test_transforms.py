@@ -1528,6 +1528,24 @@ def test_an_unpriced_rate_makes_the_receipt_a_lower_bound(
     assert receipt.has_unknown_costs
 
 
+def test_the_receipt_totals_with_nws_rule():
+    """``WeaveReceipt.of`` totals with ``nw.transforms.total_cost`` (braidio#179):
+    the same three fields, and a non-finite total reads as unknown, which a
+    plain ``sum`` reported as a known (infinite) spend."""
+    from types import SimpleNamespace
+
+    def _result(cost, saved=0.0, unknown=False):
+        return SimpleNamespace(
+            cost_usd_actual=cost, cache_hit_savings_usd=saved, has_unknown_costs=unknown
+        )
+
+    receipt = braidio.WeaveReceipt.of(None, [_result(0.25), _result(0.0, 0.5)])
+    assert (receipt.cost_usd_actual, receipt.cache_hit_savings_usd) == (0.25, 0.5)
+    assert not receipt.has_unknown_costs
+    assert braidio.WeaveReceipt.of(None, [_result(float("inf"))]).has_unknown_costs
+    assert braidio.WeaveReceipt.of(None, [_result(0.25)], failed=True).has_unknown_costs
+
+
 def test_without_the_flag_the_episode_is_returned_as_before(
     project, script_and_source, patched_synthesis
 ):

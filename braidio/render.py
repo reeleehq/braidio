@@ -46,8 +46,8 @@ from braidio.tts import Speak, narrate, narrator_from_speak, tts_backend, tts_na
 from braidio.sound_design import (
     SOUND_SIDECAR_SUFFIX,
     SoundDesign,
-    TalkSpan,
     score_mix,
+    talk_spans,
 )
 from braidio.weave import TimelineItem, extract_padded, weave_timeline
 from braidio.weave_config import WeaveConfig, speaker_key
@@ -595,11 +595,7 @@ def _sound_design(out: Path, tl, spoken, *, design: SoundDesign, profile):
     import json
     from dataclasses import replace
 
-    spans = [
-        TalkSpan(start_s=beat.start, duration_s=beat.duration, text=text)
-        for beat, text in zip(tl.beats, spoken)
-        if text
-    ]
+    spans = talk_spans(tl.beats, spoken)
     scored = score_mix(out, spans, design=design, profile=profile, out_path=out)
     record = {"design": design.to_dict(), **scored.to_dict()}
     out.with_suffix(SOUND_SIDECAR_SUFFIX).write_text(json.dumps(record, indent=2))

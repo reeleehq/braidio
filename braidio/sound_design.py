@@ -105,6 +105,20 @@ class SoundDesign:
             "allow_generate": self.allow_generate,
         }
 
+    def to_config(self, profile: Profile) -> dict:
+        """The graph's ``sound-design-config/v1`` body (nw's schema) for a
+        production rendered under ``profile``: these knobs, switched on, with
+        the licence intent the profile implies.
+
+        >>> SoundDesign(max_events=2).to_config(Profile.PERSONAL)["commercial_ok"]
+        False
+        """
+        return {
+            "enabled": True,
+            **self.to_dict(),
+            "commercial_ok": self.commercial_ok(profile),
+        }
+
 
 @dataclass(frozen=True)
 class TalkSpan:
@@ -114,6 +128,35 @@ class TalkSpan:
     start_s: float
     duration_s: float
     text: str
+
+
+def spoken_of(beat) -> str:
+    """What a script beat says aloud: a narration's text, a dialogue's turns,
+    ``""`` for anything else (a clip's words are the source's; a scene break
+    says nothing).
+
+    >>> from braidio.script import Dialogue, Narration
+    >>> spoken_of(Narration("Hi.")), spoken_of(Dialogue(turns=[("a", "Yes."), ("b", "No.")]))
+    ('Hi.', 'Yes. No.')
+    """
+    from braidio.script import Dialogue, Narration
+
+    if isinstance(beat, Narration):
+        return beat.text
+    if isinstance(beat, Dialogue):
+        return " ".join(text for _role, text in beat.turns)
+    return ""
+
+
+def talk_spans(beats, texts: Iterable[str]) -> list[TalkSpan]:
+    """The spoken :class:`TalkSpan` of a timeline: its beat spans (anything with
+    ``start`` and ``duration``) zipped with what each says, silent ones left out.
+    """
+    return [
+        TalkSpan(start_s=beat.start, duration_s=beat.duration, text=text)
+        for beat, text in zip(beats, texts)
+        if text
+    ]
 
 
 def spoken_text(text: str) -> str:

@@ -25,7 +25,7 @@ def _importable(*names: str) -> bool:
 @pytest.mark.skipif(not _importable("lacing"), reason="lacing not installed")
 def test_the_graph_layer_loads_when_lacing_does():
     assert braidio.HAS_GRAPH, (
-        f"lacing imports, braidio's graph layer did not: {braidio.GRAPH_IMPORT_ERROR!r}"
+        f"lacing imports, braidio's graph layer did not: {braidio._GRAPH_IMPORT_ERROR!r}"
     )
 
 
@@ -34,5 +34,16 @@ def test_the_graph_layer_loads_when_lacing_does():
 )
 def test_the_nw_layer_loads_when_nw_does():
     assert braidio.HAS_NW, (
-        f"nw imports, braidio's nw layer did not: {braidio.NW_IMPORT_ERROR!r}"
+        f"nw imports, braidio's nw layer did not: {braidio._NW_IMPORT_ERROR!r}"
+    )
+
+
+@pytest.mark.skipif(not _importable("burns", "PIL"), reason="video extra not installed")
+def test_the_video_layer_loads_when_its_dependencies_are_found():
+    """Same hole on the video path: ``missing_dependencies`` treats a burns that
+    is *found* but fails to import as absent, so the render tests skip."""
+    from braidio import video
+
+    assert braidio.HAS_VIDEO, (
+        f"burns and PIL are installed, yet video reports {video.missing_dependencies()} missing"
     )

@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="_static/documentation_options.js?v=f82423d7"></script>
+    <script src="_static/documentation_options.js?v=cfdca9bd"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -57,7 +57,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.105" />
+  <meta name="docsearch:version" content="0.0.106" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -626,7 +626,9 @@ the project (reelee) puts it beside that caller’s other projects rather than u
 braidio’s data home, where the host’s router and lister would never find it.</p>
 <p><code class="docutils literal notranslate"><span class="pre">braidio.project.create_project_at(projects_dir,</span> <span class="pre">project_id)</span></code> is the host-placed
 create on its own. It is deliberately outside <code class="docutils literal notranslate"><span class="pre">braidio.mcp</span></code>, so placing a project
-never pulls the <code class="docutils literal notranslate"><span class="pre">[mcp]</span></code> extra.</p>
+never pulls the <code class="docutils literal notranslate"><span class="pre">[mcp]</span></code> extra. <code class="docutils literal notranslate"><span class="pre">open_or_create_project_at(projects_dir,</span> <span class="pre">project_id,</span> <span class="pre">title=...)</span></code>
+opens the project when it is there and creates it otherwise: what a host keeping
+one project per production calls each time.</p>
 <p><code class="docutils literal notranslate"><span class="pre">braidio.video</span></code>’s dependencies are imported inside the functions that use them, so
 <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">braidio.video</span></code> works on a bare install and the planners stay usable —
 <code class="docutils literal notranslate"><span class="pre">braidio.HAS_VIDEO</span></code> reports whether the render path is available.</p>
@@ -682,7 +684,7 @@ everything else.</p>
 </section>
 </section>
 
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-03 12:19 UTC from <a href="https://github.com/reeleehq/braidio/commit/f5e01f5e4e70a48d9fce2f7b05e38e2743f2de5a">f5e01f5</a> (main) · braidio 0.0.105 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-03 12:30 UTC from <a href="https://github.com/reeleehq/braidio/commit/971cdaaa3d0a4d8f02b3940cff07d3170261f0d7">971cdaa</a> (main) · braidio 0.0.106 · <a href="about-this-build.html">about this build</a></p>
 
                 </article>
               

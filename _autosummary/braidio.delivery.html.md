@@ -19,8 +19,9 @@ consistency); `eleven_v3` adds inline audio tags for real expressive control.
 
 ### Functions
 
-| [`model_supports_speed`](#braidio.delivery.model_supports_speed)(model_id)   | Whether `model_id` honors `voice_settings["speed"]`.   |
-|-----------------------------------------------------------------------------------|--------------------------------------------------------|
+| [`as_delivery`](#braidio.delivery.as_delivery)(delivery)          | `delivery` as a [`Delivery`](#braidio.delivery.Delivery): one passes through, a name is looked up in `DELIVERIES`.   |
+|---------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
+| [`model_supports_speed`](#braidio.delivery.model_supports_speed)(model_id) | Whether `model_id` honors `voice_settings["speed"]`.                                                                                  |
 
 ### Classes
 
@@ -45,6 +46,27 @@ audio tags instead.
 ### braidio.delivery.SPEEDLESS_MODELS *= frozenset({'eleven_v3'})*
 
 Models that ignore `voice_settings["speed"]` (eleven v3 has no speed control).
+
+### braidio.delivery.as_delivery(delivery)
+
+`delivery` as a [`Delivery`](#braidio.delivery.Delivery): one passes through, a name is looked
+up in `DELIVERIES`. Strict: an unknown name raises `ValueError`
+naming the known ones, anything else `TypeError`. (The env and user
+config defaults are read leniently by [`braidio.defaults.default_delivery()`](braidio.defaults.html.md#braidio.defaults.default_delivery);
+an explicit argument never is: a silent fallback would voice, and bill, a
+whole production with a delivery nobody asked for.)
+
+```pycon
+>>> as_delivery("v3-narrator").model_id
+'eleven_v3'
+>>> as_delivery("v9")
+Traceback (most recent call last):
+    ...
+ValueError: unknown delivery 'v9'; use one of [...]
+```
+
+* **Return type:**
+  [`Delivery`](#braidio.delivery.Delivery)
 
 ### braidio.delivery.model_supports_speed(model_id)
 

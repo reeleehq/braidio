@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../../_static/documentation_options.js?v=f82423d7"></script>
+    <script src="../../_static/documentation_options.js?v=cfdca9bd"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.105" />
+  <meta name="docsearch:version" content="0.0.106" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -965,6 +965,37 @@ window.runMermaid = runMermaid;</script>
         <span class="n">CONVERSATIONAL</span><span class="p">,</span>
     <span class="p">)</span>
 <span class="p">}</span>
+
+
+<div class="viewcode-block" id="as_delivery">
+<a class="viewcode-back" href="../../_autosummary/braidio.delivery.html#braidio.as_delivery">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">as_delivery</span><span class="p">(</span><span class="n">delivery</span><span class="p">:</span> <span class="s2">"Delivery | str"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Delivery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""``delivery`` as a :class:`Delivery`: one passes through, a name is looked</span>
+<span class="sd">    up in :data:`DELIVERIES`. Strict: an unknown name raises ``ValueError``</span>
+<span class="sd">    naming the known ones, anything else ``TypeError``. (The env and user</span>
+<span class="sd">    config defaults are read leniently by :func:`braidio.defaults.default_delivery`;</span>
+<span class="sd">    an explicit argument never is: a silent fallback would voice, and bill, a</span>
+<span class="sd">    whole production with a delivery nobody asked for.)</span>
+
+<span class="sd">    &gt;&gt;&gt; as_delivery("v3-narrator").model_id</span>
+<span class="sd">    'eleven_v3'</span>
+<span class="sd">    &gt;&gt;&gt; as_delivery("v9")</span>
+<span class="sd">    Traceback (most recent call last):</span>
+<span class="sd">        ...</span>
+<span class="sd">    ValueError: unknown delivery 'v9'; use one of [...]</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">delivery</span><span class="p">,</span> <span class="n">Delivery</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">delivery</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">delivery</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"delivery must be a Delivery or its name, not </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">delivery</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">delivery</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DELIVERIES</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"unknown delivery </span><span class="si">{</span><span class="n">delivery</span><span class="si">!r}</span><span class="s2">; use one of </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">DELIVERIES</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">DELIVERIES</span><span class="p">[</span><span class="n">delivery</span><span class="p">]</span></div>
+
 </pre></div>
 
                 </article>

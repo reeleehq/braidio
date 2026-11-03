@@ -235,7 +235,9 @@ braidio’s data home, where the host’s router and lister would never find it.
 
 `braidio.project.create_project_at(projects_dir, project_id)` is the host-placed
 create on its own. It is deliberately outside `braidio.mcp`, so placing a project
-never pulls the `[mcp]` extra.
+never pulls the `[mcp]` extra. `open_or_create_project_at(projects_dir, project_id, title=...)`
+opens the project when it is there and creates it otherwise: what a host keeping
+one project per production calls each time.
 
 `braidio.video`’s dependencies are imported inside the functions that use them, so
 `import braidio.video` works on a bare install and the planners stay usable —

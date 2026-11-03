@@ -1,4 +1,4 @@
-> built 2026-11-03 12:19 UTC from f5e01f5 (main) · braidio 0.0.105. Details: build_info.json
+> built 2026-11-03 12:30 UTC from 971cdaa (main) · braidio 0.0.106. Details: build_info.json
 
 # index.html.md
 
@@ -239,7 +239,9 @@ braidio’s data home, where the host’s router and lister would never find it.
 
 `braidio.project.create_project_at(projects_dir, project_id)` is the host-placed
 create on its own. It is deliberately outside `braidio.mcp`, so placing a project
-never pulls the `[mcp]` extra.
+never pulls the `[mcp]` extra. `open_or_create_project_at(projects_dir, project_id, title=...)`
+opens the project when it is there and creates it otherwise: what a host keeping
+one project per production calls each time.
 
 `braidio.video`’s dependencies are imported inside the functions that use them, so
 `import braidio.video` works on a bare install and the planners stay usable —
@@ -877,8 +879,9 @@ consistency); `eleven_v3` adds inline audio tags for real expressive control.
 
 ### Functions
 
-| [`model_supports_speed`](_autosummary/braidio.delivery.html.md#braidio.delivery.model_supports_speed)(model_id)   | Whether `model_id` honors `voice_settings["speed"]`.   |
-|-----------------------------------------------------------------------------------|--------------------------------------------------------|
+| [`as_delivery`](_autosummary/braidio.delivery.html.md#braidio.delivery.as_delivery)(delivery)          | `delivery` as a [`Delivery`](_autosummary/braidio.delivery.html.md#braidio.delivery.Delivery): one passes through, a name is looked up in `DELIVERIES`.   |
+|---------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
+| [`model_supports_speed`](_autosummary/braidio.delivery.html.md#braidio.delivery.model_supports_speed)(model_id) | Whether `model_id` honors `voice_settings["speed"]`.                                                                                  |
 
 ### Classes
 
@@ -903,6 +906,27 @@ audio tags instead.
 ### braidio.delivery.SPEEDLESS_MODELS *= frozenset({'eleven_v3'})*
 
 Models that ignore `voice_settings["speed"]` (eleven v3 has no speed control).
+
+### braidio.delivery.as_delivery(delivery)
+
+`delivery` as a [`Delivery`](_autosummary/braidio.delivery.html.md#braidio.delivery.Delivery): one passes through, a name is looked
+up in `DELIVERIES`. Strict: an unknown name raises `ValueError`
+naming the known ones, anything else `TypeError`. (The env and user
+config defaults are read leniently by [`braidio.defaults.default_delivery()`](_autosummary/braidio.defaults.html.md#braidio.defaults.default_delivery);
+an explicit argument never is: a silent fallback would voice, and bill, a
+whole production with a delivery nobody asked for.)
+
+```pycon
+>>> as_delivery("v3-narrator").model_id
+'eleven_v3'
+>>> as_delivery("v9")
+Traceback (most recent call last):
+    ...
+ValueError: unknown delivery 'v9'; use one of [...]
+```
+
+* **Return type:**
+  [`Delivery`](_autosummary/braidio.delivery.html.md#braidio.delivery.Delivery)
 
 ### braidio.delivery.model_supports_speed(model_id)
 
@@ -5463,18 +5487,16 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-03 12:19 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/f5e01f5e4e70a48d9fce2f7b05e38e2743f2de5a"><code>f5e01f5</code></a> on branch <code>main</code>, for **braidio 0.0.105** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-03 12:30 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/971cdaaa3d0a4d8f02b3940cff07d3170261f0d7"><code>971cdaa</code></a> on branch <code>main</code>, for **braidio 0.0.106** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.0.105) is behind the latest release on PyPI (0.0.106): `pip install braidio` gives newer code than these docs describe.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/f5e01f5e4e70a48d9fce2f7b05e38e2743f2de5a"><code>f5e01f5e4e70a48d9fce2f7b05e38e2743f2de5a</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/971cdaaa3d0a4d8f02b3940cff07d3170261f0d7"><code>971cdaaa3d0a4d8f02b3940cff07d3170261f0d7</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
 | Tags at this commit | none                                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
@@ -5485,9 +5507,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41631957555">41631957555</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41633663522">41633663522</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>d85e3f6487b220ea079eeb65339ad352aff95cbe</code> (in the history of the built commit) |
+| Event commit | <code>f5e01f5e4e70a48d9fce2f7b05e38e2743f2de5a</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5512,13 +5534,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.106/">0.0.106</a>, newer than the documented version (0.0.105).
+Latest release: <a href="https://pypi.org/project/braidio/0.0.106/">0.0.106</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout f5e01f5e4e70a48d9fce2f7b05e38e2743f2de5a
+git checkout 971cdaaa3d0a4d8f02b3940cff07d3170261f0d7
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

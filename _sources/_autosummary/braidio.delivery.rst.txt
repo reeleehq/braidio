@@ -14,6 +14,7 @@ braidio.delivery
 
    .. autosummary::
    
+      as_delivery
       model_supports_speed
    
    .. rubric:: Classes

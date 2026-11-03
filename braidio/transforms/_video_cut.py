@@ -981,14 +981,6 @@ def panel_source(project, panel: Annotation, index: dict, workdir: Path) -> Path
     )
 
 
-# The pre-#146 private names, which reelee's CURRENT adapter (reelee/_braidio.py)
-# imports. Kept (as the same objects) so that adapter keeps importing; remove once
-# reelee reads the public names (braidio#156).
-_content_keyed_prepare = content_keyed_prepare
-_frames_dir = frames_dir
-_panel_source = panel_source
-
-
 def panel_footage(project, panel: Annotation):
     """The recorded video a footage panel plays (a ``braidio.video.Footage``),
     or ``None`` for a still panel.

@@ -39,7 +39,7 @@ from braidio.sound_design import spoken_of, talk_segments, talk_spans
 from braidio.transforms._common import (
     TIER_SOUND_DESIGN,
     annotation_parents,
-    freshest,
+    fresh_ids,
     media_path,
 )
 
@@ -80,7 +80,9 @@ class EpisodeToSoundDesign(NarrationToSoundDesign):
 
     def plan(self, project, inputs, *, params=None):
         token = None
-        if len(inputs.primary) == 1:  # nw refuses any other count itself
+        # nw refuses a wrong count, a missing config and a disabled one plans
+        # nothing: read the episode's text only when it will be designed
+        if len(inputs.primary) == 1 and self.config(inputs).enabled:
             token = _TALK.set(episode_talk(project, inputs.primary[0]))
         try:
             return super().plan(project, inputs, params=params)
@@ -98,7 +100,13 @@ class EpisodeToSoundDesign(NarrationToSoundDesign):
         audio = media_path(
             project.root, narration.body, what=f"episode {narration.id}"
         ).resolve()
-        return PurePath(audio.relative_to(Path(project.root).resolve()))
+        root = Path(project.root).resolve()
+        if not audio.is_relative_to(root):
+            raise ValueError(
+                f"{self.name}: episode {narration.id}'s mix {audio} is outside "
+                f"the project ({root}); re-weave it here before designing."
+            )
+        return PurePath(audio.relative_to(root))
 
     def _talk(self) -> tuple[list[str], list[float]]:
         talk = _TALK.get()
@@ -111,8 +119,11 @@ class EpisodeToSoundDesign(NarrationToSoundDesign):
 
 
 def sound_design_of(project, episode: Annotation) -> Annotation | None:
-    """The current sound design of ``episode`` (the freshest one derived from
-    it), or ``None`` when it has none."""
+    """The current sound design of ``episode``: the most recent **fresh** one
+    derived from it, or ``None``. A design whose config was dropped (a weave
+    without ``sound_design``) or changed reads stale, and is not current: a
+    host must not ship credits for a design the production no longer asks
+    for."""
     import nw
 
     designs = sorted(
@@ -123,7 +134,10 @@ def sound_design_of(project, episode: Annotation) -> Annotation | None:
         ),
         key=lambda a: a.provenance.generated_at_time.to_seconds(),
     )
-    return freshest(project, designs)
+    if not designs:
+        return None
+    fresh = fresh_ids(project)
+    return next((a for a in reversed(designs) if a.id in fresh), None)
 
 
 register_transform(NAME, EpisodeToSoundDesign(), tags=SOUND_DESIGN_TAGS)

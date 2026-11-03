@@ -145,6 +145,12 @@ sound = ["foley[audio]>=0.0.127"]
 # the PUBLISHED wheels: absent from 0.0.115, first in 0.0.116 (the wads caveat
 # again). Imported at the top of `braidio.transforms`, so an older nw fails that
 # import — and, through `braidio/__init__`'s guard, turns `HAS_NW` off.
+# nw>=0.0.123: the sound-design graph path (braidio#161) subclasses
+# `nw.transforms.sound_design.NarrationToSoundDesign` and imports
+# `nw.bodies.sound_design` at the top of `braidio.transforms._common`; the
+# config's `allow_generate`/`max_usd` arrive in 0.0.122 and the Transform's
+# `reuse_fresh_outputs` (a no-op re-weave reuses the design) in 0.0.123 —
+# checked on the published wheels.
 # nw>=0.0.125: `nw.fresh_equivalents(reference_of=)` (nw#218/#219; checked on the
 # published wheel) and `nw.freshness_pass` (nw#209, 0.0.124): `fresh_equivalent`
 # delegates to the first, with braidio's per-node references left out of the
@@ -160,7 +166,8 @@ nw-app = ["lacing", "nw>=0.0.125", "falaw[fal]"]
 #   older dol without it.
 # nw>=0.0.125: see the nw-app notes above (the `secrets=` seam, braidio#58; the
 #   asset-ref declarations, nw#55; tolerant trace readers, nw#184; total_cost,
-#   nw#189; fresh_equivalents(reference_of=) + freshness_pass, nw#203/#209/#218).
+#   nw#189; fresh_equivalents(reference_of=) + freshness_pass, nw#203/#209/#218;
+#   the sound-design Transform, nw#190/#203).
 mcp = ["fastmcp", "py2mcp>=0.1.9", "pypdf", "dol>=0.3.57", "lacing", "nw>=0.0.125", "falaw[fal]", "yb[download]>=0.1.24", "graze>=0.1.45", "markdown-it-py", "mdit-py-plugins"]
 # The importer (`braidio.importing`): a finished commentary production ->
 # a real project graph. Needs the nw-app layer (it writes annotations) plus

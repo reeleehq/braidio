@@ -405,6 +405,9 @@ def weave_project(
     """
     import nw
 
+    if sound_design is not None:
+        # before any voice is paid for; nw's Transform writes the mix itself
+        sound_design.require(writes_mix=False)
     config = resolve_config(
         project, fmt, config=config, voice_id=voice_id, delivery=delivery
     )
@@ -440,11 +443,14 @@ def weave_project(
         results.append(
             _execute(transform, project, *primary, secrets=secrets, context=context)
         )
+        if not results[-1].annotations:
+            raise RuntimeError(f"{transform.name} produced nothing to weave on")
         out = results[-1].annotations[0]
         note_output(project, out)  # a node the held walk did not know: walk again
         return out
 
     render_by_authoring_id = {}
+    woven = None
     # one freshness walk per write, not ~two per beat (braidio#171): nw's pass
     # for the reuse lookups (dropped by nw's own writers), braidio's for the
     # "current node" readers (fresh_ids, dropped by note_output)
@@ -476,7 +482,8 @@ def weave_project(
                 )
             )
         except Exception as exc:  # annotated and re-raised, never swallowed
-            exc.weave_receipt = WeaveReceipt.of(None, results, failed=True)
+            # the episode, when the failure came after it (the sound design)
+            exc.weave_receipt = WeaveReceipt.of(woven, results, failed=True)
             raise
     if not return_receipt:
         return woven

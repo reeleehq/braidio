@@ -184,10 +184,12 @@ def test_a_changed_knob_redesigns_and_dropping_it_stales_the_design(
     assert len(foley.calls) == 2 and second.id != first.id
     assert foley.calls[1]["max_events"] == 1
 
-    braidio.weave_project(project, script, source=source)
+    plain = braidio.weave_project(project, script, source=source)
     assert _tier(project, "sound-design-config") == []
     verdicts = {v.annotation.id: v for v in nw.stale_verdicts_all(project.root)}
     assert verdicts[second.id].is_stale
+    # a dropped design is not the episode's current one: no credits to ship
+    assert braidio.transforms.sound_design_of(project, plain) is None
 
 
 def test_the_personal_profile_admits_non_commercial_sounds(
@@ -202,3 +204,63 @@ def test_the_personal_profile_admits_non_commercial_sounds(
         sound_design=braidio.SoundDesign(),
     )
     assert foley.calls[0]["commercial_ok"] is False
+
+
+def test_without_foley_the_weave_refuses_before_any_voice(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    spoken = []
+    monkeypatch.setattr(
+        braidio, "narrate", lambda *a, **kw: spoken.append(a) or (a[1], False)
+    )
+    monkeypatch.setitem(sys.modules, "foley", None)
+    script, source = script_and_source
+    with pytest.raises(ModuleNotFoundError, match=r"braidio\[sound\]"):
+        braidio.weave_project(
+            project, script, source=source, sound_design=braidio.SoundDesign()
+        )
+    assert spoken == [] and _tier(project, "narrative-beats") == []
+
+
+def test_a_custom_designer_is_refused_on_the_graph(
+    project, script_and_source, patched_synthesis, foley
+):
+    script, source = script_and_source
+    with pytest.raises(ValueError, match="fast path only"):
+        braidio.weave_project(
+            project,
+            script,
+            source=source,
+            sound_design=braidio.SoundDesign(designer=lambda *a, **k: None),
+        )
+
+
+def test_a_failed_design_keeps_the_episode_on_the_receipt(
+    project, script_and_source, patched_synthesis, foley, monkeypatch
+):
+    """The episode was made (and its voices paid for) before the design failed."""
+
+    def broken(*a, **kw):
+        raise RuntimeError("library offline")
+
+    monkeypatch.setattr(foley, "score", broken)
+    script, source = script_and_source
+    with pytest.raises(Exception) as info:
+        braidio.weave_project(
+            project, script, source=source, sound_design=braidio.SoundDesign()
+        )
+    receipt = info.value.weave_receipt
+    assert receipt.episode is not None and receipt.episode.tier == "episode-renders"
+    assert receipt.has_unknown_costs
+
+
+def test_an_episode_with_nothing_spoken_is_refused(project, tmp_path):
+    from types import SimpleNamespace as NS
+
+    from braidio.transforms._sound import EpisodeToSoundDesign, episode_talk
+
+    episode = NS(id="e", body={"ordered_member_ids": [], "timeline": {"beats": []}})
+    with pytest.raises(ValueError, match="no spoken text"):
+        episode_talk(project, episode)
+    with pytest.raises(RuntimeError, match="while planning"):
+        EpisodeToSoundDesign().narration_segments(episode)

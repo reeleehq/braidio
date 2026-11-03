@@ -300,6 +300,8 @@ def render_production(
     ``config.tts`` names a registered backend (:func:`braidio.tts.register_tts`),
     which is how the graph path selects one too; an explicit ``speak`` wins.
     """
+    if sound_design is not None:
+        sound_design.require()  # before any voice is paid for
     # the voice backend: an explicit `speak`, else the config's registered one,
     # else ElevenLabs
     backend_name = None
@@ -573,7 +575,9 @@ def render_production(
 
 def _spoken(pb) -> str:
     """What a planned beat says aloud: narration text, a dialogue's turns, or
-    ``""`` for a clip (its words are the source's, not this production's)."""
+    ``""`` for a clip (its words are the source's, not this production's).
+    The :class:`~braidio.rights.PlannedBeat` twin of
+    :func:`braidio.sound_design.spoken_of`, which reads a script beat."""
     if pb.kind == "narration":
         return pb.content
     if pb.kind == "dialogue":

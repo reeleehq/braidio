@@ -491,6 +491,13 @@ def _sound_design_node(design: SoundDesign, *, plan: RenderPlan) -> _AuthoringNo
         SoundDesignConfigBodyV1,
     )
 
+    if design.designer is not None or design.writer is not None:
+        raise ValueError(
+            "sound design: a custom designer or writer runs on the fast path only "
+            "(render_production); the graph path designs with nw's foley "
+            "Transform, which records and caches the call."
+        )
+
     return _AuthoringNode(
         tier=TIER_SOUND_DESIGN_CONFIG,
         identity=TIER_SOUND_DESIGN_CONFIG,

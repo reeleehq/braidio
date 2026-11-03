@@ -1,39 +1,39 @@
 {
   "schema_version": 1,
-  "built_at": "2026-11-03T15:39:56Z",
+  "built_at": "2026-11-03T15:51:49Z",
   "package": {
     "name": "braidio",
-    "version": "0.0.111",
+    "version": "0.0.113",
     "display_name": "braidio",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "3e50c0a8e2de25565f86d969c00b24aad0bd9bed",
-    "short_commit": "3e50c0a",
+    "commit": "f09bdbb9a68b5fe6bb4b1d005b512088e756ace9",
+    "short_commit": "f09bdbb",
     "branch": "main",
     "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/reeleehq/braidio",
-    "commit_url": "https://github.com/reeleehq/braidio/commit/3e50c0a8e2de25565f86d969c00b24aad0bd9bed",
+    "commit_url": "https://github.com/reeleehq/braidio/commit/f09bdbb9a68b5fe6bb4b1d005b512088e756ace9",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "reeleehq/braidio",
-    "sha": "2ba8383644182158d3ec99c3fe76ad6f23aa900e",
+    "sha": "6a5121b5c65dac8c24d0bb81336c307f4a6306bb",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "41658747860",
-    "run_url": "https://github.com/reeleehq/braidio/actions/runs/41658747860",
+    "run_id": "41660418636",
+    "run_url": "https://github.com/reeleehq/braidio/actions/runs/41660418636",
     "server_url": "https://github.com"
   },
   "tools": {
     "epythet": "0.2.22",
     "sphinx": "9.1.1",
     "docutils": "0.22.4",
-    "python": "3.12.16"
+    "python": "3.12.15"
   },
   "config": {
     "theme": "auto",
@@ -60,14 +60,16 @@
   },
   "pypi": {
     "checked": true,
-    "latest": "0.0.111",
-    "relation": "same",
+    "latest": "0.0.112",
+    "relation": "ahead",
     "error": null
   },
-  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout 3e50c0a8e2de25565f86d969c00b24aad0bd9bed\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout f09bdbb9a68b5fe6bb4b1d005b512088e756ace9\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
-    "aligned": true,
-    "notes": []
+    "aligned": false,
+    "notes": [
+      "The documented version (0.0.113) is ahead of the latest release on PyPI (0.0.112): these docs describe unreleased code."
+    ]
   }
 }

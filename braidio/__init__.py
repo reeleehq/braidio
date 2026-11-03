@@ -239,6 +239,13 @@ except PackageNotFoundError:  # pragma: no cover - source tree, not installed
 # lacing/nw. `HAS_GRAPH` / `HAS_NW` report what's available.
 HAS_GRAPH = False
 HAS_NW = False
+#: Why a layer did not load (``None`` when it did): the ``ImportError`` the
+#: guards below swallow. The swallowing is right for a bare install, and the
+#: same guard would hide a *broken* layer (an nw below braidio's floor, a bad
+#: import), so CI asserts the layer loads whenever its dependencies import
+#: (``tests/test_optional_layers.py``, braidio#187) and names this on failure.
+_GRAPH_IMPORT_ERROR: ImportError | None = None
+_NW_IMPORT_ERROR: ImportError | None = None
 try:  # needs lacing
     from braidio import bodies  # noqa: F401  (registers schemas)
     from braidio.provenance import (  # noqa: F401
@@ -248,8 +255,8 @@ try:  # needs lacing
     )
 
     HAS_GRAPH = True
-except ImportError:  # pragma: no cover - optional dep
-    pass
+except ImportError as _exc:  # pragma: no cover - optional dep
+    _GRAPH_IMPORT_ERROR = _exc
 try:  # needs nw
     from braidio.project import Project  # noqa: F401
     from braidio import transforms  # noqa: F401  (registers braidio's nw.Transforms)
@@ -257,8 +264,8 @@ try:  # needs nw
     from braidio.genre import COMMENTARY_WEAVE  # noqa: F401  (registers the nw.Genre)
 
     HAS_NW = True
-except ImportError:  # pragma: no cover - optional dep
-    pass
+except ImportError as _exc:  # pragma: no cover - optional dep
+    _NW_IMPORT_ERROR = _exc
 
 
 def skills_dir():

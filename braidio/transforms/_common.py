@@ -212,46 +212,36 @@ def annotation_parents(ann: Annotation) -> list:
 def fresh_equivalent(project, skeleton: Annotation) -> Annotation | None:
     """An existing node this ``skeleton`` would only duplicate, or ``None``.
 
-    Equivalent means: same tier, the same **annotation** parents, the same
-    :func:`planned_value` — and **verified fresh** by nw's freshness walk, so
-    its recorded upstream digests still match its parents' current values.
-    That last clause is what makes this safe after a re-ingest: a parent
-    rewritten in place keeps its id, so an old render still has "the same
-    parents" while being exactly the node that must not be reused
-    (thorwhalen/braidio#51). Reuse is by *value*, never by id alone.
+    nw's rule, :func:`nw.fresh_equivalents` (reeleehq/nw#203): same tier,
+    schema and producer, the same **annotation** parents, the same
+    :func:`planned_value` (the body minus what execution fills in), and
+    **verified fresh** by nw's freshness walk, so a parent rewritten in place
+    (same id, new value) never lets an old render be reused
+    (thorwhalen/braidio#51). This is what makes re-running the weave
+    idempotent: a no-op re-run adds no voice-assignment, no render, no
+    episode.
 
-    This is what makes re-running the weave idempotent — a no-op re-run adds
-    no voice-assignment, no render, no episode. It reads :func:`fresh_ids`:
-    one full freshness walk per call, or one per write inside a
-    :func:`fresh_ids_pass` (braidio#171).
-
-    Only the annotation half of ``was_derived_from`` is compared. Since nw#55 a
-    declared input schema also contributes the artifact ids its body names
-    (``_asset_refs``), so a node written before the declaration has none and a
-    whole-list comparison would never match it — one re-plan would re-render
-    every such node. Freshness loses nothing by ignoring them: a declared
-    asset id is read off a parent's body, so a replaced artifact changes that
-    parent's value, which the freshness walk below already refuses. Lineage
-    does lose something, deliberately: a reused pre-declaration node keeps
-    its old provenance, with no asset edge, until something re-renders it —
-    re-rendering instead would mint a new node and orphan whatever was built
-    on the old one (video panels, cuts).
+    The reference is not compared (``reference_of``, nw#218): a non-media
+    node's :func:`node_ref` is a fresh token per node, never the same twice,
+    and a media node's place is already in its planned value and parents.
+    Only the annotation half of ``was_derived_from`` is compared, so a node
+    written before nw#55's asset edges still matches. The producer
+    (``transform:<name>@<impl_version>``) is compared, so after an
+    ``impl_version`` bump the old version's node is not reused. Inside
+    :func:`nw.freshness_pass` (``weave_project`` opens one) the walk is shared
+    across lookups until a write (braidio#171).
     """
     import nw
 
-    parents = set(annotation_parents(skeleton))
-    value = planned_value(skeleton)
-    candidates = [
-        a
-        for a in nw.annotations_at_tier(project.root, skeleton.tier)
-        if a.id != skeleton.id
-        and set(annotation_parents(a)) == parents
-        and planned_value(a) == value
-    ]
-    if not candidates:
-        return None
-    fresh = fresh_ids(project)
-    return next((a for a in reversed(candidates) if a.id in fresh), None)
+    (existing,) = nw.fresh_equivalents(
+        project, [skeleton], value_of=planned_value, reference_of=_no_reference
+    )
+    return existing
+
+
+def _no_reference(_ann: Annotation) -> None:
+    """``reference_of`` for :func:`fresh_equivalent`: references are not compared."""
+    return None
 
 
 def fresh_ids(project) -> set:

@@ -389,8 +389,10 @@ def weave_project(
         return out
 
     render_by_authoring_id = {}
-    # one freshness walk per write, not ~two per beat (braidio#171)
-    with fresh_ids_pass():
+    # one freshness walk per write, not ~two per beat (braidio#171): nw's pass
+    # for the reuse lookups (dropped by nw's own writers), braidio's for the
+    # "current node" readers (fresh_ids, dropped by note_output)
+    with nw.freshness_pass(), fresh_ids_pass():
         try:
             for beat in ing.narration_beats:
                 run(voice, beat)

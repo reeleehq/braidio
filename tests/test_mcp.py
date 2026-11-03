@@ -2151,16 +2151,21 @@ def test_estimate_cost_prices_dialogue_at_the_format_s_cast(
     assert usd == pytest.approx(0.11 + 0.77)
 
 
-def test_estimate_cost_refuses_a_format_and_a_delivery_together():
-    from fastmcp.exceptions import ToolError
+def test_estimate_cost_prices_a_named_delivery_over_the_format_s():
+    """braidio#192: a delivery named with a format overrides the format's own,
+    as render_format and weave_project(fmt=, delivery=) do; it used to be
+    refused with a stale reason ("render_format takes none")."""
+    from braidio.mcp.tools import _render_models
 
-    with pytest.raises(ToolError, match="not both"):
-        _usd(
-            _local_server(ledger={}),
-            _THOUSAND,
-            format_id="solo_explainer",
-            delivery="narration",
-        )
+    named = braidio.DELIVERIES["narration"]
+    assert named.model_id != braidio.SOLO_EXPLAINER.narration_delivery.model_id
+    assert _render_models(braidio.SOLO_EXPLAINER, "narration")[0] == named.model_id
+    assert (
+        _render_models(braidio.SOLO_EXPLAINER, None)[0]
+        == braidio.SOLO_EXPLAINER.narration_delivery.model_id
+    )
+    server = _local_server(ledger={})  # and the tool takes both
+    assert _usd(server, _THOUSAND, format_id="solo_explainer", delivery="narration")
 
 
 @pytest.mark.parametrize(

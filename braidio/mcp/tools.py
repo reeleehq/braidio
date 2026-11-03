@@ -209,16 +209,12 @@ def estimate_cost(
     """Estimate the ElevenLabs cost of a production BEFORE paying for synthesis.
 
     ``script`` is a JSON script envelope (shape: see :func:`weave_project`). Only
-    narration + dialogue text is billed. Pass the ``format_id`` or ``delivery``
-    (default narration) and ``profile`` you will render with. A re-weave keeps
-    the narration model a project was first voiced with: pass its format.
+    narration + dialogue text is billed. Pass the ``format_id`` and/or
+    ``delivery`` (it overrides the format's; default narration) and ``profile``
+    you will render with. A re-weave keeps the narration model a project was
+    first voiced with: pass its format.
     Returns exact character counts and an honest dollar estimate.
     """
-    if format_id is not None and delivery is not None:
-        raise ToolError(
-            f"estimate_cost: pass format_id or delivery, not both — format "
-            f"{format_id!r} fixes its own delivery (render_format takes none)"
-        )
     model_id, dialogue_model_id = _render_models(_format(format_id), delivery)
     roll = braidio.estimate_cost(
         script_from_json(script),
@@ -690,17 +686,20 @@ def _check_source(scr, source) -> None:
 def _render_models(fmt, delivery: str | None = None) -> tuple[str, str]:
     """``(narration model_id, dialogue model_id)`` a one-shot render voices with.
 
-    The format's narration delivery, else the named ``delivery`` (``None`` =
-    :data:`_DEFAULT_DELIVERY`); the format's cast, else ``DEFAULT_CAST`` — the
-    rule ``render_format`` / ``render_production`` follow, stated once so
-    ``estimate_cost`` prices exactly what they will submit (braidio#175).
+    The named ``delivery``, else the format's narration delivery, else
+    :data:`_DEFAULT_DELIVERY`; the format's cast, else ``DEFAULT_CAST`` — the
+    rule ``render_format`` (whose overrides win over the format) and
+    ``weave_project(fmt=, delivery=)`` follow, stated once so ``estimate_cost``
+    prices exactly what they will submit (braidio#175, #192).
     """
     from braidio.conversation import DEFAULT_CAST
 
-    if fmt is not None:
+    if delivery is not None:
+        narration = _delivery(delivery)
+    elif fmt is not None:
         narration = fmt.narration_delivery
     else:
-        narration = _delivery(delivery if delivery is not None else _DEFAULT_DELIVERY)
+        narration = _delivery(_DEFAULT_DELIVERY)
     cast = fmt.cast if fmt is not None and fmt.cast is not None else DEFAULT_CAST
     return narration.model_id, cast.model_id
 

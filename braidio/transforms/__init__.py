@@ -286,7 +286,25 @@ def resolve_config(project, fmt=None, *, config=None, voice_id=None, delivery=No
     nodes = nw.annotations_at_tier(project.root, "weave-configs")
     recorded = dict(nodes[0].body.get("config", {})) if nodes else {}
     kept = {key: recorded[key] for key in VOICE_KEYS if key in recorded}
-    return (resolved or WeaveConfig()).with_(**kept)
+    final = (resolved or WeaveConfig()).with_(**kept)
+    if delivery is not None and _voice_of(final) != _voice_of(resolved):
+        import warnings
+
+        warnings.warn(
+            f"delivery {getattr(delivery, 'name', delivery)!r} was not applied: "
+            "this project is already voiced, and keeping its model and settings "
+            "is what stops a re-weave from re-billing every narration beat "
+            "(braidio#135). Pass config= to re-voice it on purpose.",
+            UserWarning,
+            stacklevel=3,
+        )
+    return final
+
+
+def _voice_of(config) -> dict:
+    """The :data:`VOICE_KEYS` a weave-config voices narration with."""
+    snapshot = config.to_dict() if config is not None else {}
+    return {key: snapshot.get(key) for key in VOICE_KEYS}
 
 
 def weave_project(

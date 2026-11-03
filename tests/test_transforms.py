@@ -699,6 +699,24 @@ def test_a_new_delivery_does_not_re_bill_a_voiced_project(
     assert set(calls) == {braidio.V2_TUNED.model_id}
 
 
+def test_a_named_delivery_kept_off_a_voiced_project_says_so(
+    project, script_and_source, patched_synthesis
+):
+    """braidio#192: the re-bill protection keeps the project's voice; a caller
+    who named another delivery is told, not silently ignored."""
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source, delivery=braidio.V2_TUNED)
+    with pytest.warns(UserWarning, match="was not applied"):
+        braidio.weave_project(
+            project, script, source=source, delivery=braidio.V3_NARRATOR
+        )
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # the same delivery again: nothing to say
+        braidio.weave_project(project, script, source=source, delivery=braidio.V2_TUNED)
+
+
 def test_an_unknown_delivery_name_is_refused_before_anything_is_written(project):
     import nw
 

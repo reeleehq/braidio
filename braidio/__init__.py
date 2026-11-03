@@ -174,6 +174,7 @@ from braidio.formats import (  # noqa: F401
 # --- composition + weaving (audio) ---
 from braidio.compose import compose_narration  # noqa: F401
 from braidio.render import render_production  # noqa: F401
+from braidio.sound_design import SoundDesign  # noqa: F401
 from braidio.timeline import (  # noqa: F401
     BeatSpan,
     TimelineBreakdown,
@@ -326,6 +327,7 @@ __all__ = [
     "PUBLISHABLE_CLIP_RIGHTS",
     # render
     "render_production",
+    "SoundDesign",
     # sources
     "SegmentSource",
     "ResolvedSegment",

@@ -37,7 +37,7 @@ from braidio.leveling import DEFAULT_TARGET_LUFS, level_part
 from braidio.script import Script
 from braidio.sources import SegmentSource
 from braidio.structure import DEFAULT_STRUCTURE, prepare_pause, prepare_sting
-from braidio.tts import Speak, voice_for
+from braidio.tts import Speak, VoiceBackend, voice_for
 from braidio.sound_design import (
     SOUND_SIDECAR_SUFFIX,
     SoundDesign,
@@ -240,6 +240,7 @@ def render_production(
     end_silence_s: float = 0.7,
     return_timeline: bool = False,  # also return a TimelineBreakdown of the render
     sound_design: SoundDesign | None = None,
+    voice: VoiceBackend | None = None,
     tts_dir: str | Path = "data/tts",
     clips_dir: str | Path = "data/clips",
     episodes_dir: str | Path = "data/episodes",
@@ -295,12 +296,17 @@ def render_production(
     ``None`` (default) is the ElevenLabs path, exactly as before, unless
     ``config.tts`` names a registered backend (:func:`braidio.tts.register_tts`),
     which is how the graph path selects one too; an explicit ``speak`` wins.
+    ``voice`` (a :class:`braidio.tts.VoiceBackend`) wins over both: a whole strategy,
+    for a backend with its own cache or its own one-pass dialogue
+    (braidio#199).
     """
     if sound_design is not None:
         sound_design.require()  # before any voice is paid for
     # the voice: an explicit `speak`, else the config's registered one, else
     # ElevenLabs (braidio#137: chosen once, in braidio.tts.voice_for)
-    voice = voice_for(config.tts if config is not None else None, speak=speak)
+    voice = voice_for(
+        config.tts if config is not None else None, speak=speak, voice=voice
+    )
     synthesize = voice.narrate
     publishable = rights.publishable_clip_rights if rights else PUBLISHABLE_CLIP_RIGHTS
     plan = plan_production(script, profile, publishable_clip_rights=publishable)

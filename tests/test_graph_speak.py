@@ -249,3 +249,75 @@ def test_a_rate_must_be_a_real_price():
             register_tts(
                 "bad", lambda text, *, voice: (b"", "wav"), usd_per_1k_chars=bad
             )
+
+
+class _OnePassVoice:
+    """A whole voice: its own narration and one-pass dialogue (braidio#203)."""
+
+    name = "whole"
+
+    def __init__(self):
+        self.tone = _Tone()
+        self.dialogues = []
+
+    def narrate(self, text, out_path, *, return_cache_status=False, **kw):
+        from braidio.tts import narrator_from_speak
+
+        path = narrator_from_speak(self.tone)(text, out_path, **kw)
+        return (path, False) if return_cache_status else path
+
+    def render_dialogue(
+        self, turns, cast, *, out_path, return_cache_status=False, **kw
+    ):
+        self.dialogues.append(tuple(text for _role, text in turns))
+        path = self.narrate(" ".join(t for _, t in turns), out_path)
+        return (path, False) if return_cache_status else path
+
+
+def test_a_registered_whole_voice_renders_the_graph(tmp_path, backends):
+    """The graph selects its voice by name; a name can now carry a whole
+    VoiceBackend, whose one-pass dialogue both paths then use."""
+    import nw
+
+    from braidio.transforms._common import url_to_path
+
+    voice = _OnePassVoice()
+    register_tts("whole", voice=voice, usd_per_1k_chars=0.0)
+    try:
+        project = braidio.Project.init(tmp_path / "p", title="p")
+        receipt = braidio.weave_project(
+            project,
+            _script(),
+            config=braidio.WeaveConfig(tts="whole"),
+            return_receipt=True,
+        )
+        _, tl = braidio.render_production(
+            _script(),
+            source=None,
+            config=braidio.WeaveConfig(tts="whole"),
+            out_path=tmp_path / "fast.mp3",
+            tts_dir=tmp_path / "tts",
+            return_timeline=True,
+        )
+    finally:
+        unregister_tts("whole")
+    # one pass per dialogue on each path, never turn by turn
+    assert voice.dialogues == [("Is that so?", "It is.")] * 2
+    assert voice.tone.calls  # narration went through it too
+    assert _calls(backends) == 0
+    # priced at the registered rate: free, and known
+    assert receipt.cost_usd_actual == 0.0 and not receipt.has_unknown_costs
+    # the record names what the config names
+    assert tl.settings["resolved"]["tts"] == tl.settings["weave"]["tts"] == "whole"
+    # every take lives in the project
+    for tier in ("narration-renders", "dialogue-renders"):
+        for node in nw.annotations_at_tier(project.root, tier):
+            path = url_to_path(node.body["url"])  # Windows-safe (file:///C:/...)
+            assert project.root.resolve() in path.resolve().parents
+
+
+def test_a_voice_registers_as_itself_and_as_an_instance():
+    with pytest.raises(TypeError, match="an instance"):
+        register_tts("whole", voice=_OnePassVoice)
+    with pytest.raises(ValueError, match="its own name"):
+        register_tts("other", voice=_OnePassVoice())

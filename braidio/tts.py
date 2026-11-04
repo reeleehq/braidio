@@ -134,17 +134,23 @@ def tts_name(speak: Speak | None) -> str:
 
 @dataclass(frozen=True)
 class TTSBackend:
-    """A named voice backend: its ``speak`` and what it costs.
+    """A named voice backend: its ``speak`` (or a whole ``voice``) and what it costs.
 
     ``usd_per_1k_chars`` is the backend's rate: ``0.0`` for a local model,
     ``None`` (default) when unknown, which a cost report then reads as
     *unpriced* rather than free (the same rule as :mod:`braidio.cost`).
+    ``voice`` is a ready :class:`VoiceBackend` (its own cache, its own one-pass
+    dialogue) registered instead of a bare ``speak`` (braidio#203): exactly
+    one of the two is set.
     """
 
-    speak: Speak
+    speak: Speak | None = None
     usd_per_1k_chars: float | None = None
+    voice: "VoiceBackend | None" = None
 
     def __post_init__(self) -> None:
+        if (self.speak is None) == (self.voice is None):
+            raise ValueError("a backend is a speak callable or a voice, exactly one")
         rate = self.usd_per_1k_chars
         if rate is not None and not (math.isfinite(rate) and rate >= 0):
             raise ValueError(
@@ -170,12 +176,20 @@ TTS_BACKENDS: Mapping[str, TTSBackend] = MappingProxyType(_TTS_BACKENDS)
 
 
 def register_tts(
-    name: str, speak: Speak, *, usd_per_1k_chars: float | None = None
+    name: str,
+    speak: Speak | None = None,
+    *,
+    voice: "VoiceBackend | None" = None,
+    usd_per_1k_chars: float | None = None,
 ) -> TTSBackend:
     """Register ``speak`` as the voice backend ``name`` (replacing any before).
 
     ``name`` is what ``WeaveConfig(tts=name)`` selects, on either render path.
-    :data:`DEFAULT_TTS` is ElevenLabs itself and cannot be taken.
+    :data:`DEFAULT_TTS` is ElevenLabs itself and cannot be taken. Register a
+    :data:`Speak` callable as ``speak``, or a ready :class:`VoiceBackend`
+    instance as ``voice=`` (its own cache, its own one-pass dialogue), which
+    the graph path then uses whole too (braidio#203). A voice is registered
+    under its own ``name``, so a render's record and its config agree.
 
     >>> b = register_tts("doc-tone", lambda text, *, voice: (b"", "wav"), usd_per_1k_chars=0.0)
     >>> tts_backend("doc-tone") is b, b.cost_usd("hello")
@@ -185,7 +199,18 @@ def register_tts(
     """
     if not name or name == DEFAULT_TTS:
         raise ValueError(f"{name!r} is not a registrable voice-backend name")
-    backend = TTSBackend(speak=speak, usd_per_1k_chars=usd_per_1k_chars)
+    if voice is not None:
+        if isinstance(voice, type) or not isinstance(voice, VoiceBackend):
+            raise TypeError(
+                "voice= must be an instance implementing braidio.tts.VoiceBackend; "
+                f"got {voice!r:.80}"
+            )
+        if voice.name != name:
+            raise ValueError(
+                f"register the voice under its own name {voice.name!r}, not {name!r}: "
+                "the render record names the voice, the config names the backend"
+            )
+    backend = TTSBackend(speak=speak, voice=voice, usd_per_1k_chars=usd_per_1k_chars)
     _TTS_BACKENDS[name] = backend
     return backend
 
@@ -306,6 +331,10 @@ class VoiceBackend(Protocol):
         self, turns, cast, *, out_path, return_cache_status: bool = False, **kw
     ): ...
 
+    # Both return the file they wrote (it must exist), at ``out_path`` or with
+    # its own suffix; a file elsewhere (a voice's own cache) is copied into the
+    # project by the graph path.
+
 
 def voice_for(
     tts: str | None = None,
@@ -335,7 +364,10 @@ def voice_for(
     if speak is not None:
         return SpeakVoice(speak=speak, name=tts_name(speak))
     if tts:
-        return SpeakVoice(speak=tts_backend(tts).speak, name=tts)
+        backend = tts_backend(tts)
+        if backend.voice is not None:
+            return backend.voice
+        return SpeakVoice(speak=backend.speak, name=tts)
     return ElevenLabsVoice()
 
 

@@ -279,6 +279,8 @@ def test_a_registered_whole_voice_renders_the_graph(tmp_path, backends):
     VoiceBackend, whose one-pass dialogue both paths then use."""
     import nw
 
+    from braidio.transforms._common import url_to_path
+
     voice = _OnePassVoice()
     register_tts("whole", voice=voice, usd_per_1k_chars=0.0)
     try:
@@ -310,8 +312,8 @@ def test_a_registered_whole_voice_renders_the_graph(tmp_path, backends):
     # every take lives in the project
     for tier in ("narration-renders", "dialogue-renders"):
         for node in nw.annotations_at_tier(project.root, tier):
-            url = node.body["url"].removeprefix("file://")
-            assert project.root.resolve() in Path(url).resolve().parents
+            path = url_to_path(node.body["url"])  # Windows-safe (file:///C:/...)
+            assert project.root.resolve() in path.resolve().parents
 
 
 def test_a_voice_registers_as_itself_and_as_an_instance():

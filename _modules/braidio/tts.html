@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../../_static/documentation_options.js?v=9cebf393"></script>
+    <script src="../../_static/documentation_options.js?v=ab1379f9"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.115" />
+  <meta name="docsearch:version" content="0.0.116" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -859,17 +859,23 @@ window.runMermaid = runMermaid;</script>
 <a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.TTSBackend">[docs]</a>
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">TTSBackend</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""A named voice backend: its ``speak`` and what it costs.</span>
+<span class="w">    </span><span class="sd">"""A named voice backend: its ``speak`` (or a whole ``voice``) and what it costs.</span>
 
 <span class="sd">    ``usd_per_1k_chars`` is the backend's rate: ``0.0`` for a local model,</span>
 <span class="sd">    ``None`` (default) when unknown, which a cost report then reads as</span>
 <span class="sd">    *unpriced* rather than free (the same rule as :mod:`braidio.cost`).</span>
+<span class="sd">    ``voice`` is a ready :class:`VoiceBackend` (its own cache, its own one-pass</span>
+<span class="sd">    dialogue) registered instead of a bare ``speak`` (braidio#203): exactly</span>
+<span class="sd">    one of the two is set.</span>
 <span class="sd">    """</span>
 
-    <span class="n">speak</span><span class="p">:</span> <span class="n">Speak</span>
+    <span class="n">speak</span><span class="p">:</span> <span class="n">Speak</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">usd_per_1k_chars</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">voice</span><span class="p">:</span> <span class="s2">"VoiceBackend | None"</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">speak</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">voice</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"a backend is a speak callable or a voice, exactly one"</span><span class="p">)</span>
         <span class="n">rate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">usd_per_1k_chars</span>
         <span class="k">if</span> <span class="n">rate</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">rate</span><span class="p">)</span> <span class="ow">and</span> <span class="n">rate</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -901,12 +907,20 @@ window.runMermaid = runMermaid;</script>
 <div class="viewcode-block" id="register_tts">
 <a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.register_tts">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">register_tts</span><span class="p">(</span>
-    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">speak</span><span class="p">:</span> <span class="n">Speak</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">usd_per_1k_chars</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">speak</span><span class="p">:</span> <span class="n">Speak</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">voice</span><span class="p">:</span> <span class="s2">"VoiceBackend | None"</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">usd_per_1k_chars</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TTSBackend</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Register ``speak`` as the voice backend ``name`` (replacing any before).</span>
 
 <span class="sd">    ``name`` is what ``WeaveConfig(tts=name)`` selects, on either render path.</span>
-<span class="sd">    :data:`DEFAULT_TTS` is ElevenLabs itself and cannot be taken.</span>
+<span class="sd">    :data:`DEFAULT_TTS` is ElevenLabs itself and cannot be taken. Register a</span>
+<span class="sd">    :data:`Speak` callable as ``speak``, or a ready :class:`VoiceBackend`</span>
+<span class="sd">    instance as ``voice=`` (its own cache, its own one-pass dialogue), which</span>
+<span class="sd">    the graph path then uses whole too (braidio#203). A voice is registered</span>
+<span class="sd">    under its own ``name``, so a render's record and its config agree.</span>
 
 <span class="sd">    &gt;&gt;&gt; b = register_tts("doc-tone", lambda text, *, voice: (b"", "wav"), usd_per_1k_chars=0.0)</span>
 <span class="sd">    &gt;&gt;&gt; tts_backend("doc-tone") is b, b.cost_usd("hello")</span>
@@ -916,7 +930,18 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">    """</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span> <span class="ow">or</span> <span class="n">name</span> <span class="o">==</span> <span class="n">DEFAULT_TTS</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> is not a registrable voice-backend name"</span><span class="p">)</span>
-    <span class="n">backend</span> <span class="o">=</span> <span class="n">TTSBackend</span><span class="p">(</span><span class="n">speak</span><span class="o">=</span><span class="n">speak</span><span class="p">,</span> <span class="n">usd_per_1k_chars</span><span class="o">=</span><span class="n">usd_per_1k_chars</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">voice</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="n">VoiceBackend</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s2">"voice= must be an instance implementing braidio.tts.VoiceBackend; "</span>
+                <span class="sa">f</span><span class="s2">"got </span><span class="si">{</span><span class="n">voice</span><span class="si">!r:</span><span class="s2">.80</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">voice</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="n">name</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"register the voice under its own name </span><span class="si">{</span><span class="n">voice</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2">, not </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">: "</span>
+                <span class="s2">"the render record names the voice, the config names the backend"</span>
+            <span class="p">)</span>
+    <span class="n">backend</span> <span class="o">=</span> <span class="n">TTSBackend</span><span class="p">(</span><span class="n">speak</span><span class="o">=</span><span class="n">speak</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="n">voice</span><span class="p">,</span> <span class="n">usd_per_1k_chars</span><span class="o">=</span><span class="n">usd_per_1k_chars</span><span class="p">)</span>
     <span class="n">_TTS_BACKENDS</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">backend</span>
     <span class="k">return</span> <span class="n">backend</span></div>
 
@@ -1053,6 +1078,10 @@ window.runMermaid = runMermaid;</script>
     <span class="p">):</span> <span class="o">...</span></div>
 
 
+    <span class="c1"># Both return the file they wrote (it must exist), at ``out_path`` or with</span>
+    <span class="c1"># its own suffix; a file elsewhere (a voice's own cache) is copied into the</span>
+    <span class="c1"># project by the graph path.</span>
+
 
 <div class="viewcode-block" id="voice_for">
 <a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.voice_for">[docs]</a>
@@ -1084,7 +1113,10 @@ window.runMermaid = runMermaid;</script>
     <span class="k">if</span> <span class="n">speak</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">SpeakVoice</span><span class="p">(</span><span class="n">speak</span><span class="o">=</span><span class="n">speak</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">tts_name</span><span class="p">(</span><span class="n">speak</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">tts</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">SpeakVoice</span><span class="p">(</span><span class="n">speak</span><span class="o">=</span><span class="n">tts_backend</span><span class="p">(</span><span class="n">tts</span><span class="p">)</span><span class="o">.</span><span class="n">speak</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">tts</span><span class="p">)</span>
+        <span class="n">backend</span> <span class="o">=</span> <span class="n">tts_backend</span><span class="p">(</span><span class="n">tts</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">backend</span><span class="o">.</span><span class="n">voice</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">backend</span><span class="o">.</span><span class="n">voice</span>
+        <span class="k">return</span> <span class="n">SpeakVoice</span><span class="p">(</span><span class="n">speak</span><span class="o">=</span><span class="n">backend</span><span class="o">.</span><span class="n">speak</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">tts</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">ElevenLabsVoice</span><span class="p">()</span></div>
 
 

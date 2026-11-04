@@ -1,4 +1,4 @@
-> built 2026-11-03 16:27 UTC from 967e5d0 (main) · braidio 0.0.115. Details: build_info.json
+> built 2026-11-04 04:12 UTC from 21165b3 (main) · braidio 0.0.116. Details: build_info.json
 
 # index.html.md
 
@@ -4611,24 +4611,24 @@ what the renderers call.
 
 ### Functions
 
-| [`narrate`](_autosummary/braidio.tts.html.md#braidio.tts.narrate)(text, out_path, \*[, api_key, ...])       | Synthesize `text` to `out_path` (mp3).                                                                                                    |
-|----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
-| [`narrator_from_speak`](_autosummary/braidio.tts.html.md#braidio.tts.narrator_from_speak)(speak, \*[, strip_tags])      | A [`narrate()`](_autosummary/braidio.tts.html.md#braidio.tts.narrate)-shaped synthesizer that speaks through `speak`.                              |
-| [`register_tts`](_autosummary/braidio.tts.html.md#braidio.tts.register_tts)(name, speak, \*[, usd_per_1k_chars]) | Register `speak` as the voice backend `name` (replacing any before).                                                                      |
-| [`resolve_voice_id`](_autosummary/braidio.tts.html.md#braidio.tts.resolve_voice_id)([voice_id])                      | Voice id from arg → `VOICE_ENV_VAR` env → default.                                                                                        |
-| [`text_to_dialogue`](_autosummary/braidio.tts.html.md#braidio.tts.text_to_dialogue)(turns, \*[, model_id, ...])      | Synthesize a multi-speaker exchange in ONE pass (ElevenLabs Text-to-Dialogue).                                                            |
-| [`tts_backend`](_autosummary/braidio.tts.html.md#braidio.tts.tts_backend)(name)                                 | The backend registered as `name`; `KeyError` naming the registered ones.                                                                  |
-| [`tts_name`](_autosummary/braidio.tts.html.md#braidio.tts.tts_name)(speak)                                   | The voice backend a render used, as its settings record names it.                                                                         |
-| [`unregister_tts`](_autosummary/braidio.tts.html.md#braidio.tts.unregister_tts)(name)                              | Remove the backend registered as `name`; returns it, or `None`.                                                                           |
-| [`voice_for`](_autosummary/braidio.tts.html.md#braidio.tts.voice_for)([tts, speak, voice])                    | The voice a render speaks with: a ready `voice` wins, then an explicit `speak`, then the registered backend `tts` names, then ElevenLabs. |
+| [`narrate`](_autosummary/braidio.tts.html.md#braidio.tts.narrate)(text, out_path, \*[, api_key, ...])   | Synthesize `text` to `out_path` (mp3).                                                                                                    |
+|------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
+| [`narrator_from_speak`](_autosummary/braidio.tts.html.md#braidio.tts.narrator_from_speak)(speak, \*[, strip_tags])  | A [`narrate()`](_autosummary/braidio.tts.html.md#braidio.tts.narrate)-shaped synthesizer that speaks through `speak`.                              |
+| [`register_tts`](_autosummary/braidio.tts.html.md#braidio.tts.register_tts)(name[, speak, voice, ...])       | Register `speak` as the voice backend `name` (replacing any before).                                                                      |
+| [`resolve_voice_id`](_autosummary/braidio.tts.html.md#braidio.tts.resolve_voice_id)([voice_id])                  | Voice id from arg → `VOICE_ENV_VAR` env → default.                                                                                        |
+| [`text_to_dialogue`](_autosummary/braidio.tts.html.md#braidio.tts.text_to_dialogue)(turns, \*[, model_id, ...])  | Synthesize a multi-speaker exchange in ONE pass (ElevenLabs Text-to-Dialogue).                                                            |
+| [`tts_backend`](_autosummary/braidio.tts.html.md#braidio.tts.tts_backend)(name)                             | The backend registered as `name`; `KeyError` naming the registered ones.                                                                  |
+| [`tts_name`](_autosummary/braidio.tts.html.md#braidio.tts.tts_name)(speak)                               | The voice backend a render used, as its settings record names it.                                                                         |
+| [`unregister_tts`](_autosummary/braidio.tts.html.md#braidio.tts.unregister_tts)(name)                          | Remove the backend registered as `name`; returns it, or `None`.                                                                           |
+| [`voice_for`](_autosummary/braidio.tts.html.md#braidio.tts.voice_for)([tts, speak, voice])                | The voice a render speaks with: a ready `voice` wins, then an explicit `speak`, then the registered backend `tts` names, then ElevenLabs. |
 
 ### Classes
 
-| [`ElevenLabsVoice`](_autosummary/braidio.tts.html.md#braidio.tts.ElevenLabsVoice)()                     | The default voice: ElevenLabs, with its on-disk cache and its one-pass Text-to-Dialogue (braidio#137).                                                                                                                       |
-|----------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`SpeakVoice`](_autosummary/braidio.tts.html.md#braidio.tts.SpeakVoice)(speak, name)               | Any other voice: a [`Speak`](_autosummary/braidio.tts.html.md#braidio.tts.Speak) callable (a registered backend, a local model, a test).                                                                                            |
-| [`TTSBackend`](_autosummary/braidio.tts.html.md#braidio.tts.TTSBackend)(speak[, usd_per_1k_chars]) | A named voice backend: its `speak` and what it costs.                                                                                                                                                                        |
-| [`VoiceBackend`](_autosummary/braidio.tts.html.md#braidio.tts.VoiceBackend)(\*args, \*\*kwargs)      | What a render speaks through (braidio#137, #199): a `name` for the render record and cache keys, and the two calls, both with [`narrate()`](_autosummary/braidio.tts.html.md#braidio.tts.narrate)'s `return_cache_status` convention. |
+| [`ElevenLabsVoice`](_autosummary/braidio.tts.html.md#braidio.tts.ElevenLabsVoice)()                            | The default voice: ElevenLabs, with its on-disk cache and its one-pass Text-to-Dialogue (braidio#137).                                                                                                                       |
+|-----------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`SpeakVoice`](_autosummary/braidio.tts.html.md#braidio.tts.SpeakVoice)(speak, name)                      | Any other voice: a [`Speak`](_autosummary/braidio.tts.html.md#braidio.tts.Speak) callable (a registered backend, a local model, a test).                                                                                            |
+| [`TTSBackend`](_autosummary/braidio.tts.html.md#braidio.tts.TTSBackend)([speak, usd_per_1k_chars, voice]) | A named voice backend: its `speak` (or a whole `voice`) and what it costs.                                                                                                                                                   |
+| [`VoiceBackend`](_autosummary/braidio.tts.html.md#braidio.tts.VoiceBackend)(\*args, \*\*kwargs)             | What a render speaks through (braidio#137, #199): a `name` for the render record and cache keys, and the two calls, both with [`narrate()`](_autosummary/braidio.tts.html.md#braidio.tts.narrate)'s `return_cache_status` convention. |
 
 ### braidio.tts.DEFAULT_MODEL_ID *= 'eleven_v3'*
 
@@ -4676,15 +4676,18 @@ model, a test). Never cached, and with no one-pass dialogue, so a dialogue
 is spoken turn by turn ([`braidio.conversation.render_turns_sequential()`](_autosummary/braidio.conversation.html.md#braidio.conversation.render_turns_sequential)),
 its per-turn parts removed once the exchange is assembled.
 
-### *class* braidio.tts.TTSBackend(speak, usd_per_1k_chars=None)
+### *class* braidio.tts.TTSBackend(speak=None, usd_per_1k_chars=None, voice=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
-A named voice backend: its `speak` and what it costs.
+A named voice backend: its `speak` (or a whole `voice`) and what it costs.
 
 `usd_per_1k_chars` is the backend’s rate: `0.0` for a local model,
 `None` (default) when unknown, which a cost report then reads as
 *unpriced* rather than free (the same rule as [`braidio.cost`](_autosummary/braidio.cost.html.md#module-braidio.cost)).
+`voice` is a ready [`VoiceBackend`](_autosummary/braidio.tts.html.md#braidio.tts.VoiceBackend) (its own cache, its own one-pass
+dialogue) registered instead of a bare `speak` (braidio#203): exactly
+one of the two is set.
 
 #### cost_usd(text)
 
@@ -4762,12 +4765,16 @@ written at `out_path` with the suffix `speak` reported.
 * **Return type:**
   [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)]
 
-### braidio.tts.register_tts(name, speak, , usd_per_1k_chars=None)
+### braidio.tts.register_tts(name, speak=None, , voice=None, usd_per_1k_chars=None)
 
 Register `speak` as the voice backend `name` (replacing any before).
 
 `name` is what `WeaveConfig(tts=name)` selects, on either render path.
-[`DEFAULT_TTS`](_autosummary/braidio.tts.html.md#braidio.tts.DEFAULT_TTS) is ElevenLabs itself and cannot be taken.
+[`DEFAULT_TTS`](_autosummary/braidio.tts.html.md#braidio.tts.DEFAULT_TTS) is ElevenLabs itself and cannot be taken. Register a
+[`Speak`](_autosummary/braidio.tts.html.md#braidio.tts.Speak) callable as `speak`, or a ready [`VoiceBackend`](_autosummary/braidio.tts.html.md#braidio.tts.VoiceBackend)
+instance as `voice=` (its own cache, its own one-pass dialogue), which
+the graph path then uses whole too (braidio#203). A voice is registered
+under its own `name`, so a render’s record and its config agree.
 
 ```pycon
 >>> b = register_tts("doc-tone", lambda text, *, voice: (b"", "wav"), usd_per_1k_chars=0.0)
@@ -5649,18 +5656,16 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-03 16:27 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/967e5d01eb61bb0d0735df800784313da2a9ed11"><code>967e5d0</code></a> on branch <code>main</code>, for **braidio 0.0.115** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-04 04:12 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/21165b372501477a0fdf3a72fdc330cb03ddb5c9"><code>21165b3</code></a> on branch <code>main</code>, for **braidio 0.0.116** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.0.115) is behind the latest release on PyPI (0.0.116): `pip install braidio` gives newer code than these docs describe.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/967e5d01eb61bb0d0735df800784313da2a9ed11"><code>967e5d01eb61bb0d0735df800784313da2a9ed11</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/21165b372501477a0fdf3a72fdc330cb03ddb5c9"><code>21165b372501477a0fdf3a72fdc330cb03ddb5c9</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
 | Tags at this commit | none                                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
@@ -5671,9 +5676,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41671566984">41671566984</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41770471138">41770471138</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>967e5d01eb61bb0d0735df800784313da2a9ed11</code> (in the history of the built commit) |
+| Event commit | <code>21165b372501477a0fdf3a72fdc330cb03ddb5c9</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5698,13 +5703,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.116/">0.0.116</a>, newer than the documented version (0.0.115).
+Latest release: <a href="https://pypi.org/project/braidio/0.0.116/">0.0.116</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 967e5d01eb61bb0d0735df800784313da2a9ed11
+git checkout 21165b372501477a0fdf3a72fdc330cb03ddb5c9
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

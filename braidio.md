@@ -1,4 +1,4 @@
-> built 2026-11-04 04:12 UTC from 21165b3 (main) · braidio 0.0.116. Details: build_info.json
+> built 2026-11-07 12:41 UTC from aee2822 (main) · braidio 0.0.118. Details: build_info.json
 
 # index.html.md
 
@@ -135,6 +135,10 @@ render_production(
     out_path="out.mp3",
 )
 ```
+
+### Timed pauses and the model
+
+A silence of any length is an SSML break in the text: `Narration('Breathe in.<break time="4s"/> And out.<break time="6s"/>')`. braidio keeps a break the voice renders itself (ElevenLabs’ v2 models, up to 3 s) and, everywhere else (`eleven_v3`, `eleven_v4`, any non-ElevenLabs voice), cuts the beat there and inserts exactly that silence. The parsing is `voxy.pauses`, shared with the rest of the fleet’s speech tools. `eleven_v4`, ElevenLabs’ current model, is the `v4-presenter` / `v4-narrator` delivery (`render_production(..., delivery="v4-narrator")`); `dataclasses.replace(braidio.V4_NARRATOR, language_code="fr")` fixes the language it reads in.
 
 ### Cost tracking
 
@@ -791,7 +795,7 @@ rather than taking a render down with it.
 | [`default_voice_settings`](_autosummary/braidio.defaults.html.md#braidio.defaults.default_voice_settings)()     | The resolved delivery's voice settings, as a fresh dict.              |
 | [`describe_defaults`](_autosummary/braidio.defaults.html.md#braidio.defaults.describe_defaults)()          | What is in force, and where each part came from.                      |
 
-### braidio.defaults.PACKAGE_DEFAULT_DELIVERY *: [Delivery](_autosummary/braidio.delivery.html.md#braidio.delivery.Delivery)* *= Delivery(name='v3-presenter', model_id='eleven_v3', voice_settings={'stability': 0.0, 'use_speaker_boost': True}, supports_audio_tags=True, supports_speed=False, note='Host/presenter commentary on v3 -- the expressive end. The narration-spine default (solo_explainer). Colour comes from tag density in the script; this setting just gets out of its way.')*
+### braidio.defaults.PACKAGE_DEFAULT_DELIVERY *: [Delivery](_autosummary/braidio.delivery.html.md#braidio.delivery.Delivery)* *= Delivery(name='v3-presenter', model_id='eleven_v3', voice_settings={'stability': 0.0, 'use_speaker_boost': True}, supports_audio_tags=True, supports_speed=False, note='Host/presenter commentary on v3 -- the expressive end. The narration-spine default (solo_explainer). Colour comes from tag density in the script; this setting just gets out of its way.', language_code=None)*
 
 What braidio uses when nothing else says otherwise. `eleven_v3` so inline
 `[audio tags]` fire, at the expressive end of `stability`.
@@ -875,8 +879,8 @@ consistency); `eleven_v3` adds inline audio tags for real expressive control.
 
 ### Module Attributes
 
-| [`SPEEDLESS_MODELS`](_autosummary/braidio.delivery.html.md#braidio.delivery.SPEEDLESS_MODELS)   | Models that ignore `voice_settings["speed"]` (eleven v3 has no speed control).   |
-|---------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| [`SPEEDLESS_MODELS`](_autosummary/braidio.delivery.html.md#braidio.delivery.SPEEDLESS_MODELS)   | Models that ignore `voice_settings["speed"]` (eleven v3 and v4 have no speed control: "Style and Speed sliders are not available" on v4).   |
+|---------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------|
 
 ### Functions
 
@@ -889,11 +893,19 @@ consistency); `eleven_v3` adds inline audio tags for real expressive control.
 | [`Delivery`](_autosummary/braidio.delivery.html.md#braidio.delivery.Delivery)(name, model_id[, voice_settings, ...])   | A named narration delivery: which model + voice settings to synthesize with.   |
 |----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------|
 
-### *class* braidio.delivery.Delivery(name, model_id, voice_settings=dict(), supports_audio_tags=False, supports_speed=True, note='')
+### *class* braidio.delivery.Delivery(name, model_id, voice_settings=dict(), supports_audio_tags=False, supports_speed=True, note='', language_code=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 A named narration delivery: which model + voice settings to synthesize with.
+
+#### language_code *: [str](https://docs.python.org/3/builtins/stdtypes.html#str) | [None](https://docs.python.org/3/builtins/constants.html#None)* *= None*
+
+ISO 639-1 language the model is told to read in (`"fr"`, `"en"`), or
+`None` to let it detect the language. Passed to ElevenLabs as
+`language_code`, which also enforces that language’s text normalisation
+(numbers, dates). Set it with `dataclasses.replace(V4_PRESENTER,
+language_code="fr")`.
 
 #### supports_speed *: [bool](https://docs.python.org/3/builtins/functions.html#bool)* *= True*
 
@@ -904,9 +916,10 @@ path ([`braidio.pacing`](_autosummary/braidio.pacing.html.md#module-braidio.paci
 speed and varies tempo through real inter-turn silence, punctuation and
 audio tags instead.
 
-### braidio.delivery.SPEEDLESS_MODELS *= frozenset({'eleven_v3'})*
+### braidio.delivery.SPEEDLESS_MODELS *= frozenset({'eleven_v3', 'eleven_v4', 'eleven_v4_turbo'})*
 
-Models that ignore `voice_settings["speed"]` (eleven v3 has no speed control).
+Models that ignore `voice_settings["speed"]` (eleven v3 and v4 have no speed
+control: “Style and Speed sliders are not available” on v4).
 
 ### braidio.delivery.as_delivery(delivery)
 
@@ -936,6 +949,8 @@ Whether `model_id` honors `voice_settings["speed"]`.
 ```pycon
 >>> model_supports_speed("eleven_v3"), model_supports_speed("eleven_multilingual_v2")
 (False, True)
+>>> model_supports_speed("eleven_v4")
+False
 ```
 
 * **Return type:**
@@ -990,7 +1005,7 @@ history is braidio#25.
 | [`Format`](_autosummary/braidio.formats.html.md#braidio.formats.Format)(id, name, summary[, aka, cast, ...])   | A named commentary-format preset: a bundle of high-quality defaults.   |
 |------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
 
-### *class* braidio.formats.Format(id, name, summary, aka=(), cast=None, narration_voice=None, narration_delivery=Delivery(name='v2-presenter', model_id='eleven_multilingual_v2', voice_settings={'stability': 0.35, 'similarity_boost': 0.75, 'style': 0.35, 'use_speaker_boost': True, 'speed': 0.98}, supports_audio_tags=False, supports_speed=True, note='Host/presenter commentary — lively (== v2-tuned), for the spine voice.'), weave=WeaveConfig(), structure=MusicStructure(), roles=dict(), clip_placement='before', music_bed='light', scripting='')
+### *class* braidio.formats.Format(id, name, summary, aka=(), cast=None, narration_voice=None, narration_delivery=Delivery(name='v2-presenter', model_id='eleven_multilingual_v2', voice_settings={'stability': 0.35, 'similarity_boost': 0.75, 'style': 0.35, 'use_speaker_boost': True, 'speed': 0.98}, supports_audio_tags=False, supports_speed=True, note='Host/presenter commentary — lively (== v2-tuned), for the spine voice.', language_code=None), weave=WeaveConfig(), structure=MusicStructure(), roles=dict(), clip_placement='before', music_bed='light', scripting='')
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -1239,11 +1254,19 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One subtitle: `[start_s, end_s)` and the text shown.
 
-### *class* braidio.Delivery(name, model_id, voice_settings=dict(), supports_audio_tags=False, supports_speed=True, note='')
+### *class* braidio.Delivery(name, model_id, voice_settings=dict(), supports_audio_tags=False, supports_speed=True, note='', language_code=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 A named narration delivery: which model + voice settings to synthesize with.
+
+#### language_code *: [str](https://docs.python.org/3/builtins/stdtypes.html#str) | [None](https://docs.python.org/3/builtins/constants.html#None)* *= None*
+
+ISO 639-1 language the model is told to read in (`"fr"`, `"en"`), or
+`None` to let it detect the language. Passed to ElevenLabs as
+`language_code`, which also enforces that language’s text normalisation
+(numbers, dates). Set it with `dataclasses.replace(V4_PRESENTER,
+language_code="fr")`.
 
 #### supports_speed *: [bool](https://docs.python.org/3/builtins/functions.html#bool)* *= True*
 
@@ -1272,7 +1295,7 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One flagged platitude.
 
-### *class* braidio.Format(id, name, summary, aka=(), cast=None, narration_voice=None, narration_delivery=Delivery(name='v2-presenter', model_id='eleven_multilingual_v2', voice_settings={'stability': 0.35, 'similarity_boost': 0.75, 'style': 0.35, 'use_speaker_boost': True, 'speed': 0.98}, supports_audio_tags=False, supports_speed=True, note='Host/presenter commentary — lively (== v2-tuned), for the spine voice.'), weave=WeaveConfig(), structure=MusicStructure(), roles=dict(), clip_placement='before', music_bed='light', scripting='')
+### *class* braidio.Format(id, name, summary, aka=(), cast=None, narration_voice=None, narration_delivery=Delivery(name='v2-presenter', model_id='eleven_multilingual_v2', voice_settings={'stability': 0.35, 'similarity_boost': 0.75, 'style': 0.35, 'use_speaker_boost': True, 'speed': 0.98}, supports_audio_tags=False, supports_speed=True, note='Host/presenter commentary — lively (== v2-tuned), for the spine voice.', language_code=None), weave=WeaveConfig(), structure=MusicStructure(), roles=dict(), clip_placement='before', music_bed='light', scripting='')
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -1736,7 +1759,7 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 A pooled narration voice.
 
-### *class* braidio.WeaveConfig(voices=('JBFqnCBsd6RMkjVDRZzb', ), pool_label='single', voice_seed=7, avoid_immediate_repeat=True, narration_voice=None, tts=None, model_id='eleven_multilingual_v2', voice_settings=<factory>, segmentation_unit='beat', min_turn=2, max_turn=4, speed_base=1.0, speed_jitter=0.04, crossfade_s=0.12, gap_turn_s=0.0, overlap_turn_s=0.0, overlap_jitter=0.3, overlap_duck_db=0.0, clip_pre_roll_s=0.4, clip_post_roll_s=0.3, clip_fade_in_s=0.5, clip_fade_out_s=0.8, clip_min_len_s=2.2, clip_edge_overlap_s=0.5, duck_db=-15.0, target_lufs=-16.0, true_peak_dbtp=-1.0, sample_rate=44100)
+### *class* braidio.WeaveConfig(voices=('JBFqnCBsd6RMkjVDRZzb', ), pool_label='single', voice_seed=7, avoid_immediate_repeat=True, narration_voice=None, tts=None, model_id='eleven_multilingual_v2', voice_settings=<factory>, language_code=None, segmentation_unit='beat', min_turn=2, max_turn=4, speed_base=1.0, speed_jitter=0.04, crossfade_s=0.12, gap_turn_s=0.0, overlap_turn_s=0.0, overlap_jitter=0.3, overlap_duck_db=0.0, clip_pre_roll_s=0.4, clip_post_roll_s=0.3, clip_fade_in_s=0.5, clip_fade_out_s=0.8, clip_min_len_s=2.2, clip_edge_overlap_s=0.5, duck_db=-15.0, target_lufs=-16.0, true_peak_dbtp=-1.0, sample_rate=44100)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -2188,9 +2211,13 @@ TimedLine\`s.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`TimedLine`](_autosummary/braidio.sources.html.md#braidio.sources.TimedLine)]
 
-### braidio.narrate(text, out_path, , api_key=None, voice_id=None, model_id='eleven_v3', voice_settings=None, output_format='mp3_44100_128', refresh=False, return_cache_status=False)
+### braidio.narrate(text, out_path, , api_key=None, voice_id=None, model_id='eleven_v3', voice_settings=None, output_format='mp3_44100_128', refresh=False, return_cache_status=False, language_code=None)
 
 Synthesize `text` to `out_path` (mp3). Returns the path.
+
+`language_code` (ISO 639-1, e.g. `"fr"`) tells the model which language
+to read in ([`braidio.delivery.Delivery.language_code`](_autosummary/braidio.delivery.html.md#braidio.delivery.Delivery.language_code)); `None` lets
+it detect the language.
 
 Caching is handled by `mixing.text_to_speech` (keyed on text+voice+model);
 pass `refresh=True` to regenerate.
@@ -3306,12 +3333,16 @@ transforms (which add provenance + partial re-render).
 
 | [`narrate_turns`](_autosummary/braidio.render.html.md#braidio.render.narrate_turns)(turns, \*, stem, api_key, ...)   | Synthesize a paced narration beat: one TTS call per turn, real silence between.   |
 |-------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
-| [`plan_beat_turns`](_autosummary/braidio.render.html.md#braidio.render.plan_beat_turns)(text, \*, config, ...)         | Plan one narration beat's turns, or `[]` for the unpaced single call.             |
+| [`plan_beat_turns`](_autosummary/braidio.render.html.md#braidio.render.plan_beat_turns)(text, \*, config, ...[, ...])  | Plan one narration beat's turns, or `[]` for the unpaced single call.             |
 | [`render_production`](_autosummary/braidio.render.html.md#braidio.render.render_production)(script, \*, source[, ...])   | Render `script` under `profile` → a single audio file.                            |
 
-### braidio.render.narrate_turns(turns, , stem, api_key, voice_id, model_id, voice_settings, narrate_fn=None)
+### braidio.render.narrate_turns(turns, , stem, api_key, voice_id, model_id, voice_settings, narrate_fn=None, \*\*synth_kwargs)
 
 Synthesize a paced narration beat: one TTS call per turn, real silence between.
+
+A turn with no text is silence only (a beat that opens on an SSML break):
+it is prepended to the next spoken turn. `synth_kwargs` (e.g.
+`language_code`) go to every synthesis call.
 
 This is the point of [`braidio.pacing`](_autosummary/braidio.pacing.html.md#module-braidio.pacing) — within one beat the tempo now
 varies (a fresh prosodic arc per turn, a per-turn speed where the model has
@@ -3325,9 +3356,17 @@ another voice, passes its own.
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### braidio.render.plan_beat_turns(text, , config, supports_speed, settings, seed_offset)
+### braidio.render.plan_beat_turns(text, , config, supports_speed, settings, seed_offset, native_break_s=0.0)
 
 Plan one narration beat’s turns, or `[]` for the unpaced single call.
+
+**Explicit pauses.** SSML breaks in the text (`<break time="6s"/>`,
+`voxy.pauses`) are honoured on every model: a break of at most
+`native_break_s` (what the voice renders itself: 3 s on ElevenLabs’ v2
+family, none on v3/v4 or a non-ElevenLabs voice) stays in the text, and at
+any other the beat is cut into turns with exactly that silence after the
+turn before it (`boundary="break"`, never capped). A pause-free beat is
+planned exactly as before.
 
 The speed each turn is jittered around is the beat’s own `speed` setting
 when it sets one (so a grave `v2-narrator`’s 0.94 survives being paced),
@@ -4621,6 +4660,7 @@ what the renderers call.
 | [`tts_name`](_autosummary/braidio.tts.html.md#braidio.tts.tts_name)(speak)                               | The voice backend a render used, as its settings record names it.                                                                         |
 | [`unregister_tts`](_autosummary/braidio.tts.html.md#braidio.tts.unregister_tts)(name)                          | Remove the backend registered as `name`; returns it, or `None`.                                                                           |
 | [`voice_for`](_autosummary/braidio.tts.html.md#braidio.tts.voice_for)([tts, speak, voice])                | The voice a render speaks with: a ready `voice` wins, then an explicit `speak`, then the registered backend `tts` names, then ElevenLabs. |
+| [`voice_native_break_s`](_autosummary/braidio.tts.html.md#braidio.tts.voice_native_break_s)(voice, model_id)         | The longest SSML `<break>` `voice` renders itself on `model_id`.                                                                          |
 
 ### Classes
 
@@ -4718,9 +4758,13 @@ one-pass dialogue renders it turn by turn through its own `narrate`
 (Not [`braidio.multivoice.Voice`](_autosummary/braidio.multivoice.html.md#braidio.multivoice.Voice), `braidio.Voice`: that is one
 voice of a narration pool, an ElevenLabs id and name.)
 
-### braidio.tts.narrate(text, out_path, , api_key=None, voice_id=None, model_id='eleven_v3', voice_settings=None, output_format='mp3_44100_128', refresh=False, return_cache_status=False)
+### braidio.tts.narrate(text, out_path, , api_key=None, voice_id=None, model_id='eleven_v3', voice_settings=None, output_format='mp3_44100_128', refresh=False, return_cache_status=False, language_code=None)
 
 Synthesize `text` to `out_path` (mp3). Returns the path.
+
+`language_code` (ISO 639-1, e.g. `"fr"`) tells the model which language
+to read in ([`braidio.delivery.Delivery.language_code`](_autosummary/braidio.delivery.html.md#braidio.delivery.Delivery.language_code)); `None` lets
+it detect the language.
 
 Caching is handled by `mixing.text_to_speech` (keyed on text+voice+model);
 pass `refresh=True` to regenerate.
@@ -4874,6 +4918,23 @@ one place that choice is made, on every render path (braidio#137, #199).
 
 * **Return type:**
   [`VoiceBackend`](_autosummary/braidio.tts.html.md#braidio.tts.VoiceBackend)
+
+### braidio.tts.voice_native_break_s(voice, model_id)
+
+The longest SSML `<break>` `voice` renders itself on `model_id`.
+
+ElevenLabs: voxy’s per-model table (3 s on the v2 family, none on v3/v4).
+Any other voice: none, so every break becomes real silence between turns.
+
+```pycon
+>>> voice_native_break_s(ElevenLabsVoice(), "eleven_multilingual_v2")
+3.0
+>>> voice_native_break_s(ElevenLabsVoice(), "eleven_v4")
+0.0
+```
+
+* **Return type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float)
 
 
 # _autosummary/braidio.video.html.md
@@ -5533,7 +5594,7 @@ recorded choices.
 | [`WeaveConfig`](_autosummary/braidio.weave_config.html.md#braidio.weave_config.WeaveConfig)([voices, pool_label, ...])   | All editing choices for a narration+segment weave.   |
 |-------------------------------------------------------------------------------------------|------------------------------------------------------|
 
-### *class* braidio.weave_config.WeaveConfig(voices=('JBFqnCBsd6RMkjVDRZzb', ), pool_label='single', voice_seed=7, avoid_immediate_repeat=True, narration_voice=None, tts=None, model_id='eleven_multilingual_v2', voice_settings=<factory>, segmentation_unit='beat', min_turn=2, max_turn=4, speed_base=1.0, speed_jitter=0.04, crossfade_s=0.12, gap_turn_s=0.0, overlap_turn_s=0.0, overlap_jitter=0.3, overlap_duck_db=0.0, clip_pre_roll_s=0.4, clip_post_roll_s=0.3, clip_fade_in_s=0.5, clip_fade_out_s=0.8, clip_min_len_s=2.2, clip_edge_overlap_s=0.5, duck_db=-15.0, target_lufs=-16.0, true_peak_dbtp=-1.0, sample_rate=44100)
+### *class* braidio.weave_config.WeaveConfig(voices=('JBFqnCBsd6RMkjVDRZzb', ), pool_label='single', voice_seed=7, avoid_immediate_repeat=True, narration_voice=None, tts=None, model_id='eleven_multilingual_v2', voice_settings=<factory>, language_code=None, segmentation_unit='beat', min_turn=2, max_turn=4, speed_base=1.0, speed_jitter=0.04, crossfade_s=0.12, gap_turn_s=0.0, overlap_turn_s=0.0, overlap_jitter=0.3, overlap_duck_db=0.0, clip_pre_roll_s=0.4, clip_post_roll_s=0.3, clip_fade_in_s=0.5, clip_fade_out_s=0.8, clip_min_len_s=2.2, clip_edge_overlap_s=0.5, duck_db=-15.0, target_lufs=-16.0, true_peak_dbtp=-1.0, sample_rate=44100)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -5656,7 +5717,7 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-04 04:12 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/21165b372501477a0fdf3a72fdc330cb03ddb5c9"><code>21165b3</code></a> on branch <code>main</code>, for **braidio 0.0.116** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-07 12:41 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/aee28227ed37e138e691136c749b9342f75bb1b6"><code>aee2822</code></a> on branch <code>main</code>, for **braidio 0.0.118** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -5665,9 +5726,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/21165b372501477a0fdf3a72fdc330cb03ddb5c9"><code>21165b372501477a0fdf3a72fdc330cb03ddb5c9</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/aee28227ed37e138e691136c749b9342f75bb1b6"><code>aee28227ed37e138e691136c749b9342f75bb1b6</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | none                                                                                                                                                    |
+| Tags at this commit | <code>0.0.118</code>                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -5676,9 +5737,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/41770471138">41770471138</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/42373208458">42373208458</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>21165b372501477a0fdf3a72fdc330cb03ddb5c9</code> (in the history of the built commit) |
+| Event commit | <code>ab07cd536e641ab94a2bb94eee4dc8a72d5b3589</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5687,7 +5748,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 | epythet  | 0.2.22  |
 | Sphinx   | 9.1.1   |
 | docutils | 0.22.4  |
-| Python   | 3.12.15 |
+| Python   | 3.12.16 |
 
 ## Configuration as resolved
 
@@ -5703,13 +5764,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.116/">0.0.116</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/braidio/0.0.118/">0.0.118</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 21165b372501477a0fdf3a72fdc330cb03ddb5c9
+git checkout aee28227ed37e138e691136c749b9342f75bb1b6
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

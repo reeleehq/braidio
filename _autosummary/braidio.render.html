@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../_static/documentation_options.js?v=ab1379f9"></script>
+    <script src="../_static/documentation_options.js?v=e7715e22"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.116" />
+  <meta name="docsearch:version" content="0.0.118" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -433,7 +433,7 @@ transforms (which add provenance + partial re-render).</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#braidio.render.narrate_turns" title="braidio.render.narrate_turns"><code class="xref py py-obj docutils literal notranslate"><span class="pre">narrate_turns</span></code></a>(turns, *, stem, api_key, ...)</p></td>
 <td><p>Synthesize a paced narration beat: one TTS call per turn, real silence between.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.render.plan_beat_turns" title="braidio.render.plan_beat_turns"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plan_beat_turns</span></code></a>(text, *, config, ...)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.render.plan_beat_turns" title="braidio.render.plan_beat_turns"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plan_beat_turns</span></code></a>(text, *, config, ...[, ...])</p></td>
 <td><p>Plan one narration beat's turns, or <code class="docutils literal notranslate"><span class="pre">[]</span></code> for the unpaced single call.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#braidio.render.render_production" title="braidio.render.render_production"><code class="xref py py-obj docutils literal notranslate"><span class="pre">render_production</span></code></a>(script, *, source[, ...])</p></td>
@@ -444,8 +444,11 @@ transforms (which add provenance + partial re-render).</p>
 </div>
 <dl class="py function">
 <dt class="sig sig-object py" id="braidio.render.narrate_turns">
-<span class="sig-prename descclassname"><span class="pre">braidio.render.</span></span><span class="sig-name descname"><span class="pre">narrate_turns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">turns</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">stem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api_key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_settings</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">narrate_fn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/render.html#narrate_turns"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.render.narrate_turns" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">braidio.render.</span></span><span class="sig-name descname"><span class="pre">narrate_turns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">turns</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">stem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api_key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_settings</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">narrate_fn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">synth_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/render.html#narrate_turns"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.render.narrate_turns" title="Link to this definition">#</a></dt>
 <dd><p>Synthesize a paced narration beat: one TTS call per turn, real silence between.</p>
+<p>A turn with no text is silence only (a beat that opens on an SSML break):
+it is prepended to the next spoken turn. <code class="docutils literal notranslate"><span class="pre">synth_kwargs</span></code> (e.g.
+<code class="docutils literal notranslate"><span class="pre">language_code</span></code>) go to every synthesis call.</p>
 <p>This is the point of <a class="reference internal" href="braidio.pacing.html#module-braidio.pacing" title="braidio.pacing"><code class="xref py py-mod docutils literal notranslate"><span class="pre">braidio.pacing</span></code></a> — within one beat the tempo now
 varies (a fresh prosodic arc per turn, a per-turn speed where the model has
 one) and the silence between turns is proportional to how strongly the
@@ -462,8 +465,15 @@ another voice, passes its own.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="braidio.render.plan_beat_turns">
-<span class="sig-prename descclassname"><span class="pre">braidio.render.</span></span><span class="sig-name descname"><span class="pre">plan_beat_turns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">supports_speed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">settings</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed_offset</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/render.html#plan_beat_turns"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.render.plan_beat_turns" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">braidio.render.</span></span><span class="sig-name descname"><span class="pre">plan_beat_turns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">supports_speed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">settings</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed_offset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">native_break_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/render.html#plan_beat_turns"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.render.plan_beat_turns" title="Link to this definition">#</a></dt>
 <dd><p>Plan one narration beat’s turns, or <code class="docutils literal notranslate"><span class="pre">[]</span></code> for the unpaced single call.</p>
+<p><strong>Explicit pauses.</strong> SSML breaks in the text (<code class="docutils literal notranslate"><span class="pre">&lt;break</span> <span class="pre">time=&quot;6s&quot;/&gt;</span></code>,
+<code class="xref py py-mod docutils literal notranslate"><span class="pre">voxy.pauses</span></code>) are honoured on every model: a break of at most
+<code class="docutils literal notranslate"><span class="pre">native_break_s</span></code> (what the voice renders itself: 3 s on ElevenLabs’ v2
+family, none on v3/v4 or a non-ElevenLabs voice) stays in the text, and at
+any other the beat is cut into turns with exactly that silence after the
+turn before it (<code class="docutils literal notranslate"><span class="pre">boundary=&quot;break&quot;</span></code>, never capped). A pause-free beat is
+planned exactly as before.</p>
 <p>The speed each turn is jittered around is the beat’s own <code class="docutils literal notranslate"><span class="pre">speed</span></code> setting
 when it sets one (so a grave <code class="docutils literal notranslate"><span class="pre">v2-narrator</span></code>’s 0.94 survives being paced),
 falling back to <code class="docutils literal notranslate"><span class="pre">WeaveConfig.speed_base</span></code>. A model with no speed control

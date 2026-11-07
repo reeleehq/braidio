@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="_static/documentation_options.js?v=ab1379f9"></script>
+    <script src="_static/documentation_options.js?v=e7715e22"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -57,7 +57,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.116" />
+  <meta name="docsearch:version" content="0.0.118" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -504,6 +504,10 @@ full control:</p>
 <span class="p">)</span>
 </pre></div>
 </div>
+<section id="timed-pauses-and-the-model">
+<h3>Timed pauses and the model<a class="headerlink" href="#timed-pauses-and-the-model" title="Link to this heading">#</a></h3>
+<p>A silence of any length is an SSML break in the text: <code class="docutils literal notranslate"><span class="pre">Narration('Breathe</span> <span class="pre">in.&lt;break</span> <span class="pre">time=&quot;4s&quot;/&gt;</span> <span class="pre">And</span> <span class="pre">out.&lt;break</span> <span class="pre">time=&quot;6s&quot;/&gt;')</span></code>. braidio keeps a break the voice renders itself (ElevenLabs’ v2 models, up to 3 s) and, everywhere else (<code class="docutils literal notranslate"><span class="pre">eleven_v3</span></code>, <code class="docutils literal notranslate"><span class="pre">eleven_v4</span></code>, any non-ElevenLabs voice), cuts the beat there and inserts exactly that silence. The parsing is <code class="docutils literal notranslate"><span class="pre">voxy.pauses</span></code>, shared with the rest of the fleet’s speech tools. <code class="docutils literal notranslate"><span class="pre">eleven_v4</span></code>, ElevenLabs’ current model, is the <code class="docutils literal notranslate"><span class="pre">v4-presenter</span></code> / <code class="docutils literal notranslate"><span class="pre">v4-narrator</span></code> delivery (<code class="docutils literal notranslate"><span class="pre">render_production(...,</span> <span class="pre">delivery=&quot;v4-narrator&quot;)</span></code>); <code class="docutils literal notranslate"><span class="pre">dataclasses.replace(braidio.V4_NARRATOR,</span> <span class="pre">language_code=&quot;fr&quot;)</span></code> fixes the language it reads in.</p>
+</section>
 <section id="cost-tracking">
 <h3>Cost tracking<a class="headerlink" href="#cost-tracking" title="Link to this heading">#</a></h3>
 <p>ElevenLabs TTS is braidio’s only spend (everything else is local ffmpeg). <code class="docutils literal notranslate"><span class="pre">braidio.estimate_cost(script)</span></code> previews a production’s cost before you pay for synthesis, and real renders attribute a per-character cost onto their artifacts. Dollars are a <strong>rate estimate</strong> — set your ElevenLabs plan’s rate for exact figures:</p>
@@ -684,7 +688,7 @@ everything else.</p>
 </section>
 </section>
 
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-04 04:12 UTC from <a href="https://github.com/reeleehq/braidio/commit/21165b372501477a0fdf3a72fdc330cb03ddb5c9">21165b3</a> (main) · braidio 0.0.116 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-07 12:41 UTC from <a href="https://github.com/reeleehq/braidio/commit/aee28227ed37e138e691136c749b9342f75bb1b6">aee2822</a> (main) · braidio 0.0.118 · <a href="about-this-build.html">about this build</a></p>
 
                 </article>
               
@@ -726,6 +730,7 @@ everything else.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-model">The model</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ready-made-formats">Ready-made formats</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parametrize-anything">Parametrize anything</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#timed-pauses-and-the-model">Timed pauses and the model</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cost-tracking">Cost tracking</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#any-voice-backend-speak">Any voice backend (<code class="docutils literal notranslate"><span class="pre">speak=</span></code>)</a></li>
 </ul>

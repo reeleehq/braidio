@@ -166,11 +166,19 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One subtitle: `[start_s, end_s)` and the text shown.
 
-### *class* braidio.Delivery(name, model_id, voice_settings=dict(), supports_audio_tags=False, supports_speed=True, note='')
+### *class* braidio.Delivery(name, model_id, voice_settings=dict(), supports_audio_tags=False, supports_speed=True, note='', language_code=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 A named narration delivery: which model + voice settings to synthesize with.
+
+#### language_code *: [str](https://docs.python.org/3/builtins/stdtypes.html#str) | [None](https://docs.python.org/3/builtins/constants.html#None)* *= None*
+
+ISO 639-1 language the model is told to read in (`"fr"`, `"en"`), or
+`None` to let it detect the language. Passed to ElevenLabs as
+`language_code`, which also enforces that language’s text normalisation
+(numbers, dates). Set it with `dataclasses.replace(V4_PRESENTER,
+language_code="fr")`.
 
 #### supports_speed *: [bool](https://docs.python.org/3/builtins/functions.html#bool)* *= True*
 
@@ -199,7 +207,7 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One flagged platitude.
 
-### *class* braidio.Format(id, name, summary, aka=(), cast=None, narration_voice=None, narration_delivery=Delivery(name='v2-presenter', model_id='eleven_multilingual_v2', voice_settings={'stability': 0.35, 'similarity_boost': 0.75, 'style': 0.35, 'use_speaker_boost': True, 'speed': 0.98}, supports_audio_tags=False, supports_speed=True, note='Host/presenter commentary — lively (== v2-tuned), for the spine voice.'), weave=WeaveConfig(), structure=MusicStructure(), roles=dict(), clip_placement='before', music_bed='light', scripting='')
+### *class* braidio.Format(id, name, summary, aka=(), cast=None, narration_voice=None, narration_delivery=Delivery(name='v2-presenter', model_id='eleven_multilingual_v2', voice_settings={'stability': 0.35, 'similarity_boost': 0.75, 'style': 0.35, 'use_speaker_boost': True, 'speed': 0.98}, supports_audio_tags=False, supports_speed=True, note='Host/presenter commentary — lively (== v2-tuned), for the spine voice.', language_code=None), weave=WeaveConfig(), structure=MusicStructure(), roles=dict(), clip_placement='before', music_bed='light', scripting='')
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -663,7 +671,7 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 A pooled narration voice.
 
-### *class* braidio.WeaveConfig(voices=('JBFqnCBsd6RMkjVDRZzb', ), pool_label='single', voice_seed=7, avoid_immediate_repeat=True, narration_voice=None, tts=None, model_id='eleven_multilingual_v2', voice_settings=<factory>, segmentation_unit='beat', min_turn=2, max_turn=4, speed_base=1.0, speed_jitter=0.04, crossfade_s=0.12, gap_turn_s=0.0, overlap_turn_s=0.0, overlap_jitter=0.3, overlap_duck_db=0.0, clip_pre_roll_s=0.4, clip_post_roll_s=0.3, clip_fade_in_s=0.5, clip_fade_out_s=0.8, clip_min_len_s=2.2, clip_edge_overlap_s=0.5, duck_db=-15.0, target_lufs=-16.0, true_peak_dbtp=-1.0, sample_rate=44100)
+### *class* braidio.WeaveConfig(voices=('JBFqnCBsd6RMkjVDRZzb', ), pool_label='single', voice_seed=7, avoid_immediate_repeat=True, narration_voice=None, tts=None, model_id='eleven_multilingual_v2', voice_settings=<factory>, language_code=None, segmentation_unit='beat', min_turn=2, max_turn=4, speed_base=1.0, speed_jitter=0.04, crossfade_s=0.12, gap_turn_s=0.0, overlap_turn_s=0.0, overlap_jitter=0.3, overlap_duck_db=0.0, clip_pre_roll_s=0.4, clip_post_roll_s=0.3, clip_fade_in_s=0.5, clip_fade_out_s=0.8, clip_min_len_s=2.2, clip_edge_overlap_s=0.5, duck_db=-15.0, target_lufs=-16.0, true_peak_dbtp=-1.0, sample_rate=44100)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -1115,9 +1123,13 @@ TimedLine\`s.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`TimedLine`](braidio.sources.html.md#braidio.sources.TimedLine)]
 
-### braidio.narrate(text, out_path, , api_key=None, voice_id=None, model_id='eleven_v3', voice_settings=None, output_format='mp3_44100_128', refresh=False, return_cache_status=False)
+### braidio.narrate(text, out_path, , api_key=None, voice_id=None, model_id='eleven_v3', voice_settings=None, output_format='mp3_44100_128', refresh=False, return_cache_status=False, language_code=None)
 
 Synthesize `text` to `out_path` (mp3). Returns the path.
+
+`language_code` (ISO 639-1, e.g. `"fr"`) tells the model which language
+to read in ([`braidio.delivery.Delivery.language_code`](braidio.delivery.html.md#braidio.delivery.Delivery.language_code)); `None` lets
+it detect the language.
 
 Caching is handled by `mixing.text_to_speech` (keyed on text+voice+model);
 pass `refresh=True` to regenerate.

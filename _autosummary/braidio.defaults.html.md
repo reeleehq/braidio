@@ -45,7 +45,7 @@ rather than taking a render down with it.
 | [`default_voice_settings`](#braidio.defaults.default_voice_settings)()     | The resolved delivery's voice settings, as a fresh dict.              |
 | [`describe_defaults`](#braidio.defaults.describe_defaults)()          | What is in force, and where each part came from.                      |
 
-### braidio.defaults.PACKAGE_DEFAULT_DELIVERY *: [Delivery](braidio.delivery.html.md#braidio.delivery.Delivery)* *= Delivery(name='v3-presenter', model_id='eleven_v3', voice_settings={'stability': 0.0, 'use_speaker_boost': True}, supports_audio_tags=True, supports_speed=False, note='Host/presenter commentary on v3 -- the expressive end. The narration-spine default (solo_explainer). Colour comes from tag density in the script; this setting just gets out of its way.')*
+### braidio.defaults.PACKAGE_DEFAULT_DELIVERY *: [Delivery](braidio.delivery.html.md#braidio.delivery.Delivery)* *= Delivery(name='v3-presenter', model_id='eleven_v3', voice_settings={'stability': 0.0, 'use_speaker_boost': True}, supports_audio_tags=True, supports_speed=False, note='Host/presenter commentary on v3 -- the expressive end. The narration-spine default (solo_explainer). Colour comes from tag density in the script; this setting just gets out of its way.', language_code=None)*
 
 What braidio uses when nothing else says otherwise. `eleven_v3` so inline
 `[audio tags]` fire, at the expressive end of `stability`.

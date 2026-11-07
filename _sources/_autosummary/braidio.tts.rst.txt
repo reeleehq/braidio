@@ -26,6 +26,7 @@ braidio.tts
       tts_name
       unregister_tts
       voice_for
+      voice_native_break_s
    
    .. rubric:: Classes
 

@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../../_static/documentation_options.js?v=ab1379f9"></script>
+    <script src="../../_static/documentation_options.js?v=e7715e22"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.116" />
+  <meta name="docsearch:version" content="0.0.118" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -733,8 +733,9 @@ window.runMermaid = runMermaid;</script>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
 
 
-<span class="c1">#: Models that ignore ``voice_settings["speed"]`` (eleven v3 has no speed control).</span>
-<span class="n">SPEEDLESS_MODELS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">"eleven_v3"</span><span class="p">})</span>
+<span class="c1">#: Models that ignore ``voice_settings["speed"]`` (eleven v3 and v4 have no speed</span>
+<span class="c1">#: control: "Style and Speed sliders are not available" on v4).</span>
+<span class="n">SPEEDLESS_MODELS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">"eleven_v3"</span><span class="p">,</span> <span class="s2">"eleven_v4"</span><span class="p">,</span> <span class="s2">"eleven_v4_turbo"</span><span class="p">})</span>
 
 
 <div class="viewcode-block" id="model_supports_speed">
@@ -744,6 +745,8 @@ window.runMermaid = runMermaid;</script>
 
 <span class="sd">    &gt;&gt;&gt; model_supports_speed("eleven_v3"), model_supports_speed("eleven_multilingual_v2")</span>
 <span class="sd">    (False, True)</span>
+<span class="sd">    &gt;&gt;&gt; model_supports_speed("eleven_v4")</span>
+<span class="sd">    False</span>
 <span class="sd">    """</span>
     <span class="k">return</span> <span class="n">model_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">SPEEDLESS_MODELS</span></div>
 
@@ -766,7 +769,13 @@ window.runMermaid = runMermaid;</script>
     <span class="c1">#: speed and varies tempo through real inter-turn silence, punctuation and</span>
     <span class="c1">#: audio tags instead.</span>
     <span class="n">supports_speed</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
-    <span class="n">note</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span></div>
+    <span class="n">note</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="c1">#: ISO 639-1 language the model is told to read in (``"fr"``, ``"en"``), or</span>
+    <span class="c1">#: ``None`` to let it detect the language. Passed to ElevenLabs as</span>
+    <span class="c1">#: ``language_code``, which also enforces that language's text normalisation</span>
+    <span class="c1">#: (numbers, dates). Set it with ``dataclasses.replace(V4_PRESENTER,</span>
+    <span class="c1">#: language_code="fr")``.</span>
+    <span class="n">language_code</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></div>
 
 
 
@@ -915,6 +924,38 @@ window.runMermaid = runMermaid;</script>
     <span class="s2">"still tag-responsive. Contrast partner to v3-presenter."</span><span class="p">,</span>
 <span class="p">)</span>
 
+<span class="c1"># --- v4 role deliveries -------------------------------------------------------</span>
+<span class="c1"># eleven_v4 (2026-09-28) is ElevenLabs' current model; v3 is now "previous</span>
+<span class="c1"># generation". Same audio-tag language as v3, followed "more reliably"; no SSML;</span>
+<span class="c1"># stability and similarity only (no style, no speed); 10,000 characters per</span>
+<span class="c1"># request. Pauses longer than a tag can give are SSML breaks in the text, which</span>
+<span class="c1"># braidio cuts at and fills with exact silence (voxy.pauses).</span>
+<span class="c1"># Settings mirror the v3 pair. The v3 table above did NOT reproduce on v4 in a</span>
+<span class="c1"># one-take check (2026-11-07, one voice, pitch range p5-p95): plain 215 Hz vs</span>
+<span class="c1"># tagged 201 Hz; tagged at stability 0.0/0.5/1.0 -&gt; 169/201/197 Hz. One take</span>
+<span class="c1"># per cell is inconclusive, so do not quote the v3 numbers for v4; the default</span>
+<span class="c1"># delivery stays v3-presenter until a listening comparison says otherwise.</span>
+
+<span class="n">V4_PRESENTER</span> <span class="o">=</span> <span class="n">Delivery</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">"v4-presenter"</span><span class="p">,</span>
+    <span class="n">model_id</span><span class="o">=</span><span class="s2">"eleven_v4"</span><span class="p">,</span>
+    <span class="n">voice_settings</span><span class="o">=</span><span class="p">{</span><span class="s2">"stability"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s2">"use_speaker_boost"</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
+    <span class="n">supports_audio_tags</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">supports_speed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">note</span><span class="o">=</span><span class="s2">"Host/presenter commentary on eleven_v4, the current ElevenLabs model "</span>
+    <span class="s2">"-- the expressive end, like v3-presenter."</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">V4_NARRATOR</span> <span class="o">=</span> <span class="n">Delivery</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">"v4-narrator"</span><span class="p">,</span>
+    <span class="n">model_id</span><span class="o">=</span><span class="s2">"eleven_v4"</span><span class="p">,</span>
+    <span class="n">voice_settings</span><span class="o">=</span><span class="p">{</span><span class="s2">"stability"</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s2">"use_speaker_boost"</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
+    <span class="n">supports_audio_tags</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">supports_speed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">note</span><span class="o">=</span><span class="s2">"Documentary/book-read narrator on eleven_v4 -- steadier than "</span>
+    <span class="s2">"v4-presenter. Contrast partner to v4-presenter."</span><span class="p">,</span>
+<span class="p">)</span>
+
 <span class="c1"># --- register presets: narration (reading) vs conversational (talking) --------</span>
 <span class="c1"># The two named "registers" (issue #1). ``narration`` = the default reading</span>
 <span class="c1"># register (kept in lock-step with V2_TUNED, render_production's default).</span>
@@ -961,6 +1002,8 @@ window.runMermaid = runMermaid;</script>
         <span class="n">V3_CREATIVE</span><span class="p">,</span>
         <span class="n">V3_PRESENTER</span><span class="p">,</span>
         <span class="n">V3_NARRATOR</span><span class="p">,</span>
+        <span class="n">V4_PRESENTER</span><span class="p">,</span>
+        <span class="n">V4_NARRATOR</span><span class="p">,</span>
         <span class="n">NARRATION</span><span class="p">,</span>
         <span class="n">CONVERSATIONAL</span><span class="p">,</span>
     <span class="p">)</span>

@@ -19,12 +19,16 @@ transforms (which add provenance + partial re-render).
 
 | [`narrate_turns`](#braidio.render.narrate_turns)(turns, \*, stem, api_key, ...)   | Synthesize a paced narration beat: one TTS call per turn, real silence between.   |
 |-------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
-| [`plan_beat_turns`](#braidio.render.plan_beat_turns)(text, \*, config, ...)         | Plan one narration beat's turns, or `[]` for the unpaced single call.             |
+| [`plan_beat_turns`](#braidio.render.plan_beat_turns)(text, \*, config, ...[, ...])  | Plan one narration beat's turns, or `[]` for the unpaced single call.             |
 | [`render_production`](#braidio.render.render_production)(script, \*, source[, ...])   | Render `script` under `profile` → a single audio file.                            |
 
-### braidio.render.narrate_turns(turns, , stem, api_key, voice_id, model_id, voice_settings, narrate_fn=None)
+### braidio.render.narrate_turns(turns, , stem, api_key, voice_id, model_id, voice_settings, narrate_fn=None, \*\*synth_kwargs)
 
 Synthesize a paced narration beat: one TTS call per turn, real silence between.
+
+A turn with no text is silence only (a beat that opens on an SSML break):
+it is prepended to the next spoken turn. `synth_kwargs` (e.g.
+`language_code`) go to every synthesis call.
 
 This is the point of [`braidio.pacing`](braidio.pacing.html.md#module-braidio.pacing) — within one beat the tempo now
 varies (a fresh prosodic arc per turn, a per-turn speed where the model has
@@ -38,9 +42,17 @@ another voice, passes its own.
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### braidio.render.plan_beat_turns(text, , config, supports_speed, settings, seed_offset)
+### braidio.render.plan_beat_turns(text, , config, supports_speed, settings, seed_offset, native_break_s=0.0)
 
 Plan one narration beat’s turns, or `[]` for the unpaced single call.
+
+**Explicit pauses.** SSML breaks in the text (`<break time="6s"/>`,
+`voxy.pauses`) are honoured on every model: a break of at most
+`native_break_s` (what the voice renders itself: 3 s on ElevenLabs’ v2
+family, none on v3/v4 or a non-ElevenLabs voice) stays in the text, and at
+any other the beat is cut into turns with exactly that silence after the
+turn before it (`boundary="break"`, never capped). A pause-free beat is
+planned exactly as before.
 
 The speed each turn is jittered around is the beat’s own `speed` setting
 when it sets one (so a grave `v2-narrator`’s 0.94 survives being paced),

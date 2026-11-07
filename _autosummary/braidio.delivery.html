@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../_static/documentation_options.js?v=ab1379f9"></script>
+    <script src="../_static/documentation_options.js?v=e7715e22"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.116" />
+  <meta name="docsearch:version" content="0.0.118" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -428,7 +428,7 @@ consistency); <code class="docutils literal notranslate"><span class="pre">eleve
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#braidio.delivery.SPEEDLESS_MODELS" title="braidio.delivery.SPEEDLESS_MODELS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SPEEDLESS_MODELS</span></code></a></p></td>
-<td><p>Models that ignore <code class="docutils literal notranslate"><span class="pre">voice_settings[&quot;speed&quot;]</span></code> (eleven v3 has no speed control).</p></td>
+<td><p>Models that ignore <code class="docutils literal notranslate"><span class="pre">voice_settings[&quot;speed&quot;]</span></code> (eleven v3 and v4 have no speed control: &quot;Style and Speed sliders are not available&quot; on v4).</p></td>
 </tr>
 </tbody>
 </table>
@@ -456,11 +456,21 @@ consistency); <code class="docutils literal notranslate"><span class="pre">eleve
 </div>
 <dl class="py class">
 <dt class="sig sig-object py" id="braidio.delivery.Delivery">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">braidio.delivery.</span></span><span class="sig-name descname"><span class="pre">Delivery</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_settings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">dict()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">supports_audio_tags</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">supports_speed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">note</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/delivery.html#Delivery"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.delivery.Delivery" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">braidio.delivery.</span></span><span class="sig-name descname"><span class="pre">Delivery</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_settings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">dict()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">supports_audio_tags</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">supports_speed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">note</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">language_code</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/delivery.html#Delivery"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.delivery.Delivery" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>A named narration delivery: which model + voice settings to synthesize with.</p>
 <dl class="field-list simple">
 </dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="braidio.delivery.Delivery.language_code">
+<span class="sig-name descname"><span class="pre">language_code</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#braidio.delivery.Delivery.language_code" title="Link to this definition">#</a></dt>
+<dd><p>ISO 639-1 language the model is told to read in (<code class="docutils literal notranslate"><span class="pre">&quot;fr&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;en&quot;</span></code>), or
+<code class="docutils literal notranslate"><span class="pre">None</span></code> to let it detect the language. Passed to ElevenLabs as
+<code class="docutils literal notranslate"><span class="pre">language_code</span></code>, which also enforces that language’s text normalisation
+(numbers, dates). Set it with <code class="docutils literal notranslate"><span class="pre">dataclasses.replace(V4_PRESENTER,</span>
+<span class="pre">language_code=&quot;fr&quot;)</span></code>.</p>
+</dd></dl>
+
 <dl class="py attribute">
 <dt class="sig sig-object py" id="braidio.delivery.Delivery.supports_speed">
 <span class="sig-name descname"><span class="pre">supports_speed</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></span><a class="headerlink" href="#braidio.delivery.Delivery.supports_speed" title="Link to this definition">#</a></dt>
@@ -476,8 +486,9 @@ audio tags instead.</p>
 
 <dl class="py data">
 <dt class="sig sig-object py" id="braidio.delivery.SPEEDLESS_MODELS">
-<span class="sig-prename descclassname"><span class="pre">braidio.delivery.</span></span><span class="sig-name descname"><span class="pre">SPEEDLESS_MODELS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">frozenset({'eleven_v3'})</span></span><a class="headerlink" href="#braidio.delivery.SPEEDLESS_MODELS" title="Link to this definition">#</a></dt>
-<dd><p>Models that ignore <code class="docutils literal notranslate"><span class="pre">voice_settings[&quot;speed&quot;]</span></code> (eleven v3 has no speed control).</p>
+<span class="sig-prename descclassname"><span class="pre">braidio.delivery.</span></span><span class="sig-name descname"><span class="pre">SPEEDLESS_MODELS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">frozenset({'eleven_v3',</span> <span class="pre">'eleven_v4',</span> <span class="pre">'eleven_v4_turbo'})</span></span><a class="headerlink" href="#braidio.delivery.SPEEDLESS_MODELS" title="Link to this definition">#</a></dt>
+<dd><p>Models that ignore <code class="docutils literal notranslate"><span class="pre">voice_settings[&quot;speed&quot;]</span></code> (eleven v3 and v4 have no speed
+control: “Style and Speed sliders are not available” on v4).</p>
 </dd></dl>
 
 <dl class="py function">
@@ -510,6 +521,8 @@ whole production with a delivery nobody asked for.)</p>
 <dd><p>Whether <code class="docutils literal notranslate"><span class="pre">model_id</span></code> honors <code class="docutils literal notranslate"><span class="pre">voice_settings[&quot;speed&quot;]</span></code>.</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">model_supports_speed</span><span class="p">(</span><span class="s2">"eleven_v3"</span><span class="p">),</span> <span class="n">model_supports_speed</span><span class="p">(</span><span class="s2">"eleven_multilingual_v2"</span><span class="p">)</span>
 <span class="go">(False, True)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model_supports_speed</span><span class="p">(</span><span class="s2">"eleven_v4"</span><span class="p">)</span>
+<span class="go">False</span>
 </pre></div>
 </div>
 <dl class="field-list simple">
@@ -569,6 +582,7 @@ whole production with a delivery nobody asked for.)</p>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.delivery.Delivery"><code class="docutils literal notranslate"><span class="pre">Delivery</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.delivery.Delivery.language_code"><code class="docutils literal notranslate"><span class="pre">Delivery.language_code</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.delivery.Delivery.supports_speed"><code class="docutils literal notranslate"><span class="pre">Delivery.supports_speed</span></code></a></li>
 </ul>
 </li>

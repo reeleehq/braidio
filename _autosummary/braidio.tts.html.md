@@ -36,6 +36,7 @@ what the renderers call.
 | [`tts_name`](#braidio.tts.tts_name)(speak)                               | The voice backend a render used, as its settings record names it.                                                                         |
 | [`unregister_tts`](#braidio.tts.unregister_tts)(name)                          | Remove the backend registered as `name`; returns it, or `None`.                                                                           |
 | [`voice_for`](#braidio.tts.voice_for)([tts, speak, voice])                | The voice a render speaks with: a ready `voice` wins, then an explicit `speak`, then the registered backend `tts` names, then ElevenLabs. |
+| [`voice_native_break_s`](#braidio.tts.voice_native_break_s)(voice, model_id)         | The longest SSML `<break>` `voice` renders itself on `model_id`.                                                                          |
 
 ### Classes
 
@@ -133,9 +134,13 @@ one-pass dialogue renders it turn by turn through its own `narrate`
 (Not [`braidio.multivoice.Voice`](braidio.multivoice.html.md#braidio.multivoice.Voice), `braidio.Voice`: that is one
 voice of a narration pool, an ElevenLabs id and name.)
 
-### braidio.tts.narrate(text, out_path, , api_key=None, voice_id=None, model_id='eleven_v3', voice_settings=None, output_format='mp3_44100_128', refresh=False, return_cache_status=False)
+### braidio.tts.narrate(text, out_path, , api_key=None, voice_id=None, model_id='eleven_v3', voice_settings=None, output_format='mp3_44100_128', refresh=False, return_cache_status=False, language_code=None)
 
 Synthesize `text` to `out_path` (mp3). Returns the path.
+
+`language_code` (ISO 639-1, e.g. `"fr"`) tells the model which language
+to read in ([`braidio.delivery.Delivery.language_code`](braidio.delivery.html.md#braidio.delivery.Delivery.language_code)); `None` lets
+it detect the language.
 
 Caching is handled by `mixing.text_to_speech` (keyed on text+voice+model);
 pass `refresh=True` to regenerate.
@@ -289,3 +294,20 @@ one place that choice is made, on every render path (braidio#137, #199).
 
 * **Return type:**
   [`VoiceBackend`](#braidio.tts.VoiceBackend)
+
+### braidio.tts.voice_native_break_s(voice, model_id)
+
+The longest SSML `<break>` `voice` renders itself on `model_id`.
+
+ElevenLabs: voxy’s per-model table (3 s on the v2 family, none on v3/v4).
+Any other voice: none, so every break becomes real silence between turns.
+
+```pycon
+>>> voice_native_break_s(ElevenLabsVoice(), "eleven_multilingual_v2")
+3.0
+>>> voice_native_break_s(ElevenLabsVoice(), "eleven_v4")
+0.0
+```
+
+* **Return type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float)

@@ -311,6 +311,24 @@ class SpeakVoice:
         return (path, False) if return_cache_status else path
 
 
+def voice_native_break_s(voice, model_id: str) -> float:
+    """The longest SSML ``<break>`` ``voice`` renders itself on ``model_id``.
+
+    ElevenLabs: voxy's per-model table (3 s on the v2 family, none on v3/v4).
+    Any other voice: none, so every break becomes real silence between turns.
+
+    >>> voice_native_break_s(ElevenLabsVoice(), "eleven_multilingual_v2")
+    3.0
+    >>> voice_native_break_s(ElevenLabsVoice(), "eleven_v4")
+    0.0
+    """
+    if not isinstance(voice, ElevenLabsVoice):
+        return 0.0
+    from voxy.elevenlabs_model import ELEVENLABS_NATIVE_BREAK_S
+
+    return ELEVENLABS_NATIVE_BREAK_S.get(model_id, 0.0)
+
+
 @runtime_checkable
 class VoiceBackend(Protocol):
     """What a render speaks through (braidio#137, #199): a ``name`` for the
@@ -387,8 +405,13 @@ def narrate(
     output_format: str = "mp3_44100_128",
     refresh: bool = False,
     return_cache_status: bool = False,
+    language_code: str | None = None,
 ) -> Path | tuple[Path, bool]:
     """Synthesize ``text`` to ``out_path`` (mp3). Returns the path.
+
+    ``language_code`` (ISO 639-1, e.g. ``"fr"``) tells the model which language
+    to read in (:attr:`braidio.delivery.Delivery.language_code`); ``None`` lets
+    it detect the language.
 
     Caching is handled by ``mixing.text_to_speech`` (keyed on text+voice+model);
     pass ``refresh=True`` to regenerate.
@@ -410,6 +433,7 @@ def narrate(
         model_id=model_id,
         output_format=output_format,
         voice_settings=voice_settings or DEFAULT_VOICE_SETTINGS,
+        language_code=language_code,
         refresh=refresh,
         return_cache_status=True,
     )

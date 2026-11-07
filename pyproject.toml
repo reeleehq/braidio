@@ -52,6 +52,8 @@ authors = [
 dependencies = [
     "mixing[media]>=0.0.85",
     "elevenlabs",
+    # voxy.pauses: SSML <break> parsing and the per-model break limits
+    "voxy>=0.0.65",
 ]
 
 [project.urls]

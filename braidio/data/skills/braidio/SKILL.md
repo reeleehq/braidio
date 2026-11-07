@@ -314,6 +314,20 @@ use, and set each segment beat's `rights` honestly.
   it sound alive*. `v3-presenter` (the spine) and `v3-narrator` (the record) are
   the contrast pair, and the contrast that matters is the **voice id** you pass
   alongside them.
+- **`eleven_v4`** (`v4-presenter`, `v4-narrator`) — ElevenLabs' current model
+  (v3 is "previous generation"): the same `[audio tags]`, no SSML, no speed, no
+  style. Opt in with `delivery="v4-presenter"`; the default stays
+  `v3-presenter` until a listening comparison says otherwise. The v3
+  measurements in *Making it sound alive* were not reproduced on v4 in a
+  one-take check, so don't quote them for v4.
+- **Pauses** — write `<break time="6s"/>` (SSML) in a narration beat's text
+  for an exact silence of any length, on any model: braidio keeps a break the
+  voice renders itself (ElevenLabs v2 models, up to 3 s) and cuts the beat into
+  turns with real silence everywhere else (v3, v4, local voices). Never use
+  `[pause]` for a timed silence: it is a hint, a second or so at most.
+- **Language** — `dataclasses.replace(braidio.V4_NARRATOR, language_code="fr")`
+  tells the model which language to read in (and to normalise numbers that
+  way); `None` (the default) lets it detect.
 - **Per-beat `voice_settings` on a v3 delivery** — only `stability` does
   anything. `style`, `similarity_boost` and `speed` are accepted and **silently
   ignored**, so copying a `V2_*` preset's settings onto a v3 format quietly

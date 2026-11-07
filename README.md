@@ -131,6 +131,10 @@ render_production(
 )
 ```
 
+### Timed pauses and the model
+
+A silence of any length is an SSML break in the text: `Narration('Breathe in.<break time="4s"/> And out.<break time="6s"/>')`. braidio keeps a break the voice renders itself (ElevenLabs' v2 models, up to 3 s) and, everywhere else (`eleven_v3`, `eleven_v4`, any non-ElevenLabs voice), cuts the beat there and inserts exactly that silence. The parsing is `voxy.pauses`, shared with the rest of the fleet's speech tools. `eleven_v4`, ElevenLabs' current model, is the `v4-presenter` / `v4-narrator` delivery (`render_production(..., delivery="v4-narrator")`); `dataclasses.replace(braidio.V4_NARRATOR, language_code="fr")` fixes the language it reads in.
+
 ### Cost tracking
 
 ElevenLabs TTS is braidio's only spend (everything else is local ffmpeg). `braidio.estimate_cost(script)` previews a production's cost before you pay for synthesis, and real renders attribute a per-character cost onto their artifacts. Dollars are a **rate estimate** — set your ElevenLabs plan's rate for exact figures:

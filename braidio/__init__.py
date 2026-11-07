@@ -111,6 +111,8 @@ from braidio.delivery import (  # noqa: F401
     V3_CREATIVE,
     V3_PRESENTER,
     V3_NARRATOR,
+    V4_PRESENTER,
+    V4_NARRATOR,
     NARRATION,
     CONVERSATIONAL,
 )

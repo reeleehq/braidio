@@ -215,7 +215,7 @@ __all__ = [
 
 #: What a narration render was synthesized with: the config keys a re-weave
 #: must keep, or every one of those renders re-synthesizes (and re-bills).
-VOICE_KEYS = ("model_id", "voice_settings")
+VOICE_KEYS = ("model_id", "voice_settings", "language_code")
 
 
 def format_config(fmt=None, *, config=None, voice_id=None, delivery=None):
@@ -251,7 +251,9 @@ def format_config(fmt=None, *, config=None, voice_id=None, delivery=None):
     if delivery is not None:
         base = config if config is not None else (fmt.weave if fmt else WeaveConfig())
         config = base.with_(
-            model_id=delivery.model_id, voice_settings=dict(delivery.voice_settings)
+            model_id=delivery.model_id,
+            voice_settings=dict(delivery.voice_settings),
+            language_code=delivery.language_code,
         )
     if voice_id is None and fmt is not None:
         voice_id = fmt.narration_voice

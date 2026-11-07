@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+from dataclasses import replace
 from pathlib import Path
 
 from mixing import concatenate_audio
@@ -26,6 +27,7 @@ from braidio.conversation import DEFAULT_CAST, ConversationCast
 from braidio.defaults import default_delivery
 from braidio.delivery import Delivery
 from braidio.pacing import NarrationTurn, plan_turns
+from voxy.pauses import has_pause_markup, plan_sections
 from braidio.rights import (
     DEFAULT_PROFILE,
     PUBLISHABLE_CLIP_RIGHTS,
@@ -37,7 +39,7 @@ from braidio.leveling import DEFAULT_TARGET_LUFS, level_part
 from braidio.script import Script
 from braidio.sources import SegmentSource
 from braidio.structure import DEFAULT_STRUCTURE, prepare_pause, prepare_sting
-from braidio.tts import Speak, VoiceBackend, voice_for
+from braidio.tts import Speak, VoiceBackend, voice_for, voice_native_break_s
 from braidio.sound_design import (
     SOUND_SIDECAR_SUFFIX,
     SoundDesign,
@@ -110,8 +112,17 @@ def plan_beat_turns(
     supports_speed: bool,
     settings: dict,
     seed_offset: int,
+    native_break_s: float = 0.0,
 ) -> list[NarrationTurn]:
     """Plan one narration beat's turns, or ``[]`` for the unpaced single call.
+
+    **Explicit pauses.** SSML breaks in the text (``<break time="6s"/>``,
+    :mod:`voxy.pauses`) are honoured on every model: a break of at most
+    ``native_break_s`` (what the voice renders itself: 3 s on ElevenLabs' v2
+    family, none on v3/v4 or a non-ElevenLabs voice) stays in the text, and at
+    any other the beat is cut into turns with exactly that silence after the
+    turn before it (``boundary="break"``, never capped). A pause-free beat is
+    planned exactly as before.
 
     The speed each turn is jittered around is the beat's own ``speed`` setting
     when it sets one (so a grave ``v2-narrator``'s 0.94 survives being paced),
@@ -122,8 +133,37 @@ def plan_beat_turns(
     Shared by the fast path and the graph's ``narration_render.tts``, which is
     what keeps their per-beat durations (and so their timelines) equal.
     """
-    if config is None or not config.paces_narration:
-        return []
+    paced = config is not None and config.paces_narration
+    if not has_pause_markup(text):
+        return (
+            _plan_paced(text, config, supports_speed, settings, seed_offset)
+            if paced
+            else []
+        )
+    turns: list[NarrationTurn] = []
+    for k, section in enumerate(plan_sections(text, native_break_s=native_break_s)):
+        sub = (
+            _plan_paced(section.text, config, supports_speed, settings, seed_offset + k)
+            if paced and section.text
+            else [NarrationTurn(section.text)]
+            if section.text
+            else []
+        )
+        if not section.pause_s:
+            turns.extend(sub)
+        elif sub:
+            turns.extend(sub[:-1])
+            turns.append(
+                replace(sub[-1], gap_after_s=section.pause_s, boundary="break")
+            )
+        else:  # silence with no text before it (the beat opens on a break)
+            turns.append(
+                NarrationTurn("", gap_after_s=section.pause_s, boundary="break")
+            )
+    return turns
+
+
+def _plan_paced(text, config, supports_speed, settings, seed_offset):
     speed_base = settings.get("speed", config.speed_base) if supports_speed else None
     return plan_turns(
         text,
@@ -146,8 +186,13 @@ def narrate_turns(
     model_id: str,
     voice_settings: dict,
     narrate_fn=None,
+    **synth_kwargs,
 ) -> Path:
     """Synthesize a paced narration beat: one TTS call per turn, real silence between.
+
+    A turn with no text is silence only (a beat that opens on an SSML break):
+    it is prepended to the next spoken turn. ``synth_kwargs`` (e.g.
+    ``language_code``) go to every synthesis call.
 
     This is the point of :mod:`braidio.pacing` — within one beat the tempo now
     varies (a fresh prosodic arc per turn, a per-turn speed where the model has
@@ -160,7 +205,11 @@ def narrate_turns(
     """
     synthesize = narrate_fn or voice_for().narrate
     parts: list[Path] = []
+    lead_s = 0.0  # silence owed to the next spoken turn
     for j, turn in enumerate(turns):
+        if not turn.text:
+            lead_s += turn.gap_after_s
+            continue
         settings = dict(voice_settings)
         if turn.speed is not None:
             settings["speed"] = turn.speed
@@ -171,7 +220,13 @@ def narrate_turns(
             voice_id=voice_id,
             model_id=model_id,
             voice_settings=settings,
+            **synth_kwargs,
         )
+        if lead_s > 0:
+            part = _lead_gap(
+                part, stem.with_name(f"{stem.name}-turn{j:02d}-lead.mp3"), gap_s=lead_s
+            )
+            lead_s = 0.0
         if turn.gap_after_s > 0:
             part = _tail_gap(
                 part,
@@ -179,6 +234,8 @@ def narrate_turns(
                 gap_s=turn.gap_after_s,
             )
         parts.append(part)
+    if not parts:  # nothing but silence
+        return prepare_pause(lead_s, stem.with_name(f"{stem.name}-silence.mp3"))
     if len(parts) == 1:
         return parts[0]
     out = stem.with_name(f"{stem.name}-paced.mp3")
@@ -397,6 +454,12 @@ def render_production(
                 supports_speed=delivery.supports_speed,
                 settings=beat_settings,
                 seed_offset=pb.from_index,  # the script position, as the graph's beat_id
+                native_break_s=voice_native_break_s(voice, delivery.model_id),
+            )
+            lang = (
+                {"language_code": delivery.language_code}
+                if delivery.language_code
+                else {}
             )
             if turns:
                 raw = narrate_turns(
@@ -407,6 +470,7 @@ def render_production(
                     model_id=delivery.model_id,
                     voice_settings=beat_settings,
                     narrate_fn=synthesize,
+                    **lang,
                 )
             else:
                 raw = synthesize(
@@ -416,6 +480,7 @@ def render_production(
                     voice_id=beat_voice,
                     model_id=delivery.model_id,
                     voice_settings=beat_settings,
+                    **lang,
                 )
             # breathing room before a register change (Narration.lead_gap_s)
             gap = getattr(orig, "lead_gap_s", 0.0)

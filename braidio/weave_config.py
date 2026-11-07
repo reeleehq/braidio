@@ -59,6 +59,9 @@ class WeaveConfig:
     voice_settings: Mapping[str, Any] = field(
         default_factory=lambda: dict(_DEFAULT_VOICE_SETTINGS)
     )
+    # The language narration is read in (ISO 639-1; Delivery.language_code).
+    # None = the model detects it, and is left out of ``to_dict``.
+    language_code: str | None = None
 
     # --- Segmentation / turns ----------------------------------------------
     # How a narration beat is cut into turns. ``"beat"`` (the default) = one TTS
@@ -194,7 +197,11 @@ class WeaveConfig:
         d = asdict(self)
         d["voices"] = list(self.voices)
         d["voice_settings"] = dict(self.voice_settings)
-        for key in ("narration_voice", "tts"):  # the absence rule: unset writes nothing
+        for key in (
+            "narration_voice",
+            "tts",
+            "language_code",
+        ):  # the absence rule: unset writes nothing
             if d[key] is None:
                 del d[key]
         return d

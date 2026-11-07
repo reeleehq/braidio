@@ -52,7 +52,13 @@ from braidio.bodies._render_nodes import (
 from braidio.cost import backend_cost_usd
 from braidio.delivery import model_supports_speed
 from braidio.render import narrate_turns, plan_beat_turns
-from braidio.tts import DEFAULT_MODEL_ID, DEFAULT_VOICE_ID, voice_for
+from braidio.tts import (
+    DEFAULT_MODEL_ID,
+    DEFAULT_VOICE_ID,
+    ElevenLabsVoice,
+    voice_for,
+    voice_native_break_s,
+)
 from braidio.weave_config import WeaveConfig
 from braidio.transforms._common import (
     settle_take,
@@ -82,7 +88,15 @@ NAME = "narration_render.tts"
 
 
 def _narration_cache_key(
-    transform, text: str, voice_id: str, model_id: str, settings, turns=(), *, tts=None
+    transform,
+    text: str,
+    voice_id: str,
+    model_id: str,
+    settings,
+    turns=(),
+    *,
+    tts=None,
+    language_code=None,
 ) -> str:
     """The output identity for one TTS render — nw's shared derivation.
 
@@ -112,6 +126,8 @@ def _narration_cache_key(
         parts.append(json.dumps([asdict(t) for t in turns], sort_keys=True))
     if tts:
         parts.append(f"tts={tts}")
+    if language_code:  # same absence rule: an unset language keeps old keys
+        parts.append(f"language_code={language_code}")
     return transform_cache_key(transform, *parts)
 
 
@@ -125,6 +141,7 @@ def _speak_beat(
     voice_id: str,
     model_id: str,
     settings,
+    language_code: str | None = None,
 ) -> tuple[Path, bool]:
     """Synthesize one beat → ``(audio path, was_cached)``.
 
@@ -144,6 +161,8 @@ def _speak_beat(
         return path
 
     kwargs = dict(api_key=api_key, voice_id=voice_id, model_id=model_id)
+    if language_code:
+        kwargs["language_code"] = language_code
     if turns:  # paced: one call per turn, real silence between (braidio#118)
         paced = narrate_turns(
             turns,
@@ -182,6 +201,13 @@ def _beat_turns(beat, config: dict, *, model_id: str, settings: dict) -> list:
         supports_speed=model_supports_speed(model_id),
         settings=settings,
         seed_offset=beat_ordinal(beat),
+        # by name, not by resolving the backend: a cached render must plan the
+        # same turns without the backend being registered
+        native_break_s=(
+            0.0
+            if config.get("tts")
+            else voice_native_break_s(ElevenLabsVoice(), model_id)
+        ),
     )
 
 
@@ -195,6 +221,7 @@ class _RenderInputs:
     settings: dict
     turns: list
     tts: str | None  # a registered voice backend, else ElevenLabs (braidio#132)
+    language_code: str | None = None
 
     def cache_key(self, transform) -> str:
         return _narration_cache_key(
@@ -205,6 +232,7 @@ class _RenderInputs:
             self.settings,
             self.turns,
             tts=self.tts,
+            language_code=self.language_code,
         )
 
 
@@ -226,6 +254,7 @@ def _render_inputs(beat, va, cfg) -> _RenderInputs:
         settings=settings,
         turns=_beat_turns(beat, config, model_id=model_id, settings=settings),
         tts=config.get("tts"),
+        language_code=config.get("language_code"),
     )
 
 
@@ -343,6 +372,7 @@ class NarrationRenderTTS(BaseTransform):
             voice_id=r.voice_id,
             model_id=r.model_id,
             settings=r.settings,
+            language_code=r.language_code,
         )
         duration = safe_duration(out_path)
         artifact = audio_artifact(

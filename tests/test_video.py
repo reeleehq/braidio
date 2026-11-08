@@ -207,3 +207,33 @@ def test_render_video_refuses_an_empty_panel_list():
 
     with pytest.raises(ValueError, match="at least one panel"):
         render_video([], audio_path="a.mp3", out_path="o.mp4")
+
+
+def test_prepare_still_rebuilds_when_the_source_changes(tmp_path):
+    """The cache key is the input, not the output path (braidio#213)."""
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    from braidio.video import prepare_still
+
+    Image.new("RGB", (40, 20), "red").save(tmp_path / "a.png")
+    Image.new("RGB", (40, 20), "blue").save(tmp_path / "b.png")
+    dst = tmp_path / "out.jpg"
+    red = prepare_still(tmp_path / "a.png", dst, size=(64, 36)).read_bytes()
+    blue = prepare_still(tmp_path / "b.png", dst, size=(64, 36)).read_bytes()
+    assert blue != red
+    # same input again: reused (mtime unchanged), a new size: rebuilt
+    mtime = dst.stat().st_mtime_ns
+    prepare_still(tmp_path / "b.png", dst, size=(64, 36))
+    assert dst.stat().st_mtime_ns == mtime
+    assert Image.open(prepare_still(tmp_path / "b.png", dst, size=(32, 18))).size == (
+        32,
+        18,
+    )
+    # no sidecar -> unknown origin -> rebuilt; refresh forces it too
+    (tmp_path / "out.jpg.src").unlink()
+    prepare_still(tmp_path / "b.png", dst, size=(32, 18))
+    assert (tmp_path / "out.jpg.src").exists()
+    before = dst.stat().st_mtime_ns
+    prepare_still(tmp_path / "b.png", dst, size=(32, 18), refresh=True)
+    assert dst.stat().st_mtime_ns != before

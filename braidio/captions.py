@@ -171,17 +171,22 @@ def format_srt(cues) -> str:
 DEFAULT_HOLD_S = 0.6
 DEFAULT_CUE_GAP_S = 0.05
 
+#: Longest SRT *line* (chars) in a cue; a player shows two.
+DEFAULT_LINE_CHARS = 42
+
 
 def captions_from_cues(
     cues,
     *,
-    max_chars: int = 42,
+    max_chars: int = DEFAULT_LINE_CHARS,
     hold_s: float = DEFAULT_HOLD_S,
     gap_s: float = DEFAULT_CUE_GAP_S,
 ) -> str:
     """An SRT document for cues timed from *measured* words (braidio#212).
 
-    Each cue's text is wrapped to lines of at most ``max_chars`` and held
+    Each cue's text is wrapped to *lines* of at most ``max_chars`` (not to be
+    confused with :func:`~braidio.align.align_script`'s ``max_chars``, the longest
+    *cue*) and held
     ``hold_s`` past its last word, never into the next cue (``gap_s`` before it).
     Cues timed by :func:`~braidio.align.align_script` are speech-tight, so
     unlike :func:`captions_for` they get this hold.

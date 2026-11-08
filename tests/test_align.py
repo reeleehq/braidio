@@ -89,10 +89,12 @@ def test_unspoken_markup_is_not_aligned_and_spacing_entries_are_ignored():
 
 def test_normalize_is_a_seam():
     # a normaliser that keeps accents tells "été" and "ete" apart
-    words = _words([("ete", 0.0, 0.5)])
-    exact = align_script("été", words, normalize=str.split)
-    assert exact.unmatched == ("été",)
-    assert align_script("été", words).unmatched == ()
+    words = _words([("ete", 0.0, 0.5), ("trois", 0.5, 1.0)])
+    strict = align_script(
+        "Été. Trois.", words, normalize=lambda t: t.lower().replace(".", "").split()
+    )
+    assert strict.unmatched == ("Été.",)
+    assert align_script("Été. Trois.", words).unmatched == ()
 
 
 @pytest.mark.parametrize(
@@ -141,3 +143,66 @@ def test_cues_never_overlap_even_when_matched_words_do():
     words = _words([("un", 1.0, 3.0), ("deux", 2.0, 2.5)])
     a = align_script("Un. Deux.", words)
     assert a.cues[0].end_s <= a.cues[1].start_s
+
+
+def test_a_non_latin_script_is_timed_not_silently_interpolated():
+    words = _words([("Привет", 0.5, 0.9), ("мир", 0.9, 1.3)])
+    a = align_script("Привет мир.", words)
+    assert a.unmatched == () and (a.cues[0].start_s, a.cues[0].end_s) == (0.5, 1.3)
+
+
+def test_audio_that_is_not_this_text_is_refused_not_interpolated():
+    with pytest.raises(ValueError, match="no authored word matched"):
+        align_script("Un deux trois.", _words([("zzz", 0.0, 1.0)]))
+    # normalize that drops everything says so the same way
+    with pytest.raises(ValueError, match="no text|no authored word"):
+        align_script("Un deux.", HEARD, normalize=lambda t: [])
+
+
+def test_coverage_is_reported():
+    a = align_script(TEXT, HEARD)
+    assert 0 < a.matched < a.total  # "Matte." was not heard
+
+
+def test_words_past_the_audio_are_refused():
+    with pytest.raises(ValueError, match="past duration_s"):
+        align_script(TEXT, HEARD, duration_s=3.0)
+
+
+def test_words_out_of_order_are_refused():
+    late_first = _words([("deux", 5.0, 5.4), ("un", 1.0, 1.4)])
+    with pytest.raises(ValueError, match="out of order"):
+        align_script("Un deux.", late_first)
+
+
+def test_a_missed_last_chunk_stays_inside_the_audio():
+    a = align_script(
+        "Un deux. Outro final.",
+        _words([("un", 1, 1.2), ("deux", 1.2, 1.5)]),
+        duration_s=1.6,
+    )
+    assert a.unmatched == ("Outro final.",)
+    assert a.cues[-1].end_s <= 1.6
+
+
+def test_punctuation_only_text_is_not_a_cue_or_a_beat():
+    a = align_script(
+        "Un deux.\n\n...\n\nTrois.",
+        _words([("un", 0, 0.3), ("deux", 0.3, 0.6), ("trois", 1.0, 1.4)]),
+    )
+    assert [c.text for c in a.cues] == ["Un deux.", "Trois."]
+    assert len(a.timeline.beats) == 2 and a.unmatched == ()
+
+
+def test_a_long_track_with_a_refrain_matches_exactly():
+    """A 240-word track whose refrain recurs in every paragraph still matches exactly."""
+    paragraphs, spec, t = [], [], 0.0
+    for p in range(30):
+        sentence = [f"w{p}x{i}" for i in range(6)] + ["le", "refrain"]
+        paragraphs.append(" ".join(sentence).capitalize() + ".")
+        for tok in sentence:
+            spec.append((tok, t, t + 0.2))
+            t += 0.25
+    a = align_script("\n\n".join(paragraphs), _words(spec))
+    assert a.matched == a.total == 240 and a.unmatched == ()
+    assert len(a.timeline.beats) == 30

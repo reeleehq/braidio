@@ -276,15 +276,26 @@ def resolve_config(project, fmt=None, *, config=None, voice_id=None, delivery=No
     delivery applies. ``weave_project`` and ``save_script`` both resolve
     through here, so saving and then weaving never rewrites the config node.
     A ``delivery`` is protected exactly like a format's: it sets the model and
-    settings of a project's first render, not of a later one.
+    settings of a project's first render, not of a later one. With no format,
+    config or delivery at all, an unvoiced project is given
+    :func:`braidio.defaults.default_delivery` (env, user config, package
+    default), the delivery the fast path renders with (braidio#191).
     """
     import nw
 
+    unvoiced = not nw.annotations_at_tier(project.root, "narration-renders")
+    named = delivery
+    if unvoiced and delivery is None and config is None and fmt is None:
+        # Nothing names a voice: say what the fast path would use, so one
+        # script is voiced alike on both paths (braidio#191). Only before the
+        # first render; a voiced project keeps what it was synthesized with.
+        from braidio.defaults import default_delivery
+
+        delivery = default_delivery()
     resolved = format_config(fmt, config=config, voice_id=voice_id, delivery=delivery)
-    if config is not None or not nw.annotations_at_tier(
-        project.root, "narration-renders"
-    ):
+    if config is not None or unvoiced:
         return resolved
+    delivery = named
     nodes = nw.annotations_at_tier(project.root, "weave-configs")
     recorded = dict(nodes[0].body.get("config", {})) if nodes else {}
     kept = {key: recorded[key] for key in VOICE_KEYS if key in recorded}

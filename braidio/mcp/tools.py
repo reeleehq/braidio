@@ -477,7 +477,9 @@ def save_script(
     ingested = braidio.transforms.ingest_script(
         proj,
         scr,
-        config=braidio.transforms.resolve_config(proj, fmt),
+        config=braidio.transforms.resolve_config(
+            proj, fmt, delivery=_graph_delivery(fmt)
+        ),
         source=src,
         structure=structure,
         bed=bed,
@@ -758,6 +760,17 @@ _COST_NOTE = (
     "cost_usd estimates synthesizing the whole script; cost_usd_actual is what "
     "this run synthesized (0 when every take was reused)"
 )
+
+
+def _graph_delivery(fmt):
+    """The delivery the graph tools voice with when no format names one.
+
+    The connector's own default (:data:`_DEFAULT_DELIVERY`), the one
+    ``estimate_cost`` quotes and the one-shot tools use, so the wire default
+    does not move with the library's :func:`braidio.defaults.default_delivery`
+    (braidio#191).
+    """
+    return None if fmt is not None else _delivery(_DEFAULT_DELIVERY)
 
 
 def _delivery(name: str):
@@ -1059,6 +1072,7 @@ def weave_project(
         scr,
         source=src,
         fmt=fmt,
+        delivery=_graph_delivery(fmt),
         structure=structure,
         bed=bed,
         profile=_profile(profile),
@@ -1107,7 +1121,10 @@ def _weave_result(
             # what the graph voiced the narration with: the project's config
             # (None = ingest's default WeaveConfig, as ingest itself resolves it)
             model_id=(
-                braidio.transforms.resolve_config(proj, fmt) or braidio.WeaveConfig()
+                braidio.transforms.resolve_config(
+                    proj, fmt, delivery=_graph_delivery(fmt)
+                )
+                or braidio.WeaveConfig()
             ).model_id,
             # the dialogue half of the one-shot rule: the format's cast, else
             # the default cast — as the graph's dialogue-cast node resolves it

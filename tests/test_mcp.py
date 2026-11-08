@@ -2516,3 +2516,46 @@ def test_the_deployed_metering_bills_a_weave_actual_then_partial(monkeypatch):
         0.0,
         pytest.approx(0.30),
     ]
+
+
+@_NW
+def test_weave_project_tool_keeps_the_connectors_own_no_format_voice(monkeypatch):
+    """braidio#191 moved the library's unnamed-delivery default; the graph tool
+    pins ``fallback_delivery=None`` so a deployed connector's voice (and what
+    ``estimate_cost`` quotes) does not move with it."""
+    episode = type(
+        "Ann",
+        (),
+        {"id": "9a23da78-0a3e-4acf-a557-48bd6e519038", "body": {"url": "file:///x"}},
+    )()
+    seen = {}
+
+    def _weave(proj, scr, **kw):
+        seen.update(kw)
+        return braidio.WeaveReceipt(episode)
+
+    monkeypatch.setattr(braidio, "weave_project", _weave)
+    server = _local_server(ledger={})
+    _call(server, "create_project", {"project_id": "demo", "title": "Demo"})
+    _call(server, "weave_project", {"project_id": "demo", "script": _THOUSAND})
+    assert "fallback_delivery" in seen and seen["fallback_delivery"] is None
+
+
+@_NW
+def test_save_script_keeps_the_connectors_own_no_format_voice(monkeypatch):
+    """braidio#191: ``save_script`` pins the same ``fallback_delivery=None`` as
+    ``weave_project``, so saving then weaving leaves one weave-config node."""
+    import nw
+
+    server = _local_server(ledger={})
+    _call(server, "create_project", {"project_id": "sw", "title": "SW"})
+    script = {
+        "title": "t",
+        "id_slug": "01",
+        "beats": [{"type": "narration", "text": "hello"}],
+    }
+    _call(server, "save_script", {"project_id": "sw", "script": script})
+    proj = Workspace.for_email(OWNER).open_project("sw")
+    before = nw.annotations_at_tier(proj.root, "weave-configs")
+    assert before and before[0].body["config"].get("model_id") in (None, _V2)
+    assert braidio.defaults.default_delivery().model_id == _V3  # the fallback differs

@@ -33,3 +33,15 @@ def _no_real_synthesis(monkeypatch, _empty_synthesis_cache):
         monkeypatch.delenv(name, raising=False)
     for name in SYNTHESIS_CACHE_ENV_VARS:
         monkeypatch.setenv(name, str(_empty_synthesis_cache / name.lower()))
+
+
+@pytest.fixture(autouse=True)
+def _no_ambient_braidio_defaults(monkeypatch, tmp_path_factory):
+    """A test never reads the developer's delivery env or user config
+    (``braidio.defaults.default_delivery``): an unnamed delivery resolves to the
+    package default, on every machine (braidio#191)."""
+    monkeypatch.delenv("BRAIDIO_DELIVERY", raising=False)
+    monkeypatch.delenv("BRAIDIO_VOICE_ID", raising=False)
+    monkeypatch.setenv(
+        "BRAIDIO_CONFIG", str(tmp_path_factory.getbasetemp() / "no-braidio-config.json")
+    )

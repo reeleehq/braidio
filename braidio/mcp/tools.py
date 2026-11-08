@@ -477,7 +477,7 @@ def save_script(
     ingested = braidio.transforms.ingest_script(
         proj,
         scr,
-        config=braidio.transforms.resolve_config(proj, fmt),
+        config=braidio.transforms.resolve_config(proj, fmt, fallback_delivery=None),
         source=src,
         structure=structure,
         bed=bed,
@@ -1051,6 +1051,9 @@ def weave_project(
         script=scr,
         tool="weave_project",
     )
+    # ``fallback_delivery=None`` on the graph tools: the connector's no-format
+    # voice stays the bare weave config the deployed projects already carry
+    # (braidio#191); only the library default moved.
     proj = ws.open_project(project_id)
     # A failed weave carries its partial spend as ``exc.weave_receipt`` for
     # the metering layer's error path; ``weave_project`` attaches it itself.
@@ -1059,6 +1062,7 @@ def weave_project(
         scr,
         source=src,
         fmt=fmt,
+        fallback_delivery=None,
         structure=structure,
         bed=bed,
         profile=_profile(profile),
@@ -1107,7 +1111,8 @@ def _weave_result(
             # what the graph voiced the narration with: the project's config
             # (None = ingest's default WeaveConfig, as ingest itself resolves it)
             model_id=(
-                braidio.transforms.resolve_config(proj, fmt) or braidio.WeaveConfig()
+                braidio.transforms.resolve_config(proj, fmt, fallback_delivery=None)
+                or braidio.WeaveConfig()
             ).model_id,
             # the dialogue half of the one-shot rule: the format's cast, else
             # the default cast — as the graph's dialogue-cast node resolves it

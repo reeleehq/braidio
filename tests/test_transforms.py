@@ -685,6 +685,67 @@ def test_a_delivery_without_a_format_voices_the_graph(
     assert all(v == dict(expected.voice_settings) for _, v in seen)
 
 
+def test_an_unnamed_delivery_resolves_like_the_fast_path(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """braidio#191: no format, config or delivery -> ``default_delivery()``, the
+    resolution ``render_production`` uses (env, user config, package default)."""
+    monkeypatch.setenv("BRAIDIO_DELIVERY", "v3-narrator")
+    seen = []
+    real = braidio.narrate
+
+    def _narrate(text, out, **kw):
+        seen.append((kw["model_id"], kw["voice_settings"]))
+        return real(text, out, **kw)
+
+    monkeypatch.setattr(braidio, "narrate", _narrate)
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source)
+    expected = braidio.default_delivery()
+    assert expected.name == "v3-narrator"
+    assert seen and all(
+        v == dict(expected.voice_settings) and m == expected.model_id for m, v in seen
+    )
+
+
+def test_an_unnamed_delivery_leaves_a_voiced_project_alone(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """braidio#191 must not re-bill: the default applies before the first render
+    only, and says nothing when the caller named nothing."""
+    calls = _counting_narrate(monkeypatch)
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source, delivery=braidio.V2_TUNED)
+    voiced = len(calls)
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        braidio.weave_project(project, script, source=source)
+    assert len(calls) == voiced
+
+
+def test_no_fallback_delivery_keeps_the_bare_weave_config(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """braidio#191's seam: ``fallback_delivery=None`` is the old behaviour (what
+    the MCP graph tools pass), and a later unnamed re-weave of a project voiced
+    that way neither warns nor reports a delivery as kept."""
+    import warnings
+
+    calls = _counting_narrate(monkeypatch)
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source, fallback_delivery=None)
+    voiced = len(calls)
+    assert set(calls) == {braidio.WeaveConfig().model_id}
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        again = braidio.weave_project(
+            project, script, source=source, fallback_delivery=None, return_receipt=True
+        )
+    assert len(calls) == voiced and not again.delivery_kept
+
+
 def test_a_new_delivery_does_not_re_bill_a_voiced_project(
     project, script_and_source, patched_synthesis, monkeypatch
 ):

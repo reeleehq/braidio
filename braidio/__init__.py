@@ -188,9 +188,13 @@ from braidio.timeline import (  # noqa: F401
 from braidio.captions import (  # noqa: F401
     Cue,
     captions_for,
+    captions_from_cues,
     cues_for,
     format_srt,
 )
+
+# --- time an authored script on audio braidio did not render (measured words) ---
+from braidio.align import Alignment, align_script  # noqa: F401
 
 # --- markdown document -> narration beats (read-aloud) ---
 from braidio.markdown_script import (  # noqa: F401
@@ -306,6 +310,9 @@ __all__ = [
     # captions
     "Cue",
     "captions_for",
+    "captions_from_cues",
+    "Alignment",
+    "align_script",
     "cues_for",
     "format_srt",
     # script

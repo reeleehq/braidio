@@ -39,7 +39,7 @@ from dataclasses import dataclass
 
 from braidio.script import Dialogue, Narration, SegmentBeat
 
-__all__ = ["Cue", "captions_for", "cues_for", "format_srt"]
+__all__ = ["Cue", "captions_for", "captions_from_cues", "cues_for", "format_srt"]
 
 #: Sentence boundary: end punctuation followed by whitespace. The text is ours
 #: (authored, not scraped), so a full NLP splitter would be ceremony.
@@ -164,6 +164,50 @@ def format_srt(cues) -> str:
         for n, c in enumerate(cues, 1)
     ]
     return "\n".join(blocks)
+
+
+#: How long a measured cue lingers after its last word, and the gap kept before the
+#: next cue (seconds); what a reader needs to finish a line.
+DEFAULT_HOLD_S = 0.6
+DEFAULT_CUE_GAP_S = 0.05
+
+
+def captions_from_cues(
+    cues,
+    *,
+    max_chars: int = 42,
+    hold_s: float = DEFAULT_HOLD_S,
+    gap_s: float = DEFAULT_CUE_GAP_S,
+) -> str:
+    """An SRT document for cues timed from *measured* words (braidio#212).
+
+    Each cue's text is wrapped to lines of at most ``max_chars`` and held
+    ``hold_s`` past its last word, never into the next cue (``gap_s`` before it).
+    Cues timed by :func:`~braidio.align.align_script` are speech-tight, so
+    unlike :func:`captions_for` they get this hold.
+
+    >>> print(captions_from_cues([Cue(0.0, 1.0, "Hi there."), Cue(1.2, 2.0, "Bye.")]))
+    1
+    00:00:00,000 --> 00:00:01,150
+    Hi there.
+    <BLANKLINE>
+    2
+    00:00:01,200 --> 00:00:02,600
+    Bye.
+    <BLANKLINE>
+    """
+    cues = list(cues)
+    held = []
+    for i, cue in enumerate(cues):
+        end = cue.end_s + hold_s
+        if i + 1 < len(cues):
+            end = min(end, cues[i + 1].start_s - gap_s)
+        held.append(Cue(cue.start_s, max(end, cue.end_s), cue.text))
+    if max_chars > 0:
+        held = [
+            Cue(c.start_s, c.end_s, "\n".join(_wrap(c.text, max_chars))) for c in held
+        ]
+    return format_srt(held)
 
 
 def captions_for(script, timeline, *, max_chars: int = 0) -> str:

@@ -216,7 +216,20 @@ play.
 Path("ep.srt").write_text(braidio.captions_for(script, timeline, max_chars=42))
 ```
 
-`braidio.captions` is part of the core (pure, no extra dependencies);
+`braidio.captions` is part of the core (pure, no extra dependencies).
+
+For narration braidio did **not** render (another TTS, a hand recording) there is
+no timeline, so measure one: `braidio.align_script(script_or_text, words)` walks the
+authored text against the word times of any word-level transcript, and returns the
+`timeline` (for `plan_spans`) and `cues` carrying your words at the measured
+times, never the recogniser's. It is free and offline.
+
+```python
+a = braidio.align_script(script, scribe_words, duration_s=mix_seconds)
+Path("ep.srt").write_text(braidio.captions_from_cues(a.cues, max_chars=42))
+spans = braidio.video.plan_spans(a.timeline)
+```
+
 For a production you will **reopen and re-edit** — swap a still, change a
 move, re-render — the picture track lives in the project graph instead: four
 `lacing` bodies (`still/v1`, `video-panel/v1`, `video-cut/v1`,

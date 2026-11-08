@@ -253,15 +253,15 @@ def test_prepare_still_interrupted_rebuild_leaves_no_stale_claim(tmp_path, monke
     dst = tmp_path / "out.jpg"
     video.prepare_still(tmp_path / "a.png", dst, size=(64, 36))
 
-    def boom(*args, **kwargs):
-        raise KeyboardInterrupt
+    real_replace = os.replace
+
+    def replace(a, b):
+        if str(b).endswith(".src"):
+            raise KeyboardInterrupt
+        return real_replace(a, b)
 
     with monkeypatch.context() as m:
-        m.setattr(
-            os,
-            "replace",
-            lambda a, b: boom() if str(b).endswith(".src") else os.rename(a, b),
-        )
+        m.setattr(os, "replace", replace)
         with pytest.raises(KeyboardInterrupt):
             video.prepare_still(tmp_path / "b.png", dst, size=(64, 36))
     blue_dst = dst.read_bytes()

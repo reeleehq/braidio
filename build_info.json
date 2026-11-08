@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "built_at": "2026-11-08T22:35:36Z",
+  "built_at": "2026-11-08T23:35:52Z",
   "package": {
     "name": "braidio",
     "version": "0.0.119",
@@ -9,26 +9,24 @@
   },
   "git": {
     "available": true,
-    "commit": "be48f0548f48f82339e4297fad83f7b1ecac7f1c",
-    "short_commit": "be48f05",
+    "commit": "6456d76e124b9bea30797b106c604184de8a23e8",
+    "short_commit": "6456d76",
     "branch": "main",
-    "tags": [
-      "0.0.119"
-    ],
+    "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/reeleehq/braidio",
-    "commit_url": "https://github.com/reeleehq/braidio/commit/be48f0548f48f82339e4297fad83f7b1ecac7f1c",
+    "commit_url": "https://github.com/reeleehq/braidio/commit/6456d76e124b9bea30797b106c604184de8a23e8",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "reeleehq/braidio",
-    "sha": "9868f6ba4cdb529f61e667ee67efeaccf9de6f5c",
+    "sha": "6456d76e124b9bea30797b106c604184de8a23e8",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "42530490032",
-    "run_url": "https://github.com/reeleehq/braidio/actions/runs/42530490032",
+    "run_id": "42534193279",
+    "run_url": "https://github.com/reeleehq/braidio/actions/runs/42534193279",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -62,16 +60,14 @@
   },
   "pypi": {
     "checked": true,
-    "latest": "0.0.118",
-    "relation": "ahead",
+    "latest": "0.0.119",
+    "relation": "same",
     "error": null
   },
-  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout be48f0548f48f82339e4297fad83f7b1ecac7f1c\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout 6456d76e124b9bea30797b106c604184de8a23e8\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
-    "aligned": false,
-    "notes": [
-      "The documented version (0.0.119) is ahead of the latest release on PyPI (0.0.118): these docs describe unreleased code."
-    ]
+    "aligned": true,
+    "notes": []
   }
 }

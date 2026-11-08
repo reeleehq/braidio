@@ -237,3 +237,36 @@ def test_prepare_still_rebuilds_when_the_source_changes(tmp_path):
     before = dst.stat().st_mtime_ns
     prepare_still(tmp_path / "b.png", dst, size=(32, 18), refresh=True)
     assert dst.stat().st_mtime_ns != before
+
+
+def test_prepare_still_interrupted_rebuild_leaves_no_stale_claim(tmp_path, monkeypatch):
+    """A rebuild that dies after writing dst must not leave the old stamp vouching."""
+    pytest.importorskip("PIL")
+    import os
+
+    from PIL import Image
+
+    from braidio import video
+
+    Image.new("RGB", (40, 20), "red").save(tmp_path / "a.png")
+    Image.new("RGB", (40, 20), "blue").save(tmp_path / "b.png")
+    dst = tmp_path / "out.jpg"
+    video.prepare_still(tmp_path / "a.png", dst, size=(64, 36))
+
+    def boom(*args, **kwargs):
+        raise KeyboardInterrupt
+
+    with monkeypatch.context() as m:
+        m.setattr(
+            os,
+            "replace",
+            lambda a, b: boom() if str(b).endswith(".src") else os.rename(a, b),
+        )
+        with pytest.raises(KeyboardInterrupt):
+            video.prepare_still(tmp_path / "b.png", dst, size=(64, 36))
+    blue_dst = dst.read_bytes()
+    # red is asked for again: must be rebuilt, not served blue's canvas
+    assert (
+        video.prepare_still(tmp_path / "a.png", dst, size=(64, 36)).read_bytes()
+        != blue_dst
+    )

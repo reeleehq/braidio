@@ -335,6 +335,8 @@ def prepare_still(
         False
     """
     _require()
+    import os
+
     from PIL import Image, ImageEnhance, ImageFilter
 
     dst = Path(dst)
@@ -348,6 +350,9 @@ def prepare_still(
     ):
         return dst
     dst.parent.mkdir(parents=True, exist_ok=True)
+    # Drop the old claim first: if the rebuild dies between writing ``dst`` and
+    # the new stamp, no stamp survives to vouch for a canvas it did not make.
+    stamp_file.unlink(missing_ok=True)
 
     width, height = size
     img = Image.open(src).convert("RGB")
@@ -367,7 +372,9 @@ def prepare_still(
     )
     bg.paste(fg, ((width - fg.width) // 2, (height - fg.height) // 2))
     save_atomically(bg, dst, quality=94)
-    stamp_file.write_text(stamp)
+    tmp = stamp_file.with_name(stamp_file.name + ".tmp")
+    tmp.write_text(stamp)
+    os.replace(tmp, stamp_file)
     return dst
 
 

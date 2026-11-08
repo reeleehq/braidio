@@ -33,7 +33,7 @@ and never shows dead black bars.
 | [`credits_card`](#braidio.video.credits_card)(lines, dst, \*[, heading, ...])     | Render an end card listing `lines`, **fitted** so none is lost.                     |
 | [`missing_dependencies`](#braidio.video.missing_dependencies)()                           | Which `braidio[video]` dependencies are absent (empty when ready).                  |
 | [`plan_spans`](#braidio.video.plan_spans)(timeline, \*[, min_panel_s, ...])     | Cut `timeline` into contiguous spans of roughly one still each.                     |
-| [`prepare_still`](#braidio.video.prepare_still)(src, dst, \*[, size])              | Composite `src` onto a blurred fill of itself at exactly `size`.                    |
+| [`prepare_still`](#braidio.video.prepare_still)(src, dst, \*[, size, refresh])     | Composite `src` onto a blurred fill of itself at exactly `size`.                    |
 | [`save_atomically`](#braidio.video.save_atomically)(img, dst, \*\*encode)            | `img.save(dst)` through a sibling temp file and an atomic rename.                   |
 | [`render_video`](#braidio.video.render_video)(panels, \*, audio_path, out_path)   | Render `panels` as one film and mux `audio_path` under it.                          |
 | [`concat_argv`](#braidio.video.concat_argv)(listing, \*, audio_path, ...[, ...]) | Join the pieces a concat `listing` names, under `audio_path`, as the delivered mp4. |
@@ -198,13 +198,33 @@ A short beat does not become its own panel:
 1
 ```
 
-### braidio.video.prepare_still(src, dst, , size=(1920, 1080))
+### braidio.video.prepare_still(src, dst, , size=(1920, 1080), refresh=False)
 
 Composite `src` onto a blurred fill of itself at exactly `size`.
 
 Nothing is cropped away and no dead black bar appears, whatever the source
-aspect. Idempotent: an existing `dst` is returned untouched, so re-running a
-build does not redo the work.
+aspect. Idempotent *for the same input*: `dst` is reused only when a
+sidecar (`<dst>.src`) records that it was made from these source bytes at
+this `size`. A different still, or a different size, into the same `dst`
+is rebuilt; so is a `dst` with no sidecar (its origin is unknown).
+`refresh=True` rebuilds unconditionally.
+
+### Examples
+
+```pycon
+>>> import tempfile
+>>> from pathlib import Path
+>>> from PIL import Image
+>>> d = Path(tempfile.mkdtemp())
+>>> Image.new("RGB", (40, 20), "red").save(d / "a.png")
+>>> Image.new("RGB", (40, 20), "blue").save(d / "b.png")
+>>> out = prepare_still(d / "a.png", d / "o.jpg", size=(64, 36))
+>>> before = out.read_bytes()
+>>> prepare_still(d / "a.png", d / "o.jpg", size=(64, 36)).read_bytes() == before
+True
+>>> prepare_still(d / "b.png", d / "o.jpg", size=(64, 36)).read_bytes() == before
+False
+```
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)

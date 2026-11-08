@@ -1,4 +1,4 @@
-> built 2026-11-07 12:41 UTC from aee2822 (main) · braidio 0.0.118. Details: build_info.json
+> built 2026-11-08 22:35 UTC from be48f05 (main) · braidio 0.0.119. Details: build_info.json
 
 # index.html.md
 
@@ -4974,7 +4974,7 @@ and never shows dead black bars.
 | [`credits_card`](_autosummary/braidio.video.html.md#braidio.video.credits_card)(lines, dst, \*[, heading, ...])     | Render an end card listing `lines`, **fitted** so none is lost.                     |
 | [`missing_dependencies`](_autosummary/braidio.video.html.md#braidio.video.missing_dependencies)()                           | Which `braidio[video]` dependencies are absent (empty when ready).                  |
 | [`plan_spans`](_autosummary/braidio.video.html.md#braidio.video.plan_spans)(timeline, \*[, min_panel_s, ...])     | Cut `timeline` into contiguous spans of roughly one still each.                     |
-| [`prepare_still`](_autosummary/braidio.video.html.md#braidio.video.prepare_still)(src, dst, \*[, size])              | Composite `src` onto a blurred fill of itself at exactly `size`.                    |
+| [`prepare_still`](_autosummary/braidio.video.html.md#braidio.video.prepare_still)(src, dst, \*[, size, refresh])     | Composite `src` onto a blurred fill of itself at exactly `size`.                    |
 | [`save_atomically`](_autosummary/braidio.video.html.md#braidio.video.save_atomically)(img, dst, \*\*encode)            | `img.save(dst)` through a sibling temp file and an atomic rename.                   |
 | [`render_video`](_autosummary/braidio.video.html.md#braidio.video.render_video)(panels, \*, audio_path, out_path)   | Render `panels` as one film and mux `audio_path` under it.                          |
 | [`concat_argv`](_autosummary/braidio.video.html.md#braidio.video.concat_argv)(listing, \*, audio_path, ...[, ...]) | Join the pieces a concat `listing` names, under `audio_path`, as the delivered mp4. |
@@ -5139,13 +5139,33 @@ A short beat does not become its own panel:
 1
 ```
 
-### braidio.video.prepare_still(src, dst, , size=(1920, 1080))
+### braidio.video.prepare_still(src, dst, , size=(1920, 1080), refresh=False)
 
 Composite `src` onto a blurred fill of itself at exactly `size`.
 
 Nothing is cropped away and no dead black bar appears, whatever the source
-aspect. Idempotent: an existing `dst` is returned untouched, so re-running a
-build does not redo the work.
+aspect. Idempotent *for the same input*: `dst` is reused only when a
+sidecar (`<dst>.src`) records that it was made from these source bytes at
+this `size`. A different still, or a different size, into the same `dst`
+is rebuilt; so is a `dst` with no sidecar (its origin is unknown).
+`refresh=True` rebuilds unconditionally.
+
+### Examples
+
+```pycon
+>>> import tempfile
+>>> from pathlib import Path
+>>> from PIL import Image
+>>> d = Path(tempfile.mkdtemp())
+>>> Image.new("RGB", (40, 20), "red").save(d / "a.png")
+>>> Image.new("RGB", (40, 20), "blue").save(d / "b.png")
+>>> out = prepare_still(d / "a.png", d / "o.jpg", size=(64, 36))
+>>> before = out.read_bytes()
+>>> prepare_still(d / "a.png", d / "o.jpg", size=(64, 36)).read_bytes() == before
+True
+>>> prepare_still(d / "b.png", d / "o.jpg", size=(64, 36)).read_bytes() == before
+False
+```
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
@@ -5717,18 +5737,20 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-07 12:41 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/aee28227ed37e138e691136c749b9342f75bb1b6"><code>aee2822</code></a> on branch <code>main</code>, for **braidio 0.0.118** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-08 22:35 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/be48f0548f48f82339e4297fad83f7b1ecac7f1c"><code>be48f05</code></a> on branch <code>main</code>, for **braidio 0.0.119** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.119) is ahead of the latest release on PyPI (0.0.118): these docs describe unreleased code.
 
 ## Source
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/aee28227ed37e138e691136c749b9342f75bb1b6"><code>aee28227ed37e138e691136c749b9342f75bb1b6</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/be48f0548f48f82339e4297fad83f7b1ecac7f1c"><code>be48f0548f48f82339e4297fad83f7b1ecac7f1c</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | <code>0.0.118</code>                                                                                                                                    |
+| Tags at this commit | <code>0.0.119</code>                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -5737,9 +5759,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/42373208458">42373208458</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/42530490032">42530490032</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>ab07cd536e641ab94a2bb94eee4dc8a72d5b3589</code> (in the history of the built commit) |
+| Event commit | <code>9868f6ba4cdb529f61e667ee67efeaccf9de6f5c</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5764,13 +5786,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.118/">0.0.118</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/braidio/0.0.118/">0.0.118</a>, older than the documented version (0.0.119).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout aee28227ed37e138e691136c749b9342f75bb1b6
+git checkout be48f0548f48f82339e4297fad83f7b1ecac7f1c
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

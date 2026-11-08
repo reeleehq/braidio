@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../_static/documentation_options.js?v=e7715e22"></script>
+    <script src="../_static/documentation_options.js?v=4309da3b"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.118" />
+  <meta name="docsearch:version" content="0.0.119" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -450,7 +450,7 @@ and never shows dead black bars.</p>
 <tr class="row-even"><td><p><a class="reference internal" href="#braidio.video.plan_spans" title="braidio.video.plan_spans"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plan_spans</span></code></a>(timeline, *[, min_panel_s, ...])</p></td>
 <td><p>Cut <code class="docutils literal notranslate"><span class="pre">timeline</span></code> into contiguous spans of roughly one still each.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.video.prepare_still" title="braidio.video.prepare_still"><code class="xref py py-obj docutils literal notranslate"><span class="pre">prepare_still</span></code></a>(src, dst, *[, size])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.video.prepare_still" title="braidio.video.prepare_still"><code class="xref py py-obj docutils literal notranslate"><span class="pre">prepare_still</span></code></a>(src, dst, *[, size, refresh])</p></td>
 <td><p>Composite <code class="docutils literal notranslate"><span class="pre">src</span></code> onto a blurred fill of itself at exactly <code class="docutils literal notranslate"><span class="pre">size</span></code>.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#braidio.video.save_atomically" title="braidio.video.save_atomically"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save_atomically</span></code></a>(img, dst, **encode)</p></td>
@@ -660,11 +660,29 @@ producing a flicker.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="braidio.video.prepare_still">
-<span class="sig-prename descclassname"><span class="pre">braidio.video.</span></span><span class="sig-name descname"><span class="pre">prepare_still</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dst</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(1920,</span> <span class="pre">1080)</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/video.html#prepare_still"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.video.prepare_still" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">braidio.video.</span></span><span class="sig-name descname"><span class="pre">prepare_still</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dst</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(1920,</span> <span class="pre">1080)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">refresh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/video.html#prepare_still"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.video.prepare_still" title="Link to this definition">#</a></dt>
 <dd><p>Composite <code class="docutils literal notranslate"><span class="pre">src</span></code> onto a blurred fill of itself at exactly <code class="docutils literal notranslate"><span class="pre">size</span></code>.</p>
 <p>Nothing is cropped away and no dead black bar appears, whatever the source
-aspect. Idempotent: an existing <code class="docutils literal notranslate"><span class="pre">dst</span></code> is returned untouched, so re-running a
-build does not redo the work.</p>
+aspect. Idempotent <em>for the same input</em>: <code class="docutils literal notranslate"><span class="pre">dst</span></code> is reused only when a
+sidecar (<code class="docutils literal notranslate"><span class="pre">&lt;dst&gt;.src</span></code>) records that it was made from these source bytes at
+this <code class="docutils literal notranslate"><span class="pre">size</span></code>. A different still, or a different size, into the same <code class="docutils literal notranslate"><span class="pre">dst</span></code>
+is rebuilt; so is a <code class="docutils literal notranslate"><span class="pre">dst</span></code> with no sidecar (its origin is unknown).
+<code class="docutils literal notranslate"><span class="pre">refresh=True</span></code> rebuilds unconditionally.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">d</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Image</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s2">"RGB"</span><span class="p">,</span> <span class="p">(</span><span class="mi">40</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span> <span class="s2">"red"</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">d</span> <span class="o">/</span> <span class="s2">"a.png"</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Image</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s2">"RGB"</span><span class="p">,</span> <span class="p">(</span><span class="mi">40</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span> <span class="s2">"blue"</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">d</span> <span class="o">/</span> <span class="s2">"b.png"</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">out</span> <span class="o">=</span> <span class="n">prepare_still</span><span class="p">(</span><span class="n">d</span> <span class="o">/</span> <span class="s2">"a.png"</span><span class="p">,</span> <span class="n">d</span> <span class="o">/</span> <span class="s2">"o.jpg"</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">36</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">before</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">prepare_still</span><span class="p">(</span><span class="n">d</span> <span class="o">/</span> <span class="s2">"a.png"</span><span class="p">,</span> <span class="n">d</span> <span class="o">/</span> <span class="s2">"o.jpg"</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">36</span><span class="p">))</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">()</span> <span class="o">==</span> <span class="n">before</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">prepare_still</span><span class="p">(</span><span class="n">d</span> <span class="o">/</span> <span class="s2">"b.png"</span><span class="p">,</span> <span class="n">d</span> <span class="o">/</span> <span class="s2">"o.jpg"</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">36</span><span class="p">))</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">()</span> <span class="o">==</span> <span class="n">before</span>
+<span class="go">False</span>
+</pre></div>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span></p>

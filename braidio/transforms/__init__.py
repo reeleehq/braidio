@@ -43,6 +43,7 @@ from lacing import Annotation
 from nw import TransformInputs
 from nw.transforms import total_cost
 
+from braidio.defaults import default_delivery as _default_delivery
 from braidio.transforms._common import (
     ELEVENLABS_SECRET,
     fresh_ids_pass,
@@ -262,7 +263,15 @@ def format_config(fmt=None, *, config=None, voice_id=None, delivery=None):
     return config
 
 
-def resolve_config(project, fmt=None, *, config=None, voice_id=None, delivery=None):
+def resolve_config(
+    project,
+    fmt=None,
+    *,
+    config=None,
+    voice_id=None,
+    delivery=None,
+    fallback_delivery=_default_delivery,
+):
     """The weave-config to ingest into ``project``: :func:`format_config`, minus
     any change to what its narration was already synthesized with.
 
@@ -277,25 +286,23 @@ def resolve_config(project, fmt=None, *, config=None, voice_id=None, delivery=No
     through here, so saving and then weaving never rewrites the config node.
     A ``delivery`` is protected exactly like a format's: it sets the model and
     settings of a project's first render, not of a later one. With no format,
-    config or delivery at all, an unvoiced project is given
-    :func:`braidio.defaults.default_delivery` (env, user config, package
-    default), the delivery the fast path renders with (braidio#191).
+    config or delivery at all, an unvoiced project gets ``fallback_delivery()``:
+    by default :func:`braidio.defaults.default_delivery` (env, user config,
+    package default), what the fast path renders with (braidio#191). Pass
+    ``None`` to keep the bare :class:`~braidio.weave_config.WeaveConfig`.
     """
     import nw
 
     unvoiced = not nw.annotations_at_tier(project.root, "narration-renders")
-    named = delivery
-    if unvoiced and delivery is None and config is None and fmt is None:
-        # Nothing names a voice: say what the fast path would use, so one
-        # script is voiced alike on both paths (braidio#191). Only before the
-        # first render; a voiced project keeps what it was synthesized with.
-        from braidio.defaults import default_delivery
-
-        delivery = default_delivery()
+    if unvoiced and (delivery, config, fmt) == (None, None, None) and fallback_delivery:
+        # Nothing names a voice: use the fallback (by default what the fast
+        # path resolves), so one script is voiced alike on both paths
+        # (braidio#191). Before the first render only; it is never "named", so
+        # it can neither warn nor be reported as kept.
+        return format_config(voice_id=voice_id, delivery=fallback_delivery())
     resolved = format_config(fmt, config=config, voice_id=voice_id, delivery=delivery)
     if config is not None or unvoiced:
         return resolved
-    delivery = named
     nodes = nw.annotations_at_tier(project.root, "weave-configs")
     recorded = dict(nodes[0].body.get("config", {})) if nodes else {}
     kept = {key: recorded[key] for key in VOICE_KEYS if key in recorded}
@@ -334,6 +341,7 @@ def weave_project(
     cast=None,
     voice_id=None,
     delivery=None,
+    fallback_delivery=_default_delivery,
     sound_design=None,
     api_key=None,
     return_receipt: bool = False,
@@ -379,8 +387,11 @@ def weave_project(
     the narrator speaks with when the caller names one without a format: it
     wins over the format's ``narration_delivery`` and goes through
     :func:`resolve_config` like one, so a project already voiced keeps its
-    model and settings (braidio#182). Unlike the fast path, ``None`` does not
-    read the env or user-config default delivery (braidio#191).
+    model and settings (braidio#182). Naming nothing (no ``delivery``, format
+    or config) voices a project that has no narration render yet with
+    ``fallback_delivery()``, by default the fast path's
+    :func:`braidio.defaults.default_delivery` (braidio#191); ``None`` keeps the
+    bare :class:`~braidio.weave_config.WeaveConfig`.
 
     ``profile`` (a :class:`~braidio.rights.Profile`) and ``rights`` (a
     :class:`~braidio.rights.RightsPolicy`) are the rights seam, and they mean
@@ -441,7 +452,12 @@ def weave_project(
         sound_design.require(writes_mix=False)
     requested = format_config(fmt, config=config, voice_id=voice_id, delivery=delivery)
     config = resolve_config(
-        project, fmt, config=config, voice_id=voice_id, delivery=delivery
+        project,
+        fmt,
+        config=config,
+        voice_id=voice_id,
+        delivery=delivery,
+        fallback_delivery=fallback_delivery,
     )
     # a named delivery the re-bill protection did not apply (braidio#192)
     delivery_kept = delivery is not None and _voice_of(config) != _voice_of(requested)

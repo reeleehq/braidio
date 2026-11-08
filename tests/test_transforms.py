@@ -725,6 +725,27 @@ def test_an_unnamed_delivery_leaves_a_voiced_project_alone(
     assert len(calls) == voiced
 
 
+def test_no_fallback_delivery_keeps_the_bare_weave_config(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """braidio#191's seam: ``fallback_delivery=None`` is the old behaviour (what
+    the MCP graph tools pass), and a later unnamed re-weave of a project voiced
+    that way neither warns nor reports a delivery as kept."""
+    import warnings
+
+    calls = _counting_narrate(monkeypatch)
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source, fallback_delivery=None)
+    voiced = len(calls)
+    assert set(calls) == {braidio.WeaveConfig().model_id}
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        again = braidio.weave_project(
+            project, script, source=source, fallback_delivery=None, return_receipt=True
+        )
+    assert len(calls) == voiced and not again.delivery_kept
+
+
 def test_a_new_delivery_does_not_re_bill_a_voiced_project(
     project, script_and_source, patched_synthesis, monkeypatch
 ):

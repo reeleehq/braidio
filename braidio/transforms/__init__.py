@@ -288,7 +288,9 @@ def resolve_config(
     settings of a project's first render, not of a later one. With no format,
     config or delivery at all, an unvoiced project gets ``fallback_delivery()``:
     by default :func:`braidio.defaults.default_delivery` (env, user config,
-    package default), what the fast path renders with (braidio#191). Pass
+    package default), what the fast path renders with (braidio#191): a
+    zero-argument callable, or a :class:`~braidio.delivery.Delivery` / its name,
+    read when called (not at import, so patch the env, not the function). Pass
     ``None`` to keep the bare :class:`~braidio.weave_config.WeaveConfig`.
     """
     import nw
@@ -299,7 +301,10 @@ def resolve_config(
         # path resolves), so one script is voiced alike on both paths
         # (braidio#191). Before the first render only; it is never "named", so
         # it can neither warn nor be reported as kept.
-        return format_config(voice_id=voice_id, delivery=fallback_delivery())
+        fallback = (
+            fallback_delivery() if callable(fallback_delivery) else fallback_delivery
+        )
+        return format_config(voice_id=voice_id, delivery=fallback)
     resolved = format_config(fmt, config=config, voice_id=voice_id, delivery=delivery)
     if config is not None or unvoiced:
         return resolved

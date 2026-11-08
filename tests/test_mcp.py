@@ -2539,3 +2539,23 @@ def test_weave_project_tool_keeps_the_connectors_own_no_format_voice(monkeypatch
     _call(server, "create_project", {"project_id": "demo", "title": "Demo"})
     _call(server, "weave_project", {"project_id": "demo", "script": _THOUSAND})
     assert "fallback_delivery" in seen and seen["fallback_delivery"] is None
+
+
+@_NW
+def test_save_script_keeps_the_connectors_own_no_format_voice(monkeypatch):
+    """braidio#191: ``save_script`` pins the same ``fallback_delivery=None`` as
+    ``weave_project``, so saving then weaving leaves one weave-config node."""
+    import nw
+
+    server = _local_server(ledger={})
+    _call(server, "create_project", {"project_id": "sw", "title": "SW"})
+    script = {
+        "title": "t",
+        "id_slug": "01",
+        "beats": [{"type": "narration", "text": "hello"}],
+    }
+    _call(server, "save_script", {"project_id": "sw", "script": script})
+    proj = Workspace.for_email(OWNER).open_project("sw")
+    before = nw.annotations_at_tier(proj.root, "weave-configs")
+    assert before and before[0].body["config"].get("model_id") in (None, _V2)
+    assert braidio.defaults.default_delivery().model_id == _V3  # the fallback differs

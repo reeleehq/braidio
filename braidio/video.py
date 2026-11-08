@@ -43,6 +43,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable, Sequence
 
+#: Sidecar suffix recording what a prepared canvas was made from.
+_STAMP_SUFFIX = ".src"
+
 __all__ = [
     "HAS_VIDEO",
     "Footage",
@@ -293,20 +296,63 @@ def assign_stills(
     return out
 
 
-def prepare_still(src, dst, *, size: tuple[int, int] = DEFAULT_SIZE) -> Path:
+def _still_stamp(src, size: tuple[int, int]) -> str:
+    """What a prepared canvas was made from: the source's bytes and the frame size."""
+    import hashlib
+
+    digest = hashlib.sha256(Path(src).read_bytes()).hexdigest()
+    return f"{digest} {size[0]}x{size[1]}"
+
+
+def _stamp_path(dst: Path) -> Path:
+    return dst.with_name(dst.name + _STAMP_SUFFIX)
+
+
+def prepare_still(
+    src, dst, *, size: tuple[int, int] = DEFAULT_SIZE, refresh: bool = False
+) -> Path:
     """Composite ``src`` onto a blurred fill of itself at exactly ``size``.
 
     Nothing is cropped away and no dead black bar appears, whatever the source
-    aspect. Idempotent: an existing ``dst`` is returned untouched, so re-running a
-    build does not redo the work.
+    aspect. Idempotent *for the same input*: ``dst`` is reused only when a
+    sidecar (``<dst>.src``) records that it was made from these source bytes at
+    this ``size``. A different still, or a different size, into the same ``dst``
+    is rebuilt; so is a ``dst`` with no sidecar (its origin is unknown).
+    ``refresh=True`` rebuilds unconditionally.
+
+    Examples:
+        >>> import tempfile
+        >>> from pathlib import Path
+        >>> from PIL import Image
+        >>> d = Path(tempfile.mkdtemp())
+        >>> Image.new("RGB", (40, 20), "red").save(d / "a.png")
+        >>> Image.new("RGB", (40, 20), "blue").save(d / "b.png")
+        >>> out = prepare_still(d / "a.png", d / "o.jpg", size=(64, 36))
+        >>> before = out.read_bytes()
+        >>> prepare_still(d / "a.png", d / "o.jpg", size=(64, 36)).read_bytes() == before
+        True
+        >>> prepare_still(d / "b.png", d / "o.jpg", size=(64, 36)).read_bytes() == before
+        False
     """
     _require()
+    import os
+
     from PIL import Image, ImageEnhance, ImageFilter
 
     dst = Path(dst)
-    if dst.exists():
+    stamp = _still_stamp(src, size)
+    stamp_file = _stamp_path(dst)
+    if (
+        not refresh
+        and dst.exists()
+        and stamp_file.exists()
+        and stamp_file.read_text() == stamp
+    ):
         return dst
     dst.parent.mkdir(parents=True, exist_ok=True)
+    # Drop the old claim first: if the rebuild dies between writing ``dst`` and
+    # the new stamp, no stamp survives to vouch for a canvas it did not make.
+    stamp_file.unlink(missing_ok=True)
 
     width, height = size
     img = Image.open(src).convert("RGB")
@@ -326,6 +372,9 @@ def prepare_still(src, dst, *, size: tuple[int, int] = DEFAULT_SIZE) -> Path:
     )
     bg.paste(fg, ((width - fg.width) // 2, (height - fg.height) // 2))
     save_atomically(bg, dst, quality=94)
+    tmp = stamp_file.with_name(stamp_file.name + ".tmp")
+    tmp.write_text(stamp)
+    os.replace(tmp, stamp_file)
     return dst
 
 

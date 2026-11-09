@@ -183,10 +183,19 @@ class Project(nw.Project):
             self.root, _tiers().TIER_SOUND_DESIGN
         ):
             return {}
+        from nw.media_catalog import HostArtifactCatalog
+
         from braidio.transforms._sound import sound_design_of, sound_design_row
 
-        design = sound_design_of(self, current)
-        return {} if design is None else {"sound_design": sound_design_row(design)}
+        with _tiers().fresh_ids_pass():  # one freshness walk, only once a design exists
+            design = sound_design_of(self, current)
+        if design is None:
+            return {}
+        artifact_id = design.body.get("artifact_id")
+        retrievable = bool(artifact_id) and HostArtifactCatalog(self.root).has(
+            artifact_id
+        )
+        return {"sound_design": sound_design_row(design, retrievable=retrievable)}
 
 
 def create_project_at(

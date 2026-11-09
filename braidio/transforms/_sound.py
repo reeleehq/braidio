@@ -25,8 +25,9 @@ episode, or a changed knob, re-stales it through ordinary freshness.
 
 from __future__ import annotations
 
+import json
 import os
-import shutil
+import tempfile
 import warnings
 from contextvars import ContextVar
 from pathlib import Path, PurePath
@@ -151,71 +152,104 @@ def sound_design_of(project, episode: Annotation) -> Annotation | None:
 
 
 def register_sound_design(project, design: Annotation) -> bool:
-    """Make ``design``'s mix retrievable by id, like any episode (braidio#193).
+    """Make ``design``'s mix retrievable by id from the project's delivery
+    catalog (braidio#193).
 
     The mix is a FLAC in falaw's content store, named by the body's
     ``artifact_id`` (its sha256): nothing a host can fetch. This copies the bytes
     into the project (**copy, not link**: the store is shared, see
-    ``braidio.importing._writer._place_into``) and registers them in the
-    project's delivery catalog under that same id, never a ``file://`` url, so
-    ``HostArtifactCatalog`` serves them wherever the project lives. Idempotent:
-    a registered id is left alone.
+    ``braidio.importing._writer._place_into``) and registers them under that same
+    id, never a ``file://`` url, so ``HostArtifactCatalog`` serves them wherever
+    the project lives. (A graph-path *episode* is not catalog-registered: a host
+    reaches it by ``episode_id``; this design's mix is reached by ``artifact_id``.)
+    Idempotent: an id the catalog already answers for (row and blob) is left alone.
 
-    Returns whether the mix is retrievable. ``False`` (with a warning) when the
-    host's catalog backend is not the local one, which the catalog refuses; the
-    design itself is unaffected.
+    Returns whether the mix is retrievable, and never raises for a reason the
+    design does not control: ``False`` with a ``RuntimeWarning`` when the host's
+    catalog backend is not the local one (refused before any copy), or when the
+    blob is gone from falaw's store (pruned; change a knob to re-design).
     """
     from falaw.content import default_content_store
-    from nw.media_catalog import CatalogBackendMismatch, HostArtifactCatalog
+    from nw.atomic_io import copy_file_atomic
+    from nw.media_catalog import (
+        CatalogBackendMismatch,
+        HostArtifactCatalog,
+        assert_local_backend,
+    )
 
     artifact_id = design.body.get("artifact_id")
     if not artifact_id:
         return False
+    catalog = HostArtifactCatalog(project.root)
     try:
-        catalog = HostArtifactCatalog(project.root)
-        if artifact_id in catalog.registered_ids():
-            return True
-        store = default_content_store()
-        dest = Path(project.root).joinpath(*SOUND_DESIGN_DIR, f"{artifact_id}.flac")
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        scratch = dest.with_name(f".{dest.name}.{os.getpid()}.part")
-        try:
-            source = store.blob_path(artifact_id)
-            if source is not None:
-                shutil.copyfile(source, scratch)
-            else:  # an opaque blob backend: no path, so spool the bytes
-                scratch.write_bytes(store.get_blob(artifact_id))
-            os.replace(scratch, dest)
-        finally:
-            scratch.unlink(missing_ok=True)
-        catalog.register(
-            dest,
-            kind=SOUND_DESIGN_CATALOG_KIND,
-            artifact_id=artifact_id,
-            duration_s=design.body.get("duration_s"),
-            note="sound design mix",
-        )
+        assert_local_backend()
     except CatalogBackendMismatch as exc:
         warnings.warn(
             f"the sound design's mix was not registered for retrieval: {exc}",
             RuntimeWarning,
-            stacklevel=2,
+            stacklevel=3,
         )
         return False
-    return artifact_id in catalog.registered_ids()
+    if catalog.has(artifact_id):
+        return True
+    store = default_content_store()
+    if not store.has_blob(artifact_id):
+        warnings.warn(
+            f"sound design {design.id}: its mix {artifact_id[:12]}... is gone from "
+            "falaw's content store (pruned), so it cannot be served; change a "
+            "sound_design knob to re-design it",
+            RuntimeWarning,
+            stacklevel=3,
+        )
+        return False
+    dest = Path(project.root).joinpath(*SOUND_DESIGN_DIR, f"{artifact_id}.flac")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    source = store.blob_path(artifact_id)
+    if source is not None:
+        copy_file_atomic(source, dest)
+    else:  # an opaque blob backend: no path, so spool the bytes through a temp file
+        fd, name = tempfile.mkstemp(dir=dest.parent, prefix=".part-", suffix=".flac")
+        try:
+            with os.fdopen(fd, "wb") as out:
+                out.write(store.get_blob(artifact_id))
+            os.replace(name, dest)
+        finally:
+            Path(name).unlink(missing_ok=True)
+    catalog.register(
+        dest,
+        kind=SOUND_DESIGN_CATALOG_KIND,
+        artifact_id=artifact_id,
+        duration_s=design.body.get("duration_s"),
+        note="sound design mix",
+    )
+    return catalog.has(artifact_id)
 
 
-def sound_design_row(design: Annotation) -> dict:
-    """What a host needs to hand out a design: the mix's id and length, and the
-    credits that must be published with it (path-free)."""
+#: A status door is polled and capped (nw drops a whole status over its limit),
+#: so credits ride in it only up to this many bytes of JSON; past it the row says
+#: how many there are and a host reads them from the design node.
+STATUS_CREDITS_MAX_BYTES = 8_192
+
+
+def sound_design_row(design: Annotation, *, retrievable: bool | None = None) -> dict:
+    """What a host needs to hand out a design (path-free): the mix's id, length,
+    whether it is ``retrievable`` from the catalog, and the credits that must be
+    published with it (or, if they are large, how many there are)."""
     body = design.body
     duration = body.get("duration_s")
-    return {
+    credits = body.get("credits", {})
+    row = {
         "design_id": str(design.id),
         "artifact_id": body.get("artifact_id"),
         "duration_s": None if duration is None else round(float(duration), 2),
-        "credits": body.get("credits", {}),
+        "retrievable": retrievable,
     }
+    if len(json.dumps(credits, default=str)) <= STATUS_CREDITS_MAX_BYTES:
+        row["credits"] = credits
+    else:
+        row["credits"] = None
+        row["credits_omitted"] = True  # read them from the design node
+    return row
 
 
 register_transform(NAME, EpisodeToSoundDesign(), tags=SOUND_DESIGN_TAGS)

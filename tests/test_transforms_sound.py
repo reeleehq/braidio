@@ -264,3 +264,54 @@ def test_an_episode_with_nothing_spoken_is_refused(project, tmp_path):
         episode_talk(project, episode)
     with pytest.raises(RuntimeError, match="while planning"):
         EpisodeToSoundDesign().narration_segments(episode)
+
+
+def test_a_design_is_retrievable_by_id_and_in_the_status_door(
+    project, script_and_source, patched_synthesis, foley
+):
+    """braidio#193: the mix is served from the project's delivery catalog under
+    its recorded hash (never a file:// url), and the status door names it with
+    the credits that ship with it."""
+    from nw.media_catalog import HostArtifactCatalog
+
+    script, source = script_and_source
+    before = braidio.weave_project(project, script, source=source)
+    assert "sound_design" not in project.genre_status()  # the absence rule
+    receipt = braidio.weave_project(
+        project,
+        script,
+        source=source,
+        sound_design=braidio.SoundDesign(),
+        return_receipt=True,
+    )
+    design = receipt.sound_design
+    artifact_id = design.body["artifact_id"]
+    catalog = HostArtifactCatalog(project.root)
+    assert artifact_id in catalog.registered_ids()
+    blob = catalog.blob_path(artifact_id)
+    assert blob is not None and blob.read_bytes().startswith(b"flac:")
+    assert not any("file://" in str(row) for row in catalog.iter_rows())
+    status = project.genre_status()
+    assert status["sound_design"] == {
+        "design_id": str(design.id),
+        "artifact_id": artifact_id,
+        "duration_s": status["sound_design"]["duration_s"],
+        "credits": {"entries": [{"title": "Door", "by": "X"}]},
+    }
+    assert before.id == receipt.episode.id
+
+
+def test_registering_a_design_twice_is_a_noop_and_a_stale_one_is_not_served(
+    project, script_and_source, patched_synthesis, foley
+):
+    script, source = script_and_source
+    receipt = braidio.weave_project(
+        project,
+        script,
+        source=source,
+        sound_design=braidio.SoundDesign(),
+        return_receipt=True,
+    )
+    assert braidio.transforms.register_sound_design(project, receipt.sound_design)
+    braidio.weave_project(project, script, source=source)  # sound design dropped
+    assert "sound_design" not in project.genre_status()  # a stale design is not served

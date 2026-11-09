@@ -87,7 +87,9 @@ from braidio.transforms import (  # noqa: F401
 )
 from braidio.transforms._sound import (
     NAME as SOUND_DESIGN_TRANSFORM,
+    register_sound_design,
     sound_design_of,
+    sound_design_row,
 )
 from braidio.transforms._episode import (
     MemberSpan,
@@ -144,6 +146,8 @@ video_cut_reuses_existing = _video_cut.reuses_existing_cut
 __all__ = [
     "SOUND_DESIGN_TRANSFORM",
     "sound_design_of",
+    "sound_design_row",
+    "register_sound_design",
     "format_config",
     "resolve_config",
     "ingest_script",
@@ -536,6 +540,8 @@ def weave_project(
                     context={ing.sound_design.body_schema_uri: (ing.sound_design,)},
                 )
             )
+            if designed is not None:  # retrievable by id, like the episode (#193)
+                register_sound_design(project, designed)
         except Exception as exc:  # annotated and re-raised, never swallowed
             # the episode, when the failure came after it (the sound design)
             exc.weave_receipt = WeaveReceipt.of(woven, results, failed=True)

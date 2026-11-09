@@ -25,6 +25,9 @@ episode, or a changed knob, re-stales it through ordinary freshness.
 
 from __future__ import annotations
 
+import os
+import shutil
+import warnings
 from contextvars import ContextVar
 from pathlib import Path, PurePath
 from typing import Optional
@@ -44,6 +47,13 @@ from braidio.transforms._common import (
 )
 
 NAME = "episode_to_sound_design.foley"
+
+#: Where a design's mix is kept inside the project, which owns its bytes: a
+#: server the project is moved to cannot read falaw's store on this machine.
+SOUND_DESIGN_DIR = ("data", "sound-design")
+
+#: Catalog kind of a design's mix (a mastered FLAC).
+SOUND_DESIGN_CATALOG_KIND = "audio"
 
 #: The episode's ``(segments, starts)`` while its plan is being made: nw's
 #: segment seams take only the node, and reading the spoken text needs the
@@ -138,6 +148,74 @@ def sound_design_of(project, episode: Annotation) -> Annotation | None:
         return None
     fresh = fresh_ids(project)
     return next((a for a in reversed(designs) if a.id in fresh), None)
+
+
+def register_sound_design(project, design: Annotation) -> bool:
+    """Make ``design``'s mix retrievable by id, like any episode (braidio#193).
+
+    The mix is a FLAC in falaw's content store, named by the body's
+    ``artifact_id`` (its sha256): nothing a host can fetch. This copies the bytes
+    into the project (**copy, not link**: the store is shared, see
+    ``braidio.importing._writer._place_into``) and registers them in the
+    project's delivery catalog under that same id, never a ``file://`` url, so
+    ``HostArtifactCatalog`` serves them wherever the project lives. Idempotent:
+    a registered id is left alone.
+
+    Returns whether the mix is retrievable. ``False`` (with a warning) when the
+    host's catalog backend is not the local one, which the catalog refuses; the
+    design itself is unaffected.
+    """
+    from falaw.content import default_content_store
+    from nw.media_catalog import CatalogBackendMismatch, HostArtifactCatalog
+
+    artifact_id = design.body.get("artifact_id")
+    if not artifact_id:
+        return False
+    try:
+        catalog = HostArtifactCatalog(project.root)
+        if artifact_id in catalog.registered_ids():
+            return True
+        store = default_content_store()
+        dest = Path(project.root).joinpath(*SOUND_DESIGN_DIR, f"{artifact_id}.flac")
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        scratch = dest.with_name(f".{dest.name}.{os.getpid()}.part")
+        try:
+            source = store.blob_path(artifact_id)
+            if source is not None:
+                shutil.copyfile(source, scratch)
+            else:  # an opaque blob backend: no path, so spool the bytes
+                scratch.write_bytes(store.get_blob(artifact_id))
+            os.replace(scratch, dest)
+        finally:
+            scratch.unlink(missing_ok=True)
+        catalog.register(
+            dest,
+            kind=SOUND_DESIGN_CATALOG_KIND,
+            artifact_id=artifact_id,
+            duration_s=design.body.get("duration_s"),
+            note="sound design mix",
+        )
+    except CatalogBackendMismatch as exc:
+        warnings.warn(
+            f"the sound design's mix was not registered for retrieval: {exc}",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return False
+    return artifact_id in catalog.registered_ids()
+
+
+def sound_design_row(design: Annotation) -> dict:
+    """What a host needs to hand out a design: the mix's id and length, and the
+    credits that must be published with it (path-free)."""
+    body = design.body
+    duration = body.get("duration_s")
+    return {
+        "design_id": str(design.id),
+        "artifact_id": body.get("artifact_id"),
+        "duration_s": None if duration is None else round(float(duration), 2),
+        "credits": body.get("credits", {}),
+    }
 
 
 register_transform(NAME, EpisodeToSoundDesign(), tags=SOUND_DESIGN_TAGS)

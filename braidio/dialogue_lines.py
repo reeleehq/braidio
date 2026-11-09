@@ -22,7 +22,7 @@ Three choices keep a take editable many times over:
   the middle of the pause before it to the middle of the pause after it (the
   file's edges for the first and last line), and brings the same amount of its
   own lead-in and decay along, so neither the old line's tail nor the new
-  line's is lost. Each join gets a :data:`JOIN_FADE_S` fade out and in.
+  line's is lost. Each join gets mixing's join fade, out and in.
 """
 
 from __future__ import annotations
@@ -44,11 +44,6 @@ DEFAULT_OUTPUT_FORMAT = "mp3_44100_128"
 #: The lossless master's name beside the deliverable: ``take.mp3`` ->
 #: ``take.master.flac``.
 MASTER_SUFFIX = ".master.flac"
-
-#: Fade-out and fade-in length at each join of a splice. Long enough to remove
-#: a click from a cut through room tone, short enough to sit inside any pause
-#: between turns (it is halved further when the spliced piece is shorter).
-JOIN_FADE_S = 0.008
 
 #: Float slack when checking that lines do not overlap: offsets are sums of
 #: float durations, and a touching pair must not read as overlapping.
@@ -334,92 +329,52 @@ def _lines(turns, bounds, *, total_s: float) -> tuple[DialogueLine, ...]:
 # --- the splice (to move to mixing) --------------------------------------------
 
 
-def _splice(
+def _insert_window(
+    insert: Path, keep: tuple[float, float], *, rate: int
+) -> "np.ndarray":
+    """``insert[keep0:keep1]`` as float samples at ``rate``, exactly ``keep1 - keep0`` long.
+
+    The window may reach outside the insert: what falls outside is silence, so a
+    line that brings its lead-in or decay along from a pause it does not have
+    still fills the span it replaces.
+    """
+    import numpy as np
+    from mixing.decode import decode_float_chunks
+
+    k0, k1 = keep
+    n = round((k1 - k0) * rate)
+    if n <= 0:
+        raise ValueError(f"nothing to insert: keep window {keep} is empty")
+    _, chunks = decode_float_chunks(insert, sample_rate=rate)
+    audio = np.concatenate(list(chunks), axis=0)
+    window = np.zeros((n, audio.shape[1]), dtype=audio.dtype)
+    first = round(k0 * rate)  # sample of ``audio`` at the window's start (may be < 0)
+    lo, hi = max(first, 0), min(first + n, len(audio))
+    if hi > lo:
+        window[lo - first : hi - first] = audio[lo:hi]
+    return window
+
+
+def _splice_line(
     base: Path,
     insert: Path,
     *,
     cut: tuple[float, float | None],
     keep: tuple[float, float],
     out: Path,
-    fade_s: float = JOIN_FADE_S,
 ) -> None:
-    """Write ``base[:cut0] + insert[keep0:keep1] + base[cut1:]`` to ``out`` (FLAC).
+    """Write ``base[:cut0] + insert[keep0:keep1] + base[cut1:]`` to ``out``.
 
-    ``cut[1] is None`` means "to the end of ``base``"; ``cut[0] == 0`` keeps
-    nothing before. The ``keep`` window may reach outside ``insert``: what
-    falls outside is silence, so the inserted piece is always exactly
-    ``keep1 - keep0`` long. The insert is resampled to ``base``'s rate, cuts
-    fall on sample boundaries, and every join gets a ``fade_s`` fade out and
-    in. Lossless: one decode, no lossy encode.
+    ``cut[1] is None`` means "to the end of ``base``". The cutting, the faded
+    joins (``mixing``'s own join fade) and the single lossless encode are
+    :func:`mixing.splice.replace_span_file`'s; what is braidio's is only which
+    window of the re-rendered line goes in.
     """
-    _, rate = _probe(base)
-    _, insert_rate = _probe(insert)
-    fade = round(fade_s * rate)
-    head = round(cut[0] * rate)
-    k0, k1 = keep
-    n_insert = round((k1 - k0) * rate)
-    if n_insert <= 0:
-        raise ValueError(f"nothing to insert: keep window {keep} is empty")
+    from mixing.splice import replace_span_file
 
-    base_pads = [
-        p for p, wanted in (("h", head > 0), ("t", cut[1] is not None)) if wanted
-    ]
-    graph, inputs = [], []
-    if base_pads:
-        inputs = ["-i", str(base)]
-        if len(base_pads) == 2:
-            graph.append("[0:a]asplit=2[bh][bt]")
-            src = {"h": "[bh]", "t": "[bt]"}
-        else:
-            src = {base_pads[0]: "[0:a]"}
-    ins = f"[{len(inputs) // 2}:a]"
-    inputs += ["-i", str(insert)]
-
-    pieces = []
-    if head > 0:
-        f = min(fade, head)
-        graph.append(
-            f"{src['h']}atrim=end_sample={head},asetpts=PTS-STARTPTS,"
-            f"afade=t=out:ss={head - f}:ns={f}[ph]"
-        )
-        pieces.append("[ph]")
-    pad_front = round(max(0.0, -k0) * rate)
-    chain = [
-        f"atrim=start_sample={round(max(0.0, k0) * insert_rate)}"
-        f":end_sample={round(k1 * insert_rate)}",
-        "asetpts=PTS-STARTPTS",
-        f"aresample={rate}",
-    ]
-    if pad_front:
-        chain.append(f"adelay=delays={pad_front}S:all=1")
-    f = min(fade, n_insert // 2)
-    chain += [
-        f"apad=whole_len={n_insert}",
-        f"atrim=end_sample={n_insert}",
-        f"afade=t=in:ns={f}",
-        f"afade=t=out:ss={n_insert - f}:ns={f}",
-    ]
-    graph.append(f"{ins}{','.join(chain)}[pi]")
-    pieces.append("[pi]")
-    if cut[1] is not None:
-        graph.append(
-            f"{src['t']}atrim=start_sample={round(cut[1] * rate)},"
-            f"asetpts=PTS-STARTPTS,afade=t=in:ns={fade}[pt]"
-        )
-        pieces.append("[pt]")
-    graph.append(f"{''.join(pieces)}concat=n={len(pieces)}:v=0:a=1[out]")
-    _ffmpeg(
-        *inputs,
-        "-filter_complex",
-        ";".join(graph),
-        "-map",
-        "[out]",
-        "-c:a",
-        "flac",
-        "-f",
-        "flac",
-        str(out),
-    )
+    total_s, rate = _probe(base)
+    span = (cut[0], total_s if cut[1] is None else cut[1])
+    replace_span_file(base, span, _insert_window(insert, keep, rate=rate), output=out)
 
 
 # --- the seam: how one line is voiced ------------------------------------------
@@ -638,7 +593,7 @@ def rerender_line(
     line), and the new voice goes in with as much of its own lead-in and
     decay as the cut removed, so the pauses keep their length and every later
     line moves by the change in the line's duration. Joins are faded
-    (:data:`JOIN_FADE_S`). The splice runs on the lossless master; the
+    (mixing's join fade). The splice runs on the lossless master; the
     deliverable is then encoded once from it in the take's ``output_format``.
 
     Refused before any spend: empty text, a role the cast lacks, an
@@ -682,7 +637,7 @@ def rerender_line(
     )
     master = _master_path(out)
     solo = out.with_name(f".{out.stem}-line{index}{take.path.suffix}")
-    new_master = master.with_name(f".{master.name}.tmp")
+    new_master = master.with_name(f".new-{master.name}")
     new_out = out.with_name(f".{out.stem}-encoded{out.suffix}")
     try:
         solo.write_bytes(audio)
@@ -699,7 +654,7 @@ def rerender_line(
                 f"the re-render of line {index} is timed outside its "
                 f"{solo_total:.3f}s of audio"
             )
-        _splice(
+        _splice_line(
             take.master, solo, cut=cut, keep=(start - pre, end + post), out=new_master
         )
         _encode(new_master, new_out, take.output_format)

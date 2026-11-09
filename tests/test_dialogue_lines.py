@@ -681,3 +681,22 @@ def test_a_last_line_timed_past_the_take_ends_with_the_take(tmp_path, api):
     assert take.lines[-1].end_s == pytest.approx(total)
     new = rerender_line(take, 2, text="Listen again!", out_path=tmp_path / "ed.wav")
     assert new.lines[-1].end_s <= len(decode(new.path)) / RATE + 1e-9
+
+
+@needs_ffmpeg
+def test_the_insert_window_is_exact_and_silent_outside_the_insert(tmp_path):
+    """braidio#209: the one thing the splice still owns is which window of the
+    re-rendered line goes in; outside the insert it is silence."""
+    from braidio.dialogue_lines import _insert_window
+
+    n = RATE // 2  # half a second of tone
+    src = tmp_path / "solo.wav"
+    src.write_bytes(_wav(_tone(440.0, n)))
+    window = _insert_window(src, (-0.25, 0.75), rate=RATE)
+    assert len(window) == RATE  # exactly keep1 - keep0 long
+    quarter = RATE // 4
+    assert float(abs(window[: quarter - 50]).max()) < 1e-4  # leading silence
+    assert float(abs(window[quarter + 100 : quarter + n - 100]).max()) > 0.1  # the tone
+    assert float(abs(window[quarter + n + 50 :]).max()) < 1e-4  # trailing silence
+    with pytest.raises(ValueError, match="nothing to insert"):
+        _insert_window(src, (0.5, 0.5), rate=RATE)

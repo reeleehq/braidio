@@ -42,7 +42,7 @@ from braidio.tts import DialogueSegment, text_to_dialogue_with_timestamps
 DEFAULT_OUTPUT_FORMAT = "mp3_44100_128"
 
 #: The lossless master's name beside the deliverable: ``take.mp3`` ->
-#: ``take.master.flac``.
+#: ``take.mp3.master.flac``.
 MASTER_SUFFIX = ".master.flac"
 
 #: Float slack when checking that lines do not overlap: offsets are sums of
@@ -95,8 +95,9 @@ class DialogueTake:
     ``path`` is the deliverable (in ``output_format``); ``master`` the lossless
     FLAC every splice operates on, and ``master_sha256`` its content hash, so
     a take whose master has changed since is refused instead of mis-cut.
-    ``lines`` are the turns in order, timed; ``turns``, ``cast`` and
-    ``output_format`` are what :func:`rerender_line` needs to re-voice one.
+    ``lines`` are the turns in order, timed (``turns`` is their ``(role, text)``
+    view); ``cast`` and ``output_format`` are what :func:`rerender_line` needs to
+    re-voice one.
 
     A take is checked when built: one line per turn, indexed ``0..n-1`` in
     order, each with its turn's role and text, every role in the cast, and the
@@ -112,7 +113,6 @@ class DialogueTake:
 
     path: Path
     lines: tuple[DialogueLine, ...]
-    turns: tuple[tuple[str, str], ...]
     master: Path
     master_sha256: str
     cast: ConversationCast = DEFAULT_CAST
@@ -120,6 +120,11 @@ class DialogueTake:
 
     def __post_init__(self):
         _check_take(self)
+
+    @property
+    def turns(self) -> tuple[tuple[str, str], ...]:
+        """``(role, text)`` per line: what was sent to the dialogue endpoint."""
+        return tuple((ln.role, ln.text) for ln in self.lines)
 
     def to_dict(self) -> dict:
         """A JSON-able record of the take (no secret ever lives on a take)."""
@@ -134,10 +139,10 @@ class DialogueTake:
                     "text": ln.text,
                     "offset_s": ln.offset_s,
                     "duration_s": ln.duration_s,
+                    "end_s": ln.end_s,
                 }
                 for ln in self.lines
             ],
-            "turns": [list(t) for t in self.turns],
             "cast": {
                 "roles": dict(self.cast.roles),
                 "model_id": self.cast.model_id,
@@ -154,8 +159,9 @@ class DialogueTake:
             path=Path(d["path"]),
             master=Path(d["master"]),
             master_sha256=d["master_sha256"],
-            lines=tuple(DialogueLine(**ln) for ln in d["lines"]),
-            turns=tuple((role, text) for role, text in d["turns"]),
+            lines=tuple(
+                DialogueLine(**{k: ln[k] for k in _LINE_FIELDS}) for ln in d["lines"]
+            ),
             cast=ConversationCast(
                 roles=dict(cast["roles"]),
                 model_id=cast["model_id"],
@@ -165,22 +171,18 @@ class DialogueTake:
         )
 
 
+#: The stored fields of a line (``end_s`` is derived, so a stored one is ignored).
+_LINE_FIELDS = ("index", "role", "text", "offset_s", "duration_s")
+
+
 def _check_take(take: DialogueTake) -> None:
-    if len(take.lines) != len(take.turns):
-        raise ValueError(
-            f"a take has one line per turn; got {len(take.lines)} line(s) "
-            f"for {len(take.turns)} turn(s)"
-        )
-    unknown = sorted({role for role, _ in take.turns} - set(take.cast.roles))
+    unknown = sorted({ln.role for ln in take.lines} - set(take.cast.roles))
     if unknown:
         raise ValueError(f"the take's cast has no voice for role(s) {unknown}")
     prev_end = 0.0
-    for i, (ln, (role, text)) in enumerate(zip(take.lines, take.turns)):
-        if (ln.index, ln.role, ln.text) != (i, role, text):
-            raise ValueError(
-                f"line {i} must be index {i} with turn {i}'s role and text; "
-                f"got index {ln.index}, role {ln.role!r}"
-            )
+    for i, ln in enumerate(take.lines):
+        if ln.index != i:
+            raise ValueError(f"line {i} must have index {i}; got index {ln.index}")
         if ln.duration_s <= 0 or ln.offset_s < prev_end - _TIME_EPS_S:
             raise ValueError(
                 f"line {i} ({ln.offset_s:.3f}s + {ln.duration_s:.3f}s) is empty "
@@ -247,7 +249,7 @@ def _sha256(path: Path) -> str:
 
 
 def _master_path(deliverable: Path) -> Path:
-    return deliverable.with_name(f"{deliverable.stem}{MASTER_SUFFIX}")
+    return deliverable.with_name(f"{deliverable.name}{MASTER_SUFFIX}")
 
 
 def _ffmpeg(*args: str) -> None:
@@ -276,7 +278,7 @@ def _input_spans(segments, n_inputs: int) -> dict[int, tuple[float, float]]:
         if not 0 <= seg.input_index < n_inputs:
             raise DialogueTimingError(
                 f"a voice segment names input {seg.input_index}, "
-                f"but the take has {n_inputs} turn(s)"
+                f"but only {n_inputs} turn(s) were sent"
             )
         lo, hi = spans.get(seg.input_index, (seg.start_s, seg.end_s))
         spans[seg.input_index] = (min(lo, seg.start_s), max(hi, seg.end_s))
@@ -326,7 +328,7 @@ def _lines(turns, bounds, *, total_s: float) -> tuple[DialogueLine, ...]:
     return tuple(lines)
 
 
-# --- the splice (to move to mixing) --------------------------------------------
+# --- the splice (mixing's replace_span_file does the cutting) --------------------------------------------
 
 
 def _insert_window(
@@ -359,22 +361,32 @@ def _splice_line(
     base: Path,
     insert: Path,
     *,
-    cut: tuple[float, float | None],
+    span: tuple[float, float],
+    rate: int,
     keep: tuple[float, float],
     out: Path,
 ) -> None:
-    """Write ``base[:cut0] + insert[keep0:keep1] + base[cut1:]`` to ``out``.
+    """Write ``base[:span0] + insert[keep0:keep1] + base[span1:]`` to ``out``.
 
-    ``cut[1] is None`` means "to the end of ``base``". The cutting, the faded
-    joins (``mixing``'s own join fade) and the single lossless encode are
+    ``rate`` is ``base``'s sample rate. The cutting, the faded joins (mixing's
+    own join fade) and the single lossless encode are
     :func:`mixing.splice.replace_span_file`'s; what is braidio's is only which
     window of the re-rendered line goes in.
     """
     from mixing.splice import replace_span_file
 
-    total_s, rate = _probe(base)
-    span = (cut[0], total_s if cut[1] is None else cut[1])
     replace_span_file(base, span, _insert_window(insert, keep, rate=rate), output=out)
+
+
+def _scratch(near: Path, tag: str, suffix: str) -> Path:
+    """A fresh, unique, hidden scratch file beside ``near`` (empty, created)."""
+    import tempfile
+
+    fd, name = tempfile.mkstemp(
+        dir=near.parent, prefix=f".{near.stem}{tag}-", suffix=suffix
+    )
+    os.close(fd)
+    return Path(name)
 
 
 # --- the seam: how one line is voiced ------------------------------------------
@@ -501,7 +513,6 @@ def render_dialogue_lines(
     take = DialogueTake(
         path=out,
         lines=_lines(turns, bounds, total_s=total_s),
-        turns=turns,
         master=master,
         master_sha256=_sha256(master),
         cast=cast,
@@ -619,7 +630,7 @@ def rerender_line(
     _encode_args(take.output_format)
     _require_ffmpeg()
     _check_master(take)
-    total_s, _ = _probe(take.master)
+    total_s, rate = _probe(take.master)
     cut, pre, post = _cut_points(take, index, total_s)
     out = Path(out_path) if out_path is not None else take.path
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -636,9 +647,10 @@ def rerender_line(
         refresh=refresh,
     )
     master = _master_path(out)
-    solo = out.with_name(f".{out.stem}-line{index}{take.path.suffix}")
-    new_master = master.with_name(f".new-{master.name}")
-    new_out = out.with_name(f".{out.stem}-encoded{out.suffix}")
+    # Unique per call, so two edits of one take cannot unlink each other's files.
+    solo = _scratch(out, f"-line{index}", take.path.suffix)
+    new_master = _scratch(out, "-master", ".flac")
+    new_out = _scratch(out, "-encoded", out.suffix)
     try:
         solo.write_bytes(audio)
         solo_total, _ = _probe(solo)
@@ -655,7 +667,12 @@ def rerender_line(
                 f"{solo_total:.3f}s of audio"
             )
         _splice_line(
-            take.master, solo, cut=cut, keep=(start - pre, end + post), out=new_master
+            take.master,
+            solo,
+            span=(cut[0], total_s if cut[1] is None else cut[1]),
+            rate=rate,
+            keep=(start - pre, end + post),
+            out=new_master,
         )
         _encode(new_master, new_out, take.output_format)
         digest = _sha256(new_master)
@@ -673,11 +690,5 @@ def rerender_line(
         else (replace(ln, offset_s=ln.offset_s + delta) if ln.index > index else ln)
         for ln in take.lines
     )
-    turns = tuple(
-        (role, text) if i == index else (role, t)
-        for i, (role, t) in enumerate(take.turns)
-    )
-    new = replace(
-        take, path=out, master=master, master_sha256=digest, lines=lines, turns=turns
-    )
+    new = replace(take, path=out, master=master, master_sha256=digest, lines=lines)
     return (new, was_cached) if return_cache_status else new

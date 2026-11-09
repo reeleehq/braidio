@@ -549,9 +549,8 @@ def test_a_rerender_without_a_segment_for_the_line_raises(tmp_path, api):
 def test_from_dict_checks_the_stored_take(tmp_path, api):
     d = _render(tmp_path).to_dict()
     for broken, match in (
-        ({"turns": d["turns"][:1]}, "one line per turn"),
         ({"cast": {**d["cast"], "roles": {"A": "voiceA"}}}, "no voice for role"),
-        ({"lines": [d["lines"][1], d["lines"][0], d["lines"][2]]}, "line 0 must"),
+        ({"lines": [d["lines"][1], d["lines"][0], d["lines"][2]]}, "must have index"),
         (
             {
                 "lines": [
@@ -700,3 +699,49 @@ def test_the_insert_window_is_exact_and_silent_outside_the_insert(tmp_path):
     assert float(abs(window[quarter + n + 50 :]).max()) < 1e-4  # trailing silence
     with pytest.raises(ValueError, match="nothing to insert"):
         _insert_window(src, (0.5, 0.5), rate=RATE)
+
+
+@needs_ffmpeg
+def test_a_stored_take_round_trips_with_end_s_and_ignores_a_legacy_turns_key(
+    tmp_path, api
+):
+    take = _render(tmp_path)
+    d = take.to_dict()
+    assert [ln["end_s"] for ln in d["lines"]] == pytest.approx(
+        [ln.end_s for ln in take.lines]
+    )
+    assert DialogueTake.from_dict({**d, "turns": [["Z", "stale"]]}) == take
+    assert take.turns == tuple((ln.role, ln.text) for ln in take.lines)
+
+
+@needs_ffmpeg
+def test_rerendering_the_first_line_keeps_its_lead_and_shifts_the_rest(tmp_path, api):
+    take = _render(tmp_path)
+    before = decode(take.path)
+    new_text = "Hi"
+    new = rerender_line(take, 0, text=new_text, out_path=tmp_path / "first.wav")
+    after = decode(new.path)
+    delta = (len(new_text) - len(take.lines[0].text)) * S_PER_CHAR
+    lead = _samples(take.lines[0].offset_s)
+    assert after[:lead] == before[:lead]  # the lead-in is untouched
+    assert len(after) - len(before) == _samples(delta)
+    assert new.lines[1].offset_s == pytest.approx(take.lines[1].offset_s + delta)
+
+
+@needs_ffmpeg
+def test_two_deliverables_in_one_folder_do_not_share_a_master(tmp_path, api):
+    """take.wav and take.mp3 used to share take.master.flac (review of #145)."""
+    a = _render(tmp_path)  # take.wav
+    other = render_dialogue_lines(
+        TURNS, CAST, out_path=tmp_path / "take.mp3", cache=tmp_path / "cache"
+    )
+    assert a.master != other.master
+    assert a.master.name.startswith(a.path.name)
+
+
+def test_scratch_files_are_unique_per_call(tmp_path):
+    from braidio.dialogue_lines import _scratch
+
+    one, two = (_scratch(tmp_path / "take.wav", "-line0", ".wav") for _ in range(2))
+    assert one != two and one.exists() and two.exists()
+    assert one.parent == tmp_path and one.name.startswith(".take-line0-")

@@ -109,6 +109,7 @@ from braidio.dialogue_lines import (  # noqa: F401
     DialogueLine,
     DialogueTimingError,
     StaleTakeError,
+    LineSynthesizer,
 )
 from braidio.delivery import (  # noqa: F401
     Delivery,

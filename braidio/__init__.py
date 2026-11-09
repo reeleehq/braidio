@@ -252,8 +252,42 @@ HAS_NW = False
 #: (``tests/test_optional_layers.py``, braidio#187) and names this on failure.
 _GRAPH_IMPORT_ERROR: ImportError | None = None
 _NW_IMPORT_ERROR: ImportError | None = None
+#: Optional distributions a layer needs: the only reason an ``ImportError`` is
+#: an *absence* rather than a defect (braidio#207).
+_GRAPH_DEPS = ("lacing",)
+_NW_DEPS = ("lacing", "nw", "falaw")
+
+
+def _layer_failed(layer: str, exc: ImportError, loaded: list[str], deps) -> None:
+    """Say so when an optional layer failed in a way a bare install does not.
+
+    A layer whose dependency is simply not installed fails on its first import,
+    silently: that is the bare install. A layer that fails *after* some of its
+    modules registered (``loaded``), or for a reason other than a missing
+    dependency, is a defect, and is left half-registered with its flag ``False``
+    (lacing and nw have no unregister to roll it back with), so it is reported
+    once, naming what did load, instead of hiding behind the flag.
+    """
+    import warnings
+
+    absent = (
+        isinstance(exc, ModuleNotFoundError) and (exc.name or "").split(".")[0] in deps
+    )
+    if absent and not loaded:
+        return
+    warnings.warn(
+        f"braidio's {layer} layer failed to load ({exc!r}); "
+        f"{'partially loaded: ' + ', '.join(loaded) if loaded else 'nothing registered'}",
+        ImportWarning,
+        stacklevel=2,
+    )
+
+
+_graph_loaded: list[str] = []
 try:  # needs lacing
     from braidio import bodies  # noqa: F401  (registers schemas)
+
+    _graph_loaded.append("bodies")
     from braidio.provenance import (  # noqa: F401
         record_render,
         stale_after,
@@ -263,15 +297,22 @@ try:  # needs lacing
     HAS_GRAPH = True
 except ImportError as _exc:  # pragma: no cover - optional dep
     _GRAPH_IMPORT_ERROR = _exc
+    _layer_failed("graph", _exc, _graph_loaded, _GRAPH_DEPS)
+_nw_loaded: list[str] = []
 try:  # needs nw
     from braidio.project import Project  # noqa: F401
+
+    _nw_loaded.append("project")
     from braidio import transforms  # noqa: F401  (registers braidio's nw.Transforms)
+
+    _nw_loaded.append("transforms")
     from braidio.transforms import WeaveReceipt, weave_project  # noqa: F401
     from braidio.genre import COMMENTARY_WEAVE  # noqa: F401  (registers the nw.Genre)
 
     HAS_NW = True
 except ImportError as _exc:  # pragma: no cover - optional dep
     _NW_IMPORT_ERROR = _exc
+    _layer_failed("nw", _exc, _nw_loaded, _NW_DEPS)
 
 
 def skills_dir():

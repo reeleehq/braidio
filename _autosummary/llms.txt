@@ -6,6 +6,7 @@
 ## Pages in this subsection
 
 - [braidio](braidio.html.md): braidio — weave narration with extracted media segments into productions.
+- [braidio.align](braidio.align.html.md): Time an authored script on narration braidio did not render (braidio#212).
 - [braidio.captions](braidio.captions.html.md): Subtitles for a rendered production, built from the script it was rendered from.
 - [braidio.compose](braidio.compose.html.md): Config-driven narration composition (#20) — the reusable entrypoint.
 - [braidio.conversation](braidio.conversation.html.md): Conversational register: render an exchange as people &#42;talking to each other&#42;.

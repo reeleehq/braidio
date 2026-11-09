@@ -8,6 +8,7 @@
 - [braidio](index.html.md): &#42;&#42;Weave &#42;commentary&#42; — solo, duo, panel, debate, interview, documentary — with
 - [API reference](api.html.md): | &#96;braidio&#96;   | braidio — weave narration with extracted media segments into productions.   |
 - [braidio](_autosummary/braidio.html.md): braidio — weave narration with extracted media segments into productions.
+- [braidio.align](_autosummary/braidio.align.html.md): Time an authored script on narration braidio did not render (braidio#212).
 - [braidio.captions](_autosummary/braidio.captions.html.md): Subtitles for a rendered production, built from the script it was rendered from.
 - [braidio.compose](_autosummary/braidio.compose.html.md): Config-driven narration composition (#20) — the reusable entrypoint.
 - [braidio.conversation](_autosummary/braidio.conversation.html.md): Conversational register: render an exchange as people &#42;talking to each other&#42;.
@@ -37,7 +38,7 @@
 - [braidio.weave](_autosummary/braidio.weave.html.md): Weave narration + audio clips on a timeline (#21) — the reusable mix engine.
 - [braidio.weave_config](_autosummary/braidio.weave_config.html.md): WeaveConfig — every editing choice for weaving narration + segments (#20).
 - [For AI agents](ai-agents.html.md): &#96;braidio&#96; ships artifacts for coding agents alongside its code. This page lists
-- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-11-08 23:35 UTC&#42;&#42; from commit &lt;a href="https://github.com/ree...
+- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-11-09 00:16 UTC&#42;&#42; from commit &lt;a href="https://github.com/ree...
 
 ## Optional
 

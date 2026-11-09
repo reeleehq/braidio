@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="_static/documentation_options.js?v=4309da3b"></script>
+    <script src="_static/documentation_options.js?v=69b21de1"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -57,7 +57,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.119" />
+  <meta name="docsearch:version" content="0.0.120" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -610,8 +610,18 @@ play.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">Path</span><span class="p">(</span><span class="s2">"ep.srt"</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">braidio</span><span class="o">.</span><span class="n">captions_for</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="n">timeline</span><span class="p">,</span> <span class="n">max_chars</span><span class="o">=</span><span class="mi">42</span><span class="p">))</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">braidio.captions</span></code> is part of the core (pure, no extra dependencies);
-For a production you will <strong>reopen and re-edit</strong> — swap a still, change a
+<p><code class="docutils literal notranslate"><span class="pre">braidio.captions</span></code> is part of the core (pure, no extra dependencies).</p>
+<p>For narration braidio did <strong>not</strong> render (another TTS, a hand recording) there is
+no timeline, so measure one: <code class="docutils literal notranslate"><span class="pre">braidio.align_script(script_or_text,</span> <span class="pre">words)</span></code> walks the
+authored text against the word times of any word-level transcript, and returns the
+<code class="docutils literal notranslate"><span class="pre">timeline</span></code> (for <code class="docutils literal notranslate"><span class="pre">plan_spans</span></code>) and <code class="docutils literal notranslate"><span class="pre">cues</span></code> carrying your words at the measured
+times, never the recogniser’s. It is free and offline.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">a</span> <span class="o">=</span> <span class="n">braidio</span><span class="o">.</span><span class="n">align_script</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="n">scribe_words</span><span class="p">,</span> <span class="n">duration_s</span><span class="o">=</span><span class="n">mix_seconds</span><span class="p">)</span>
+<span class="n">Path</span><span class="p">(</span><span class="s2">"ep.srt"</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">braidio</span><span class="o">.</span><span class="n">captions_from_cues</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">cues</span><span class="p">,</span> <span class="n">max_chars</span><span class="o">=</span><span class="mi">42</span><span class="p">))</span>
+<span class="n">spans</span> <span class="o">=</span> <span class="n">braidio</span><span class="o">.</span><span class="n">video</span><span class="o">.</span><span class="n">plan_spans</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">timeline</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For a production you will <strong>reopen and re-edit</strong> — swap a still, change a
 move, re-render — the picture track lives in the project graph instead: four
 <code class="docutils literal notranslate"><span class="pre">lacing</span></code> bodies (<code class="docutils literal notranslate"><span class="pre">still/v1</span></code>, <code class="docutils literal notranslate"><span class="pre">video-panel/v1</span></code>, <code class="docutils literal notranslate"><span class="pre">video-cut/v1</span></code>,
 <code class="docutils literal notranslate"><span class="pre">label-track/v1</span></code>) and three free transforms on the <code class="docutils literal notranslate"><span class="pre">commentary_weave</span></code> genre
@@ -688,7 +698,7 @@ everything else.</p>
 </section>
 </section>
 
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-08 23:35 UTC from <a href="https://github.com/reeleehq/braidio/commit/6456d76e124b9bea30797b106c604184de8a23e8">6456d76</a> (main) · braidio 0.0.119 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-09 00:16 UTC from <a href="https://github.com/reeleehq/braidio/commit/23a16fdccb9ce80751b5f0bce09bd570067471ba">23a16fd</a> (main) · braidio 0.0.120 · <a href="about-this-build.html">about this build</a></p>
 
                 </article>
               

@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../_static/documentation_options.js?v=4309da3b"></script>
+    <script src="../_static/documentation_options.js?v=69b21de1"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -54,11 +54,11 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="braidio.compose" href="braidio.compose.html" />
-    <link rel="prev" title="braidio" href="braidio.html" />
+    <link rel="prev" title="braidio.align" href="braidio.align.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.119" />
+  <meta name="docsearch:version" content="0.0.120" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -320,6 +320,7 @@
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="braidio.html">braidio</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="braidio.align.html">braidio.align</a></li>
 <li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#">braidio.captions</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.compose.html">braidio.compose</a></li>
 <li class="toctree-l2"><a class="reference internal" href="braidio.conversation.html">braidio.conversation</a></li>
@@ -450,10 +451,13 @@ installed beyond braidio itself.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#braidio.captions.captions_for" title="braidio.captions.captions_for"><code class="xref py py-obj docutils literal notranslate"><span class="pre">captions_for</span></code></a>(script, timeline, *[, max_chars])</p></td>
 <td><p>The SRT document for <code class="docutils literal notranslate"><span class="pre">script</span></code> as laid out by <code class="docutils literal notranslate"><span class="pre">timeline</span></code>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.captions.cues_for" title="braidio.captions.cues_for"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cues_for</span></code></a>(script, timeline, *[, max_chars])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.captions.captions_from_cues" title="braidio.captions.captions_from_cues"><code class="xref py py-obj docutils literal notranslate"><span class="pre">captions_from_cues</span></code></a>(cues, *[, max_chars, ...])</p></td>
+<td><p>An SRT document for cues timed from <em>measured</em> words (braidio#212).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.captions.cues_for" title="braidio.captions.cues_for"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cues_for</span></code></a>(script, timeline, *[, max_chars])</p></td>
 <td><p>Subtitle cues for <code class="docutils literal notranslate"><span class="pre">script</span></code> as laid out by <code class="docutils literal notranslate"><span class="pre">timeline</span></code>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.captions.format_srt" title="braidio.captions.format_srt"><code class="xref py py-obj docutils literal notranslate"><span class="pre">format_srt</span></code></a>(cues)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.captions.format_srt" title="braidio.captions.format_srt"><code class="xref py py-obj docutils literal notranslate"><span class="pre">format_srt</span></code></a>(cues)</p></td>
 <td><p>Render <code class="docutils literal notranslate"><span class="pre">cues</span></code> as an SRT document.</p></td>
 </tr>
 </tbody>
@@ -481,6 +485,33 @@ installed beyond braidio itself.</p>
 <dt class="sig sig-object py" id="braidio.captions.captions_for">
 <span class="sig-prename descclassname"><span class="pre">braidio.captions.</span></span><span class="sig-name descname"><span class="pre">captions_for</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">script</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeline</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_chars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/captions.html#captions_for"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.captions.captions_for" title="Link to this definition">#</a></dt>
 <dd><p>The SRT document for <code class="docutils literal notranslate"><span class="pre">script</span></code> as laid out by <code class="docutils literal notranslate"><span class="pre">timeline</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="braidio.captions.captions_from_cues">
+<span class="sig-prename descclassname"><span class="pre">braidio.captions.</span></span><span class="sig-name descname"><span class="pre">captions_from_cues</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cues</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_chars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">42</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hold_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gap_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/captions.html#captions_from_cues"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.captions.captions_from_cues" title="Link to this definition">#</a></dt>
+<dd><p>An SRT document for cues timed from <em>measured</em> words (braidio#212).</p>
+<p>Each cue’s text is wrapped to <em>lines</em> of at most <code class="docutils literal notranslate"><span class="pre">max_chars</span></code> (not to be
+confused with <a class="reference internal" href="braidio.align.html#braidio.align.align_script" title="braidio.align.align_script"><code class="xref py py-func docutils literal notranslate"><span class="pre">align_script()</span></code></a>’s <code class="docutils literal notranslate"><span class="pre">max_chars</span></code>, the longest
+<em>cue</em>) and held
+<code class="docutils literal notranslate"><span class="pre">hold_s</span></code> past its last word, never into the next cue (<code class="docutils literal notranslate"><span class="pre">gap_s</span></code> before it).
+Cues timed by <a class="reference internal" href="braidio.align.html#braidio.align.align_script" title="braidio.align.align_script"><code class="xref py py-func docutils literal notranslate"><span class="pre">align_script()</span></code></a> are speech-tight, so
+unlike <a class="reference internal" href="#braidio.captions.captions_for" title="braidio.captions.captions_for"><code class="xref py py-func docutils literal notranslate"><span class="pre">captions_for()</span></code></a> they get this hold.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">captions_from_cues</span><span class="p">([</span><span class="n">Cue</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="s2">"Hi there."</span><span class="p">),</span> <span class="n">Cue</span><span class="p">(</span><span class="mf">1.2</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="s2">"Bye."</span><span class="p">)]))</span>
+<span class="go">1</span>
+<span class="go">00:00:00,000 --&gt; 00:00:01,150</span>
+<span class="go">Hi there.</span>
+
+<span class="go">2</span>
+<span class="go">00:00:01,200 --&gt; 00:00:02,600</span>
+<span class="go">Bye.</span>
+</pre></div>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span></p>
@@ -542,12 +573,12 @@ single cue overflows a player’s two lines. 0 leaves sentences whole.</p></li>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="braidio.html"
+       href="braidio.align.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">braidio</p>
+        <p class="prev-next-title">braidio.align</p>
       </div>
     </a>
     <a class="right-next"
@@ -580,6 +611,7 @@ single cue overflows a player’s two lines. 0 leaves sentences whole.</p></li>
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.captions.Cue"><code class="docutils literal notranslate"><span class="pre">Cue</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.captions.captions_for"><code class="docutils literal notranslate"><span class="pre">captions_for()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.captions.captions_from_cues"><code class="docutils literal notranslate"><span class="pre">captions_from_cues()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.captions.cues_for"><code class="docutils literal notranslate"><span class="pre">cues_for()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.captions.format_srt"><code class="docutils literal notranslate"><span class="pre">format_srt()</span></code></a></li>
 </ul>

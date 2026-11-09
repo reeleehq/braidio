@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../../_static/documentation_options.js?v=4309da3b"></script>
+    <script src="../../_static/documentation_options.js?v=69b21de1"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.119" />
+  <meta name="docsearch:version" content="0.0.120" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -756,7 +756,7 @@ window.runMermaid = runMermaid;</script>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.script</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dialogue</span><span class="p">,</span> <span class="n">Narration</span><span class="p">,</span> <span class="n">SegmentBeat</span>
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"Cue"</span><span class="p">,</span> <span class="s2">"captions_for"</span><span class="p">,</span> <span class="s2">"cues_for"</span><span class="p">,</span> <span class="s2">"format_srt"</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"Cue"</span><span class="p">,</span> <span class="s2">"captions_for"</span><span class="p">,</span> <span class="s2">"captions_from_cues"</span><span class="p">,</span> <span class="s2">"cues_for"</span><span class="p">,</span> <span class="s2">"format_srt"</span><span class="p">]</span>
 
 <span class="c1">#: Sentence boundary: end punctuation followed by whitespace. The text is ours</span>
 <span class="c1">#: (authored, not scraped), so a full NLP splitter would be ceremony.</span>
@@ -889,6 +889,58 @@ window.runMermaid = runMermaid;</script>
         <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cues</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
     <span class="p">]</span>
     <span class="k">return</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">blocks</span><span class="p">)</span></div>
+
+
+
+<span class="c1">#: How long a measured cue lingers after its last word, and the gap kept before the</span>
+<span class="c1">#: next cue (seconds); what a reader needs to finish a line.</span>
+<span class="n">DEFAULT_HOLD_S</span> <span class="o">=</span> <span class="mf">0.6</span>
+<span class="n">DEFAULT_CUE_GAP_S</span> <span class="o">=</span> <span class="mf">0.05</span>
+
+<span class="c1">#: Longest SRT *line* (chars) in a cue; a player shows two.</span>
+<span class="n">DEFAULT_LINE_CHARS</span> <span class="o">=</span> <span class="mi">42</span>
+
+
+<div class="viewcode-block" id="captions_from_cues">
+<a class="viewcode-back" href="../../_autosummary/braidio.captions.html#braidio.captions_from_cues">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">captions_from_cues</span><span class="p">(</span>
+    <span class="n">cues</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">max_chars</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_LINE_CHARS</span><span class="p">,</span>
+    <span class="n">hold_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_HOLD_S</span><span class="p">,</span>
+    <span class="n">gap_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_CUE_GAP_S</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""An SRT document for cues timed from *measured* words (braidio#212).</span>
+
+<span class="sd">    Each cue's text is wrapped to *lines* of at most ``max_chars`` (not to be</span>
+<span class="sd">    confused with :func:`~braidio.align.align_script`'s ``max_chars``, the longest</span>
+<span class="sd">    *cue*) and held</span>
+<span class="sd">    ``hold_s`` past its last word, never into the next cue (``gap_s`` before it).</span>
+<span class="sd">    Cues timed by :func:`~braidio.align.align_script` are speech-tight, so</span>
+<span class="sd">    unlike :func:`captions_for` they get this hold.</span>
+
+<span class="sd">    &gt;&gt;&gt; print(captions_from_cues([Cue(0.0, 1.0, "Hi there."), Cue(1.2, 2.0, "Bye.")]))</span>
+<span class="sd">    1</span>
+<span class="sd">    00:00:00,000 --&gt; 00:00:01,150</span>
+<span class="sd">    Hi there.</span>
+<span class="sd">    &lt;BLANKLINE&gt;</span>
+<span class="sd">    2</span>
+<span class="sd">    00:00:01,200 --&gt; 00:00:02,600</span>
+<span class="sd">    Bye.</span>
+<span class="sd">    &lt;BLANKLINE&gt;</span>
+<span class="sd">    """</span>
+    <span class="n">cues</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">cues</span><span class="p">)</span>
+    <span class="n">held</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">cue</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cues</span><span class="p">):</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="n">cue</span><span class="o">.</span><span class="n">end_s</span> <span class="o">+</span> <span class="n">hold_s</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">cues</span><span class="p">):</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">end</span><span class="p">,</span> <span class="n">cues</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">start_s</span> <span class="o">-</span> <span class="n">gap_s</span><span class="p">)</span>
+        <span class="n">held</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Cue</span><span class="p">(</span><span class="n">cue</span><span class="o">.</span><span class="n">start_s</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">end</span><span class="p">,</span> <span class="n">cue</span><span class="o">.</span><span class="n">end_s</span><span class="p">),</span> <span class="n">cue</span><span class="o">.</span><span class="n">text</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">max_chars</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">held</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">Cue</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">start_s</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">end_s</span><span class="p">,</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_wrap</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">max_chars</span><span class="p">)))</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">held</span>
+        <span class="p">]</span>
+    <span class="k">return</span> <span class="n">format_srt</span><span class="p">(</span><span class="n">held</span><span class="p">)</span></div>
 
 
 

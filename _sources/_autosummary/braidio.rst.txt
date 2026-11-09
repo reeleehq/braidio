@@ -12,6 +12,8 @@
       script_from_markdown
       untagged_differences
       captions_for
+      captions_from_cues
+      align_script
       cues_for
       format_srt
       narration_segments
@@ -67,6 +69,7 @@
       WeaveKind
       TagMismatch
       Cue
+      Alignment
       Script
       Narration
       SegmentBeat
@@ -109,6 +112,7 @@
    :toctree:
    :recursive:
 
+   align
    bodies
    captions
    compose

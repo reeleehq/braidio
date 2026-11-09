@@ -9,6 +9,7 @@ braidio.captions
    .. autosummary::
    
       captions_for
+      captions_from_cues
       cues_for
       format_srt
    

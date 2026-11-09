@@ -1,0 +1,19 @@
+braidio.align
+=============
+
+.. automodule:: braidio.align
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      align_script
+      tokens
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      Alignment
+   

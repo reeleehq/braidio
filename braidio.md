@@ -1,4 +1,4 @@
-> built 2026-11-08 23:35 UTC from 6456d76 (main) · braidio 0.0.119. Details: build_info.json
+> built 2026-11-09 00:16 UTC from 23a16fd (main) · braidio 0.0.120. Details: build_info.json
 
 # index.html.md
 
@@ -221,7 +221,20 @@ play.
 Path("ep.srt").write_text(braidio.captions_for(script, timeline, max_chars=42))
 ```
 
-`braidio.captions` is part of the core (pure, no extra dependencies);
+`braidio.captions` is part of the core (pure, no extra dependencies).
+
+For narration braidio did **not** render (another TTS, a hand recording) there is
+no timeline, so measure one: `braidio.align_script(script_or_text, words)` walks the
+authored text against the word times of any word-level transcript, and returns the
+`timeline` (for `plan_spans`) and `cues` carrying your words at the measured
+times, never the recogniser’s. It is free and offline.
+
+```python
+a = braidio.align_script(script, scribe_words, duration_s=mix_seconds)
+Path("ep.srt").write_text(braidio.captions_from_cues(a.cues, max_chars=42))
+spans = braidio.video.plan_spans(a.timeline)
+```
+
 For a production you will **reopen and re-edit** — swap a still, change a
 move, re-render — the picture track lives in the project graph instead: four
 `lacing` bodies (`still/v1`, `video-panel/v1`, `video-cut/v1`,
@@ -289,6 +302,135 @@ MIT
 <p class="epythet-aggregates">This documentation as a single file: <a href="braidio.md">braidio.md</a> (Markdown, for agents).</p>
 
 
+# _autosummary/braidio.align.html.md
+
+# braidio.align
+
+Time an authored script on narration braidio did not render (braidio#212).
+
+[`captions_for()`](_autosummary/braidio.captions.html.md#braidio.captions.captions_for) and [`plan_spans()`](_autosummary/braidio.video.html.md#braidio.video.plan_spans) both
+need the [`TimelineBreakdown`](_autosummary/braidio.timeline.html.md#braidio.timeline.TimelineBreakdown) of braidio’s *own* render.
+Narration made elsewhere has none: a long script voiced track by track through
+another TTS, or a recording somebody made by hand. This module builds that
+timeline from the audio’s **measured word times** (any word-level transcript of
+it: ElevenLabs Scribe, Whisper, a forced aligner), while the words that appear in
+a caption stay the **authored** ones. Only the *times* are measured; a recogniser
+that heard “mate” for «Matte.» never reaches a subtitle.
+
+The one entry point is [`align_script()`](_autosummary/braidio.align.html.md#braidio.align.align_script):
+
+```default
+alignment = align_script(script_or_text, words)
+alignment.timeline          # plugs into braidio.video.plan_spans
+captions_from_cues(alignment.cues)   # the SRT
+```
+
+Free, offline, pure and dependency-free (stdlib `difflib`): part of the
+functional core.
+
+Seams (keyword-only, each defaulting to the strongest built-in):
+
+- `normalize`: how a text is reduced to comparable tokens (default: lowercase,
+  accents folded, letters and digits of any alphabet).
+- `unit`: what a timeline beat is, one per `"paragraph"` or one per `"beat"`.
+- `max_chars`: the longest caption *cue* before it is cut at whitespace (the
+  SRT’s line width is [`captions_from_cues()`](_autosummary/braidio.captions.html.md#braidio.captions.captions_from_cues)’s own
+  `max_chars`).
+
+A dialogue beat is timed as its turns’ text, one unit per turn; the speaker labels
+are not spoken, so they appear in no cue (unlike [`cues_for()`](_autosummary/braidio.captions.html.md#braidio.captions.cues_for)).
+
+This is the in-package stand-in for a shared word aligner (authored tokens against
+timed words), a kind of code several packages of the fleet carry; see braidio#212.
+
+### Examples
+
+```pycon
+>>> words = [
+...     {"text": "Hello", "start": 0.5, "end": 0.9},
+...     {"text": "there.", "start": 0.9, "end": 1.4},
+...     {"text": "Goodbye", "start": 3.0, "end": 3.4},
+... ]
+>>> a = align_script("Hello there.\n\nGoodbye.", words, duration_s=4.0)
+>>> [(c.text, c.start_s, c.end_s) for c in a.cues]
+[('Hello there.', 0.5, 1.4), ('Goodbye.', 3.0, 3.4)]
+>>> [(b.start, b.duration) for b in a.timeline.beats]
+[(0.0, 3.0), (3.0, 1.0)]
+>>> a.unmatched, a.matched, a.total
+((), 3, 3)
+```
+
+### Functions
+
+| [`align_script`](_autosummary/braidio.align.html.md#braidio.align.align_script)(script_or_text, words, \*[, ...])   | Align the authored `script_or_text` to the measured `words` of its audio.   |
+|---------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
+| [`tokens`](_autosummary/braidio.align.html.md#braidio.align.tokens)(text)                                     | Comparable tokens of `text`: lowercase, accents folded, letters and digits. |
+
+### Classes
+
+| [`Alignment`](_autosummary/braidio.align.html.md#braidio.align.Alignment)(timeline, cues, unmatched, ...)   | What [`align_script()`](_autosummary/braidio.align.html.md#braidio.align.align_script) measured.   |
+|----------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+
+### *class* braidio.align.Alignment(timeline, cues, unmatched, matched, total)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+What [`align_script()`](_autosummary/braidio.align.html.md#braidio.align.align_script) measured.
+
+`timeline`: one sequential beat per unit, contiguous from 0 to the end of
+the audio (a beat is its text plus the silence after it, the first also
+holds the lead-in), so `plan_spans` and `captions` take it as they take a
+render’s. `cues`: caption cues carrying the authored text at measured
+times, never overlapping. `unmatched`: the chunks no heard word matched,
+whose times were interpolated. `matched` / `total`: authored tokens a
+heard word matched, over all of them: gate on `matched / total` before
+trusting the times of audio you are unsure belongs to this text.
+
+### braidio.align.align_script(script_or_text, words, \*, duration_s=None, unit='paragraph', max_chars=84, normalize=<function tokens>, title='')
+
+Align the authored `script_or_text` to the measured `words` of its audio.
+
+* **Parameters:**
+  * **script_or_text** ([`Script`](_autosummary/braidio.script.html.md#braidio.script.Script) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – a [`Script`](_autosummary/braidio.script.html.md#braidio.script.Script) (its narration and
+    dialogue beats; segment beats are other audio and are skipped) or
+    plain text, paragraphs separated by a blank line. `[tags]` and
+    `<break/>` markup is not spoken and is dropped.
+  * **words** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]]) – `{"text" (or "word"), "start", "end"}` mappings in playback
+    order, times in seconds on the audio’s own clock. Entries whose
+    `type` is `spacing` / `audio_event` are ignored. For audio
+    made in several tracks, offset each track’s words and concatenate.
+  * **duration_s** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – length of the audio; the last beat runs to it. Default: the
+    end of the last cue.
+  * **unit** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – `"paragraph"` (a timeline beat per paragraph) or `"beat"` (one
+    per script beat; for plain text, the whole text).
+  * **max_chars** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – longest caption cue, cut at whitespace.
+  * **normalize** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]) – text to comparable tokens, see [`tokens()`](_autosummary/braidio.align.html.md#braidio.align.tokens).
+  * **title** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – the timeline’s title.
+* **Return type:**
+  [`Alignment`](_autosummary/braidio.align.html.md#braidio.align.Alignment)
+* **Returns:**
+  An [`Alignment`](_autosummary/braidio.align.html.md#braidio.align.Alignment).
+* **Raises:**
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – `unit` unknown; no text or no usable words; `words` out
+      of order (an un-offset track) or running past `duration_s`; or no
+      authored word matched a heard one (wrong audio, or `normalize`
+      drops everything).
+
+### braidio.align.tokens(text)
+
+Comparable tokens of `text`: lowercase, accents folded, letters and digits.
+
+```pycon
+>>> tokens("Été, déjà-vu 2!")
+['ete', 'deja', 'vu', '2']
+>>> tokens("Привет, мир")
+['привет', 'мир']
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+
 # _autosummary/braidio.captions.html.md
 
 # braidio.captions
@@ -330,10 +472,11 @@ Two.
 
 ### Functions
 
-| [`captions_for`](_autosummary/braidio.captions.html.md#braidio.captions.captions_for)(script, timeline, \*[, max_chars])   | The SRT document for `script` as laid out by `timeline`.   |
-|----------------------------------------------------------------------------------------------------|------------------------------------------------------------|
-| [`cues_for`](_autosummary/braidio.captions.html.md#braidio.captions.cues_for)(script, timeline, \*[, max_chars])       | Subtitle cues for `script` as laid out by `timeline`.      |
-| [`format_srt`](_autosummary/braidio.captions.html.md#braidio.captions.format_srt)(cues)                                  | Render `cues` as an SRT document.                          |
+| [`captions_for`](_autosummary/braidio.captions.html.md#braidio.captions.captions_for)(script, timeline, \*[, max_chars])   | The SRT document for `script` as laid out by `timeline`.            |
+|----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------|
+| [`captions_from_cues`](_autosummary/braidio.captions.html.md#braidio.captions.captions_from_cues)(cues, \*[, max_chars, ...])    | An SRT document for cues timed from *measured* words (braidio#212). |
+| [`cues_for`](_autosummary/braidio.captions.html.md#braidio.captions.cues_for)(script, timeline, \*[, max_chars])       | Subtitle cues for `script` as laid out by `timeline`.               |
+| [`format_srt`](_autosummary/braidio.captions.html.md#braidio.captions.format_srt)(cues)                                  | Render `cues` as an SRT document.                                   |
 
 ### Classes
 
@@ -349,6 +492,31 @@ One subtitle: `[start_s, end_s)` and the text shown.
 ### braidio.captions.captions_for(script, timeline, , max_chars=0)
 
 The SRT document for `script` as laid out by `timeline`.
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### braidio.captions.captions_from_cues(cues, , max_chars=42, hold_s=0.6, gap_s=0.05)
+
+An SRT document for cues timed from *measured* words (braidio#212).
+
+Each cue’s text is wrapped to *lines* of at most `max_chars` (not to be
+confused with [`align_script()`](_autosummary/braidio.align.html.md#braidio.align.align_script)’s `max_chars`, the longest
+*cue*) and held
+`hold_s` past its last word, never into the next cue (`gap_s` before it).
+Cues timed by [`align_script()`](_autosummary/braidio.align.html.md#braidio.align.align_script) are speech-tight, so
+unlike [`captions_for()`](_autosummary/braidio.captions.html.md#braidio.captions.captions_for) they get this hold.
+
+```pycon
+>>> print(captions_from_cues([Cue(0.0, 1.0, "Hi there."), Cue(1.2, 2.0, "Bye.")]))
+1
+00:00:00,000 --> 00:00:01,150
+Hi there.
+
+2
+00:00:01,200 --> 00:00:02,600
+Bye.
+```
 
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
@@ -1112,6 +1280,8 @@ in the *Hamilton* repo — braidio has its own #18 about something else.
 | [`script_from_markdown`](_autosummary/braidio.html.md#braidio.script_from_markdown)(md, \*[, voice, title, ...])  | Turn a markdown document into a [`Script`](_autosummary/braidio.html.md#braidio.Script) of narration beats.             |
 | [`untagged_differences`](_autosummary/braidio.html.md#braidio.untagged_differences)(before, after)                | Where `after` differs from `before` by more than `[audio tags]`.                                                        |
 | [`captions_for`](_autosummary/braidio.html.md#braidio.captions_for)(script, timeline, \*[, max_chars])    | The SRT document for `script` as laid out by `timeline`.                                                                |
+| [`captions_from_cues`](_autosummary/braidio.html.md#braidio.captions_from_cues)(cues, \*[, max_chars, ...])     | An SRT document for cues timed from *measured* words (braidio#212).                                                     |
+| [`align_script`](_autosummary/braidio.html.md#braidio.align_script)(script_or_text, words, \*[, ...])     | Align the authored `script_or_text` to the measured `words` of its audio.                                               |
 | [`cues_for`](_autosummary/braidio.html.md#braidio.cues_for)(script, timeline, \*[, max_chars])        | Subtitle cues for `script` as laid out by `timeline`.                                                                   |
 | [`format_srt`](_autosummary/braidio.html.md#braidio.format_srt)(cues)                                   | Render `cues` as an SRT document.                                                                                       |
 | [`narration_segments`](_autosummary/braidio.html.md#braidio.narration_segments)(script)                         | All narration (default text) of a script, as sentence-level segments.                                                   |
@@ -1166,6 +1336,7 @@ in the *Hamilton* repo — braidio has its own #18 about something else.
 |----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
 | [`TagMismatch`](_autosummary/braidio.html.md#braidio.TagMismatch)(index, before, after)                 | A beat whose text changed by more than audio tags.                                                                 |
 | [`Cue`](_autosummary/braidio.html.md#braidio.Cue)(start_s, end_s, text)                         | One subtitle: `[start_s, end_s)` and the text shown.                                                               |
+| [`Alignment`](_autosummary/braidio.html.md#braidio.Alignment)(timeline, cues, unmatched, ...)         | What [`align_script()`](_autosummary/braidio.html.md#braidio.align_script) measured.                                     |
 | [`Script`](_autosummary/braidio.html.md#braidio.Script)(title, id_slug[, beats])                   | An ordered production script.                                                                                      |
 | [`Narration`](_autosummary/braidio.html.md#braidio.Narration)(text[, style, published_text, ...])     | A spoken narration beat (authored, synthesized by TTS).                                                            |
 | [`SegmentBeat`](_autosummary/braidio.html.md#braidio.SegmentBeat)(reference[, label, rights, ...])      | A span of source media to weave in, addressed by an opaque `reference`.                                            |
@@ -1200,6 +1371,21 @@ in the *Hamilton* repo — braidio has its own #18 about something else.
 
 | [`RightsViolation`](_autosummary/braidio.html.md#braidio.RightsViolation)   | A render would play source audio the profile it claims forbids.   |
 |--------------------------------------------------------------------|-------------------------------------------------------------------|
+
+### *class* braidio.Alignment(timeline, cues, unmatched, matched, total)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+What [`align_script()`](_autosummary/braidio.html.md#braidio.align_script) measured.
+
+`timeline`: one sequential beat per unit, contiguous from 0 to the end of
+the audio (a beat is its text plus the silence after it, the first also
+holds the lead-in), so `plan_spans` and `captions` take it as they take a
+render’s. `cues`: caption cues carrying the authored text at measured
+times, never overlapping. `unmatched`: the chunks no heard word matched,
+whose times were interpolated. `matched` / `total`: authored tokens a
+heard word matched, over all of them: gate on `matched / total` before
+trusting the times of audio you are unsure belongs to this text.
 
 ### *class* braidio.BeatSpan(index, kind, label='', source_start=None, source_end=None, duration=0.0, start=0.0, placement=None)
 
@@ -1839,6 +2025,36 @@ Bases: [`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Enum`](h
 A braidio production kind. `COMMENTARY_WEAVE` = narration woven with
 extracted media segments (audio now, video later).
 
+### braidio.align_script(script_or_text, words, \*, duration_s=None, unit='paragraph', max_chars=84, normalize=<function tokens>, title='')
+
+Align the authored `script_or_text` to the measured `words` of its audio.
+
+* **Parameters:**
+  * **script_or_text** ([`Script`](_autosummary/braidio.script.html.md#braidio.script.Script) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – a [`Script`](_autosummary/braidio.script.html.md#braidio.script.Script) (its narration and
+    dialogue beats; segment beats are other audio and are skipped) or
+    plain text, paragraphs separated by a blank line. `[tags]` and
+    `<break/>` markup is not spoken and is dropped.
+  * **words** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]]) – `{"text" (or "word"), "start", "end"}` mappings in playback
+    order, times in seconds on the audio’s own clock. Entries whose
+    `type` is `spacing` / `audio_event` are ignored. For audio
+    made in several tracks, offset each track’s words and concatenate.
+  * **duration_s** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – length of the audio; the last beat runs to it. Default: the
+    end of the last cue.
+  * **unit** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – `"paragraph"` (a timeline beat per paragraph) or `"beat"` (one
+    per script beat; for plain text, the whole text).
+  * **max_chars** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – longest caption cue, cut at whitespace.
+  * **normalize** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]) – text to comparable tokens, see `tokens()`.
+  * **title** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – the timeline’s title.
+* **Return type:**
+  [`Alignment`](_autosummary/braidio.align.html.md#braidio.align.Alignment)
+* **Returns:**
+  An [`Alignment`](_autosummary/braidio.html.md#braidio.Alignment).
+* **Raises:**
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – `unit` unknown; no text or no usable words; `words` out
+      of order (an un-offset track) or running past `duration_s`; or no
+      authored word matched a heard one (wrong audio, or `normalize`
+      drops everything).
+
 ### braidio.assign_voices(n, pool, , seed=0, avoid_repeats=True)
 
 Assign a voice to each of `n` turns — random, seeded, no immediate
@@ -1934,6 +2150,31 @@ extra; a real render always passes one.
 ### braidio.captions_for(script, timeline, , max_chars=0)
 
 The SRT document for `script` as laid out by `timeline`.
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### braidio.captions_from_cues(cues, , max_chars=42, hold_s=0.6, gap_s=0.05)
+
+An SRT document for cues timed from *measured* words (braidio#212).
+
+Each cue’s text is wrapped to *lines* of at most `max_chars` (not to be
+confused with [`align_script()`](_autosummary/braidio.align.html.md#braidio.align.align_script)’s `max_chars`, the longest
+*cue*) and held
+`hold_s` past its last word, never into the next cue (`gap_s` before it).
+Cues timed by [`align_script()`](_autosummary/braidio.align.html.md#braidio.align.align_script) are speech-tight, so
+unlike [`captions_for()`](_autosummary/braidio.html.md#braidio.captions_for) they get this hold.
+
+```pycon
+>>> print(captions_from_cues([Cue(0.0, 1.0, "Hi there."), Cue(1.2, 2.0, "Bye.")]))
+1
+00:00:00,000 --> 00:00:01,150
+Hi there.
+
+2
+00:00:01,200 --> 00:00:02,600
+Bye.
+```
 
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
@@ -2577,8 +2818,9 @@ quiet passage stays quiet relative to its loud neighbours.
 
 ### Modules
 
-| [`captions`](_autosummary/braidio.captions.html.md#module-braidio.captions)               | Subtitles for a rendered production, built from the script it was rendered from.                           |
+| [`align`](_autosummary/braidio.align.html.md#module-braidio.align)                     | Time an authored script on narration braidio did not render (braidio#212).                                 |
 |-------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------|
+| [`captions`](_autosummary/braidio.captions.html.md#module-braidio.captions)               | Subtitles for a rendered production, built from the script it was rendered from.                           |
 | [`compose`](_autosummary/braidio.compose.html.md#module-braidio.compose)                 | Config-driven narration composition (#20) — the reusable entrypoint.                                       |
 | [`conversation`](_autosummary/braidio.conversation.html.md#module-braidio.conversation)       | Conversational register: render an exchange as people *talking to each other*.                             |
 | [`cost`](_autosummary/braidio.cost.html.md#module-braidio.cost)                       | Cost model for braidio's paid operations (ElevenLabs TTS).                                                 |
@@ -5737,16 +5979,18 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-08 23:35 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/6456d76e124b9bea30797b106c604184de8a23e8"><code>6456d76</code></a> on branch <code>main</code>, for **braidio 0.0.119** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-09 00:16 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/23a16fdccb9ce80751b5f0bce09bd570067471ba"><code>23a16fd</code></a> on branch <code>main</code>, for **braidio 0.0.120** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.120) is behind the latest release on PyPI (0.0.121): `pip install braidio` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/6456d76e124b9bea30797b106c604184de8a23e8"><code>6456d76e124b9bea30797b106c604184de8a23e8</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/23a16fdccb9ce80751b5f0bce09bd570067471ba"><code>23a16fdccb9ce80751b5f0bce09bd570067471ba</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
 | Tags at this commit | none                                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
@@ -5757,9 +6001,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/42534193279">42534193279</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/42537816897">42537816897</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>6456d76e124b9bea30797b106c604184de8a23e8</code> (in the history of the built commit) |
+| Event commit | <code>23a16fdccb9ce80751b5f0bce09bd570067471ba</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5784,13 +6028,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.119/">0.0.119</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/braidio/0.0.121/">0.0.121</a>, newer than the documented version (0.0.120).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 6456d76e124b9bea30797b106c604184de8a23e8
+git checkout 23a16fdccb9ce80751b5f0bce09bd570067471ba
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

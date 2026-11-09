@@ -37,10 +37,11 @@ Two.
 
 ### Functions
 
-| [`captions_for`](#braidio.captions.captions_for)(script, timeline, \*[, max_chars])   | The SRT document for `script` as laid out by `timeline`.   |
-|----------------------------------------------------------------------------------------------------|------------------------------------------------------------|
-| [`cues_for`](#braidio.captions.cues_for)(script, timeline, \*[, max_chars])       | Subtitle cues for `script` as laid out by `timeline`.      |
-| [`format_srt`](#braidio.captions.format_srt)(cues)                                  | Render `cues` as an SRT document.                          |
+| [`captions_for`](#braidio.captions.captions_for)(script, timeline, \*[, max_chars])   | The SRT document for `script` as laid out by `timeline`.            |
+|----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------|
+| [`captions_from_cues`](#braidio.captions.captions_from_cues)(cues, \*[, max_chars, ...])    | An SRT document for cues timed from *measured* words (braidio#212). |
+| [`cues_for`](#braidio.captions.cues_for)(script, timeline, \*[, max_chars])       | Subtitle cues for `script` as laid out by `timeline`.               |
+| [`format_srt`](#braidio.captions.format_srt)(cues)                                  | Render `cues` as an SRT document.                                   |
 
 ### Classes
 
@@ -56,6 +57,31 @@ One subtitle: `[start_s, end_s)` and the text shown.
 ### braidio.captions.captions_for(script, timeline, , max_chars=0)
 
 The SRT document for `script` as laid out by `timeline`.
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### braidio.captions.captions_from_cues(cues, , max_chars=42, hold_s=0.6, gap_s=0.05)
+
+An SRT document for cues timed from *measured* words (braidio#212).
+
+Each cue’s text is wrapped to *lines* of at most `max_chars` (not to be
+confused with [`align_script()`](braidio.align.html.md#braidio.align.align_script)’s `max_chars`, the longest
+*cue*) and held
+`hold_s` past its last word, never into the next cue (`gap_s` before it).
+Cues timed by [`align_script()`](braidio.align.html.md#braidio.align.align_script) are speech-tight, so
+unlike [`captions_for()`](#braidio.captions.captions_for) they get this hold.
+
+```pycon
+>>> print(captions_from_cues([Cue(0.0, 1.0, "Hi there."), Cue(1.2, 2.0, "Bye.")]))
+1
+00:00:00,000 --> 00:00:01,150
+Hi there.
+
+2
+00:00:01,200 --> 00:00:02,600
+Bye.
+```
 
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)

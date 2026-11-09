@@ -264,3 +264,131 @@ def test_an_episode_with_nothing_spoken_is_refused(project, tmp_path):
         episode_talk(project, episode)
     with pytest.raises(RuntimeError, match="while planning"):
         EpisodeToSoundDesign().narration_segments(episode)
+
+
+def _designed(project, script_and_source):
+    script, source = script_and_source
+    receipt = braidio.weave_project(
+        project,
+        script,
+        source=source,
+        sound_design=braidio.SoundDesign(),
+        return_receipt=True,
+    )
+    return script, source, receipt
+
+
+def _design_dir(project):
+    return project.root.joinpath(*braidio.transforms._sound.SOUND_DESIGN_DIR)
+
+
+def test_a_design_is_retrievable_by_id_and_in_the_status_door(
+    project, script_and_source, patched_synthesis, foley
+):
+    """braidio#193: the mix is served from the project's delivery catalog under
+    its recorded hash (never a file:// url), and the status door names it with
+    the credits that ship with it."""
+    from nw.media_catalog import HostArtifactCatalog
+
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source)
+    assert "sound_design" not in project.genre_status()  # the absence rule
+    _, _, receipt = _designed(project, script_and_source)
+    design = receipt.sound_design
+    artifact_id = design.body["artifact_id"]
+    catalog = HostArtifactCatalog(project.root)
+    assert artifact_id in catalog.registered_ids()
+    blob = catalog.blob_path(artifact_id)
+    assert blob is not None and blob.read_bytes().startswith(b"flac:")
+    assert not any("file://" in str(row) for row in catalog.iter_rows())
+    row = project.genre_status()["sound_design"]
+    assert row == {
+        "design_id": str(design.id),
+        "artifact_id": artifact_id,
+        "duration_s": design.body["duration_s"],
+        "retrievable": True,
+        "credits": {"entries": [{"title": "Door", "by": "X"}]},
+    }
+
+
+def test_registering_twice_copies_nothing_and_a_stale_design_is_not_served(
+    project, script_and_source, patched_synthesis, foley, monkeypatch
+):
+    script, source, receipt = _designed(project, script_and_source)
+    import nw.atomic_io
+
+    copies = []
+    real = nw.atomic_io.copy_file_atomic
+    monkeypatch.setattr(
+        nw.atomic_io,
+        "copy_file_atomic",
+        lambda *a, **k: (copies.append(a), real(*a, **k)),
+    )
+    assert braidio.transforms.register_sound_design(project, receipt.sound_design)
+    assert copies == []  # already registered: nothing is copied again
+    braidio.weave_project(project, script, source=source)  # sound design dropped
+    assert "sound_design" not in project.genre_status()
+
+
+def test_a_pruned_blob_warns_and_is_not_reported_retrievable(
+    project, script_and_source, patched_synthesis, foley
+):
+    """A blob evicted from falaw's store cannot be served: registration warns
+    instead of raising, and the status door says so (review of #193). nw's own
+    reuse path still refuses such a design: braidio#228."""
+    from falaw.content import default_content_store
+
+    _, _, receipt = _designed(project, script_and_source)
+    artifact_id = receipt.sound_design.body["artifact_id"]
+    catalog_dir = project.root / ".reelee" / "artifacts"
+    (catalog_dir / "blobs" / artifact_id).unlink(missing_ok=True)
+    for row in (catalog_dir / "catalog").glob("*"):
+        row.unlink()
+    default_content_store().delete_blob(artifact_id)
+    with pytest.warns(RuntimeWarning, match="pruned"):
+        assert not braidio.transforms.register_sound_design(
+            project, receipt.sound_design
+        )
+    assert project.genre_status()["sound_design"]["retrievable"] is False
+
+
+def test_a_non_local_backend_is_refused_before_any_copy(
+    project, script_and_source, patched_synthesis, foley, monkeypatch
+):
+    script, source = script_and_source
+    monkeypatch.setenv("REELEE_ARTIFACT_BACKEND", "aws")
+    with pytest.warns(RuntimeWarning, match="not registered"):
+        receipt = braidio.weave_project(
+            project,
+            script,
+            source=source,
+            sound_design=braidio.SoundDesign(),
+            return_receipt=True,
+        )
+    assert receipt.sound_design is not None  # the paid design is kept
+    assert not list(_design_dir(project).glob("*"))
+
+
+def test_an_opaque_blob_backend_is_spooled_through_a_temp_file(
+    project, script_and_source, patched_synthesis, foley, monkeypatch
+):
+    from falaw.content import default_content_store
+
+    store = default_content_store()
+    monkeypatch.setattr(type(store), "blob_path", lambda self, h: None)
+    _designed(project, script_and_source)
+    assert project.genre_status()["sound_design"]["retrievable"] is True
+    assert list(_design_dir(project).glob(".part-*")) == []
+
+
+def test_large_credits_are_counted_not_carried_in_the_status_door():
+    from types import SimpleNamespace
+
+    from braidio.transforms._sound import STATUS_CREDITS_MAX_BYTES, sound_design_row
+
+    big = {"entries": ["x" * 100] * (STATUS_CREDITS_MAX_BYTES // 50)}
+    design = SimpleNamespace(
+        id="d", body={"artifact_id": "a" * 64, "duration_s": 1.0, "credits": big}
+    )
+    row = sound_design_row(design, retrievable=True)
+    assert row["credits"] is None and row["credits_omitted"] is True

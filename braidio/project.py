@@ -127,7 +127,9 @@ class Project(nw.Project):
         once there is more than one episode to choose from — no file probe, so
         it stays small however often the project is re-woven, and never names
         a path. Two overrides for one beat are reported as the next step
-        (``restore_take``), not raised: a polled status door must answer. The
+        (``restore_take``), not raised: a polled status door must answer. A current
+        episode whose sound design is current too adds ``sound_design`` (mix id and
+        credits; absent otherwise, braidio#193). The
         current episode depends on this process's environment voice when
         several mixes are fresh (:meth:`current_episode`, braidio#172).
 
@@ -169,7 +171,31 @@ class Project(nw.Project):
             "latest_episode": _episode_row(current) if current else None,
             "pending_takes": list(pending),
             "next_step": {"op": op, "why": why},
+            **self._sound_design_status(current),
         }
+
+    def _sound_design_status(self, current) -> dict:
+        """``{"sound_design": row}`` when the current episode has a current sound
+        design, else ``{}``: a production without one keeps the status it always
+        had (braidio#193). The row names the mix's artifact id (fetchable like any
+        episode) and the credits that ship with it."""
+        if current is None or not nw.annotations_at_tier(
+            self.root, _tiers().TIER_SOUND_DESIGN
+        ):
+            return {}
+        from nw.media_catalog import HostArtifactCatalog
+
+        from braidio.transforms._sound import sound_design_of, sound_design_row
+
+        with _tiers().fresh_ids_pass():  # one freshness walk, only once a design exists
+            design = sound_design_of(self, current)
+        if design is None:
+            return {}
+        artifact_id = design.body.get("artifact_id")
+        retrievable = bool(artifact_id) and HostArtifactCatalog(self.root).has(
+            artifact_id
+        )
+        return {"sound_design": sound_design_row(design, retrievable=retrievable)}
 
 
 def create_project_at(

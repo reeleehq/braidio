@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../_static/documentation_options.js?v=69b21de1"></script>
+    <script src="../_static/documentation_options.js?v=cdca99f8"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.120" />
+  <meta name="docsearch:version" content="0.0.121" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -966,26 +966,99 @@ window.runMermaid = runMermaid;</script>
 <span class="c1">#: (``tests/test_optional_layers.py``, braidio#187) and names this on failure.</span>
 <span class="n">_GRAPH_IMPORT_ERROR</span><span class="p">:</span> <span class="ne">ImportError</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="n">_NW_IMPORT_ERROR</span><span class="p">:</span> <span class="ne">ImportError</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="k">try</span><span class="p">:</span>  <span class="c1"># needs lacing</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">braidio</span><span class="w"> </span><span class="kn">import</span> <span class="n">bodies</span>  <span class="c1"># noqa: F401  (registers schemas)</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.provenance</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>  <span class="c1"># noqa: F401</span>
-        <span class="n">record_render</span><span class="p">,</span>
-        <span class="n">stale_after</span><span class="p">,</span>
-        <span class="n">descendants_of</span><span class="p">,</span>
+<span class="c1">#: Optional distributions a layer needs. A layer whose dependencies are not all</span>
+<span class="c1">#: installed is simply absent (the bare install, silent); anything that fails</span>
+<span class="c1">#: *after* that preflight is a defect in braidio or a version skew (braidio#207).</span>
+<span class="n">_GRAPH_DEPS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"lacing"</span><span class="p">,)</span>
+<span class="n">_NW_DEPS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"lacing"</span><span class="p">,</span> <span class="s2">"nw"</span><span class="p">,</span> <span class="s2">"falaw"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_missing</span><span class="p">(</span><span class="n">deps</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The distributions in ``deps`` that cannot be imported (decided without importing).</span>
+
+<span class="sd">    A dependency whose spec cannot be found, or is a bare namespace folder with</span>
+<span class="sd">    no code (``origin is None``), is absent; one whose spec lookup itself raises is</span>
+<span class="sd">    treated as present, so the import that follows reports it.</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">importlib.util</span>
+
+    <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">dep</span> <span class="ow">in</span> <span class="n">deps</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">spec</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="n">dep</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">ImportError</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">spec</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">spec</span><span class="o">.</span><span class="n">origin</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dep</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_layer_failed</span><span class="p">(</span><span class="n">layer</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">exc</span><span class="p">:</span> <span class="ne">ImportError</span><span class="p">,</span> <span class="n">loaded</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Report a layer that failed although its dependencies are installed.</span>
+
+<span class="sd">    Left half-registered with its flag ``False`` (lacing and nw have no unregister</span>
+<span class="sd">    to roll it back with), so it is said once, naming what did load. A</span>
+<span class="sd">    ``RuntimeWarning``, because ``ImportWarning`` is ignored by default and the</span>
+<span class="sd">    point is that this is not hidden.</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+
+    <span class="n">detail</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="s2">"imported before the failure: "</span>
+        <span class="o">+</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">loaded</span><span class="p">)</span>
+        <span class="o">+</span> <span class="s2">" (what they register stays registered)"</span>
+        <span class="k">if</span> <span class="n">loaded</span>
+        <span class="k">else</span> <span class="s2">"no module of it had loaded (a module that failed partway may still "</span>
+        <span class="s2">"have registered some of its own)"</span>
+    <span class="p">)</span>
+    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"braidio's </span><span class="si">{</span><span class="n">layer</span><span class="si">}</span><span class="s2"> layer failed to load (</span><span class="si">{</span><span class="n">exc</span><span class="si">!r}</span><span class="s2">); </span><span class="si">{</span><span class="n">detail</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+        <span class="ne">RuntimeWarning</span><span class="p">,</span>
+        <span class="n">stacklevel</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
     <span class="p">)</span>
 
-    <span class="n">HAS_GRAPH</span> <span class="o">=</span> <span class="kc">True</span>
-<span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">_exc</span><span class="p">:</span>  <span class="c1"># pragma: no cover - optional dep</span>
-    <span class="n">_GRAPH_IMPORT_ERROR</span> <span class="o">=</span> <span class="n">_exc</span>
-<span class="k">try</span><span class="p">:</span>  <span class="c1"># needs nw</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.project</span><span class="w"> </span><span class="kn">import</span> <span class="n">Project</span>  <span class="c1"># noqa: F401</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">braidio</span><span class="w"> </span><span class="kn">import</span> <span class="n">transforms</span>  <span class="c1"># noqa: F401  (registers braidio's nw.Transforms)</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">WeaveReceipt</span><span class="p">,</span> <span class="n">weave_project</span>  <span class="c1"># noqa: F401</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.genre</span><span class="w"> </span><span class="kn">import</span> <span class="n">COMMENTARY_WEAVE</span>  <span class="c1"># noqa: F401  (registers the nw.Genre)</span>
 
-    <span class="n">HAS_NW</span> <span class="o">=</span> <span class="kc">True</span>
-<span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">_exc</span><span class="p">:</span>  <span class="c1"># pragma: no cover - optional dep</span>
-    <span class="n">_NW_IMPORT_ERROR</span> <span class="o">=</span> <span class="n">_exc</span>
+<span class="c1">#: What each layer registered before it failed (empty when it loaded or was absent).</span>
+<span class="n">_graph_loaded</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">_nw_loaded</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">if</span> <span class="n">_absent</span> <span class="o">:=</span> <span class="n">_missing</span><span class="p">(</span><span class="n">_GRAPH_DEPS</span><span class="p">):</span>
+    <span class="n">_GRAPH_IMPORT_ERROR</span> <span class="o">=</span> <span class="ne">ModuleNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No module named </span><span class="si">{</span><span class="n">_absent</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">braidio</span><span class="w"> </span><span class="kn">import</span> <span class="n">bodies</span>  <span class="c1"># noqa: F401  (registers schemas)</span>
+
+        <span class="n">_graph_loaded</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"bodies"</span><span class="p">)</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.provenance</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>  <span class="c1"># noqa: F401</span>
+            <span class="n">record_render</span><span class="p">,</span>
+            <span class="n">stale_after</span><span class="p">,</span>
+            <span class="n">descendants_of</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">HAS_GRAPH</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">_exc</span><span class="p">:</span>  <span class="c1"># pragma: no cover - defect, not absence</span>
+        <span class="n">_GRAPH_IMPORT_ERROR</span> <span class="o">=</span> <span class="n">_exc</span>
+        <span class="n">_layer_failed</span><span class="p">(</span><span class="s2">"graph"</span><span class="p">,</span> <span class="n">_exc</span><span class="p">,</span> <span class="n">_graph_loaded</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">_absent</span> <span class="o">:=</span> <span class="n">_missing</span><span class="p">(</span><span class="n">_NW_DEPS</span><span class="p">):</span>
+    <span class="n">_NW_IMPORT_ERROR</span> <span class="o">=</span> <span class="ne">ModuleNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No module named </span><span class="si">{</span><span class="n">_absent</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+<span class="k">elif</span> <span class="ow">not</span> <span class="n">HAS_GRAPH</span><span class="p">:</span>  <span class="c1"># the nw layer imports the graph's bodies: one failure, one report</span>
+    <span class="n">_NW_IMPORT_ERROR</span> <span class="o">=</span> <span class="n">_GRAPH_IMPORT_ERROR</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.project</span><span class="w"> </span><span class="kn">import</span> <span class="n">Project</span>  <span class="c1"># noqa: F401</span>
+
+        <span class="n">_nw_loaded</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"project"</span><span class="p">)</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">braidio</span><span class="w"> </span><span class="kn">import</span> <span class="n">transforms</span>  <span class="c1"># noqa: F401  (registers braidio's nw.Transforms)</span>
+
+        <span class="n">_nw_loaded</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"transforms"</span><span class="p">)</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">WeaveReceipt</span><span class="p">,</span> <span class="n">weave_project</span>  <span class="c1"># noqa: F401</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.genre</span><span class="w"> </span><span class="kn">import</span> <span class="n">COMMENTARY_WEAVE</span>  <span class="c1"># noqa: F401  (registers the nw.Genre)</span>
+
+        <span class="n">HAS_NW</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">_exc</span><span class="p">:</span>  <span class="c1"># pragma: no cover - defect, not absence</span>
+        <span class="n">_NW_IMPORT_ERROR</span> <span class="o">=</span> <span class="n">_exc</span>
+        <span class="n">_layer_failed</span><span class="p">(</span><span class="s2">"nw"</span><span class="p">,</span> <span class="n">_exc</span><span class="p">,</span> <span class="n">_nw_loaded</span><span class="p">)</span>
+<span class="k">del</span> <span class="n">_absent</span>  <span class="c1"># layer bookkeeping, not API</span>
 
 
 <div class="viewcode-block" id="skills_dir">

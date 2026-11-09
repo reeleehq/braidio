@@ -38,7 +38,7 @@ def _need(*names: str) -> None:
     if _importable(*names):
         return
     message = f"{', '.join(names)} not installed"
-    if os.environ.get(CI_ENV_VAR):
+    if os.environ.get(CI_ENV_VAR, "").lower() not in ("", "0", "false"):
         pytest.fail(f"{message}: CI must install the extras these guards check")
     pytest.skip(message)
 
@@ -68,19 +68,24 @@ def test_the_video_layer_loads_when_its_dependencies_are_found():
     )
 
 
-_BLOCK_AND_IMPORT = textwrap.dedent(
+_CHILD = textwrap.dedent(
     """
     import sys, warnings
     from importlib.abc import MetaPathFinder
 
+    fail, absent = {fail!r}, {absent!r}
+    if absent:
+        sys.modules[absent] = None  # importlib.util.find_spec(absent) is None
+
     class Block(MetaPathFinder):
         def find_spec(self, name, path=None, target=None):
-            if name == {blocked!r}:
-                raise {exc}
+            if name == fail:
+                raise ModuleNotFoundError(name, name=name)
 
-    sys.meta_path.insert(0, Block())
+    if fail:
+        sys.meta_path.insert(0, Block())
     with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
+        warnings.simplefilter("default")  # Python's own filters would hide ImportWarning
         import braidio
     print(braidio.HAS_GRAPH, braidio.HAS_NW)
     for w in caught:
@@ -90,40 +95,49 @@ _BLOCK_AND_IMPORT = textwrap.dedent(
 )
 
 
-def _import_with_blocked(module: str, *, absent: bool = False) -> list[str]:
-    exc = (
-        f"ModuleNotFoundError({module!r}, name='lacing')"
-        if absent
-        else 'ImportError("blocked for the test")'
-    )
-    out = subprocess.run(
-        [sys.executable, "-I", "-c", _BLOCK_AND_IMPORT.format(blocked=module, exc=exc)],
+def _import_with(*, fail: str = "", absent: str = "") -> list[str]:
+    """Import braidio in a fresh interpreter where ``fail`` cannot be imported
+    (or the distribution ``absent`` is not installed); its report lines."""
+    done = subprocess.run(
+        [sys.executable, "-I", "-c", _CHILD.format(fail=fail, absent=absent)],
         capture_output=True,
         text=True,
-        check=True,
-    ).stdout
-    return out.splitlines()
+    )
+    assert done.returncode == 0, done.stderr
+    return done.stdout.splitlines()
 
 
-def test_a_layer_that_half_loads_says_which_part_did():
+def test_a_graph_layer_that_half_loads_says_which_part_did():
     """braidio#207: ``bodies`` registers, ``provenance`` fails -> the schemas stay
     registered with ``HAS_GRAPH`` False, and that is reported, not swallowed."""
     _need("lacing")
-    first, *warned = _import_with_blocked("braidio.provenance")
+    first, *warned = _import_with(fail="braidio.provenance")
     assert first.startswith("False")
     assert any(
-        "ImportWarning" in w and "graph layer" in w and "bodies" in w for w in warned
+        "RuntimeWarning" in w and "graph layer" in w and "partially loaded: bodies" in w
+        for w in warned
     ), warned
 
 
-def test_a_missing_dependency_after_a_part_registered_is_still_reported():
-    """Absence is silent only when nothing registered first."""
+def test_an_nw_layer_that_half_loads_says_which_part_did():
+    _need("lacing", "nw", "falaw")
+    first, *warned = _import_with(fail="braidio.genre")
+    assert first == "True False", first
+    assert any("nw layer" in w and "project, transforms" in w for w in warned), warned
+
+
+def test_a_lacing_missing_a_submodule_is_a_defect_not_an_absence():
+    """An old lacing that is installed but lacks a module braidio imports."""
     _need("lacing")
-    first, *warned = _import_with_blocked("braidio.provenance", absent=True)
-    assert first.startswith("False") and any("partially loaded" in w for w in warned)
+    first, *warned = _import_with(fail="lacing.schema")
+    assert first.startswith("False") and any("layer failed" in w for w in warned)
 
 
 def test_a_bare_install_stays_silent():
     """No lacing at all: nothing registered, so nothing to say (the supported case)."""
-    out = _import_with_blocked("lacing", absent=True)
-    assert out[0].startswith("False False") and len(out) == 1, out
+    assert _import_with(absent="lacing") == ["False False"]
+
+
+def test_a_missing_nw_leaves_the_graph_layer_and_says_nothing():
+    _need("lacing")
+    assert _import_with(absent="nw") == ["True False"]

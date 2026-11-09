@@ -252,67 +252,76 @@ HAS_NW = False
 #: (``tests/test_optional_layers.py``, braidio#187) and names this on failure.
 _GRAPH_IMPORT_ERROR: ImportError | None = None
 _NW_IMPORT_ERROR: ImportError | None = None
-#: Optional distributions a layer needs: the only reason an ``ImportError`` is
-#: an *absence* rather than a defect (braidio#207).
+#: Optional distributions a layer needs. A layer whose dependencies are not all
+#: installed is simply absent (the bare install, silent); anything that fails
+#: *after* that preflight is a defect in braidio or a version skew (braidio#207).
 _GRAPH_DEPS = ("lacing",)
 _NW_DEPS = ("lacing", "nw", "falaw")
 
 
-def _layer_failed(layer: str, exc: ImportError, loaded: list[str], deps) -> None:
-    """Say so when an optional layer failed in a way a bare install does not.
+def _missing(deps) -> list[str]:
+    """The distributions in ``deps`` that cannot be imported (decided without importing)."""
+    import importlib.util
 
-    A layer whose dependency is simply not installed fails on its first import,
-    silently: that is the bare install. A layer that fails *after* some of its
-    modules registered (``loaded``), or for a reason other than a missing
-    dependency, is a defect, and is left half-registered with its flag ``False``
-    (lacing and nw have no unregister to roll it back with), so it is reported
-    once, naming what did load, instead of hiding behind the flag.
+    return [d for d in deps if importlib.util.find_spec(d) is None]
+
+
+def _layer_failed(layer: str, exc: ImportError, loaded: list[str]) -> None:
+    """Report a layer that failed although its dependencies are installed.
+
+    Left half-registered with its flag ``False`` (lacing and nw have no unregister
+    to roll it back with), so it is said once, naming what did load. A
+    ``RuntimeWarning``, because ``ImportWarning`` is ignored by default and the
+    point is that this is not hidden.
     """
     import warnings
 
-    absent = (
-        isinstance(exc, ModuleNotFoundError) and (exc.name or "").split(".")[0] in deps
-    )
-    if absent and not loaded:
-        return
+    detail = "partially loaded: " + ", ".join(loaded) if loaded else "nothing loaded"
     warnings.warn(
-        f"braidio's {layer} layer failed to load ({exc!r}); "
-        f"{'partially loaded: ' + ', '.join(loaded) if loaded else 'nothing registered'}",
-        ImportWarning,
-        stacklevel=2,
+        f"braidio's {layer} layer failed to load ({exc!r}); {detail}",
+        RuntimeWarning,
+        stacklevel=1,
     )
 
 
+#: What each layer registered before it failed (empty when it loaded or was absent).
 _graph_loaded: list[str] = []
-try:  # needs lacing
-    from braidio import bodies  # noqa: F401  (registers schemas)
-
-    _graph_loaded.append("bodies")
-    from braidio.provenance import (  # noqa: F401
-        record_render,
-        stale_after,
-        descendants_of,
-    )
-
-    HAS_GRAPH = True
-except ImportError as _exc:  # pragma: no cover - optional dep
-    _GRAPH_IMPORT_ERROR = _exc
-    _layer_failed("graph", _exc, _graph_loaded, _GRAPH_DEPS)
 _nw_loaded: list[str] = []
-try:  # needs nw
-    from braidio.project import Project  # noqa: F401
 
-    _nw_loaded.append("project")
-    from braidio import transforms  # noqa: F401  (registers braidio's nw.Transforms)
+if _absent := _missing(_GRAPH_DEPS):
+    _GRAPH_IMPORT_ERROR = ModuleNotFoundError(f"No module named {_absent[0]!r}")
+else:
+    try:
+        from braidio import bodies  # noqa: F401  (registers schemas)
 
-    _nw_loaded.append("transforms")
-    from braidio.transforms import WeaveReceipt, weave_project  # noqa: F401
-    from braidio.genre import COMMENTARY_WEAVE  # noqa: F401  (registers the nw.Genre)
+        _graph_loaded.append("bodies")
+        from braidio.provenance import (  # noqa: F401
+            record_render,
+            stale_after,
+            descendants_of,
+        )
 
-    HAS_NW = True
-except ImportError as _exc:  # pragma: no cover - optional dep
-    _NW_IMPORT_ERROR = _exc
-    _layer_failed("nw", _exc, _nw_loaded, _NW_DEPS)
+        HAS_GRAPH = True
+    except ImportError as _exc:  # pragma: no cover - defect, not absence
+        _GRAPH_IMPORT_ERROR = _exc
+        _layer_failed("graph", _exc, _graph_loaded)
+if _absent := _missing(_NW_DEPS):
+    _NW_IMPORT_ERROR = ModuleNotFoundError(f"No module named {_absent[0]!r}")
+else:
+    try:
+        from braidio.project import Project  # noqa: F401
+
+        _nw_loaded.append("project")
+        from braidio import transforms  # noqa: F401  (registers braidio's nw.Transforms)
+
+        _nw_loaded.append("transforms")
+        from braidio.transforms import WeaveReceipt, weave_project  # noqa: F401
+        from braidio.genre import COMMENTARY_WEAVE  # noqa: F401  (registers the nw.Genre)
+
+        HAS_NW = True
+    except ImportError as _exc:  # pragma: no cover - defect, not absence
+        _NW_IMPORT_ERROR = _exc
+        _layer_failed("nw", _exc, _nw_loaded)
 
 
 def skills_dir():

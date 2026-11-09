@@ -16,8 +16,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 
-#: Models that ignore ``voice_settings["speed"]`` (eleven v3 has no speed control).
-SPEEDLESS_MODELS = frozenset({"eleven_v3"})
+#: Models that ignore ``voice_settings["speed"]`` (eleven v3 and v4 have no speed
+#: control: "Style and Speed sliders are not available" on v4).
+SPEEDLESS_MODELS = frozenset({"eleven_v3", "eleven_v4", "eleven_v4_turbo"})
 
 
 def model_supports_speed(model_id: str) -> bool:
@@ -25,6 +26,8 @@ def model_supports_speed(model_id: str) -> bool:
 
     >>> model_supports_speed("eleven_v3"), model_supports_speed("eleven_multilingual_v2")
     (False, True)
+    >>> model_supports_speed("eleven_v4")
+    False
     """
     return model_id not in SPEEDLESS_MODELS
 
@@ -45,6 +48,12 @@ class Delivery:
     #: audio tags instead.
     supports_speed: bool = True
     note: str = ""
+    #: ISO 639-1 language the model is told to read in (``"fr"``, ``"en"``), or
+    #: ``None`` to let it detect the language. Passed to ElevenLabs as
+    #: ``language_code``, which also enforces that language's text normalisation
+    #: (numbers, dates). Set it with ``dataclasses.replace(V4_PRESENTER,
+    #: language_code="fr")``.
+    language_code: str | None = None
 
 
 # --- presets -----------------------------------------------------------------
@@ -192,6 +201,38 @@ V3_NARRATOR = Delivery(
     "still tag-responsive. Contrast partner to v3-presenter.",
 )
 
+# --- v4 role deliveries -------------------------------------------------------
+# eleven_v4 (2026-09-28) is ElevenLabs' current model; v3 is now "previous
+# generation". Same audio-tag language as v3, followed "more reliably"; no SSML;
+# stability and similarity only (no style, no speed); 10,000 characters per
+# request. Pauses longer than a tag can give are SSML breaks in the text, which
+# braidio cuts at and fills with exact silence (voxy.pauses).
+# Settings mirror the v3 pair. The v3 table above did NOT reproduce on v4 in a
+# one-take check (2026-11-07, one voice, pitch range p5-p95): plain 215 Hz vs
+# tagged 201 Hz; tagged at stability 0.0/0.5/1.0 -> 169/201/197 Hz. One take
+# per cell is inconclusive, so do not quote the v3 numbers for v4; the default
+# delivery stays v3-presenter until a listening comparison says otherwise.
+
+V4_PRESENTER = Delivery(
+    name="v4-presenter",
+    model_id="eleven_v4",
+    voice_settings={"stability": 0.0, "use_speaker_boost": True},
+    supports_audio_tags=True,
+    supports_speed=False,
+    note="Host/presenter commentary on eleven_v4, the current ElevenLabs model "
+    "-- the expressive end, like v3-presenter.",
+)
+
+V4_NARRATOR = Delivery(
+    name="v4-narrator",
+    model_id="eleven_v4",
+    voice_settings={"stability": 0.5, "use_speaker_boost": True},
+    supports_audio_tags=True,
+    supports_speed=False,
+    note="Documentary/book-read narrator on eleven_v4 -- steadier than "
+    "v4-presenter. Contrast partner to v4-presenter.",
+)
+
 # --- register presets: narration (reading) vs conversational (talking) --------
 # The two named "registers" (issue #1). ``narration`` = the default reading
 # register (kept in lock-step with V2_TUNED, render_production's default).
@@ -238,7 +279,37 @@ DELIVERIES: dict[str, Delivery] = {
         V3_CREATIVE,
         V3_PRESENTER,
         V3_NARRATOR,
+        V4_PRESENTER,
+        V4_NARRATOR,
         NARRATION,
         CONVERSATIONAL,
     )
 }
+
+
+def as_delivery(delivery: "Delivery | str") -> Delivery:
+    """``delivery`` as a :class:`Delivery`: one passes through, a name is looked
+    up in :data:`DELIVERIES`. Strict: an unknown name raises ``ValueError``
+    naming the known ones, anything else ``TypeError``. (The env and user
+    config defaults are read leniently by :func:`braidio.defaults.default_delivery`;
+    an explicit argument never is: a silent fallback would voice, and bill, a
+    whole production with a delivery nobody asked for.)
+
+    >>> as_delivery("v3-narrator").model_id
+    'eleven_v3'
+    >>> as_delivery("v9")
+    Traceback (most recent call last):
+        ...
+    ValueError: unknown delivery 'v9'; use one of [...]
+    """
+    if isinstance(delivery, Delivery):
+        return delivery
+    if not isinstance(delivery, str):
+        raise TypeError(
+            f"delivery must be a Delivery or its name, not {type(delivery).__name__}"
+        )
+    if delivery not in DELIVERIES:
+        raise ValueError(
+            f"unknown delivery {delivery!r}; use one of {sorted(DELIVERIES)}"
+        )
+    return DELIVERIES[delivery]

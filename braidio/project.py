@@ -202,3 +202,32 @@ def create_project_at(
     root = Path(projects_dir) / safe_component(project_id, label="project_id")
     root.parent.mkdir(parents=True, exist_ok=True)
     return Project.init(root, title=title or project_id, force=force)
+
+
+def open_or_create_project_at(
+    projects_dir: "str | Path", project_id: str, *, title: str = ""
+) -> Project:
+    """The project at ``projects_dir/<project_id>``: opened when it is one,
+    created (:func:`create_project_at`) when the folder is absent or empty.
+
+    What every host keeping one project per production needs (braidio#182),
+    without knowing nw's on-disk marker. ``title`` names a *new* project only;
+    an existing one keeps its own. A folder that holds something but no
+    project is refused (nw's ``FileNotFoundError``) rather than overwritten.
+
+    >>> import tempfile
+    >>> with tempfile.TemporaryDirectory() as d:
+    ...     made = open_or_create_project_at(d, "ep_01", title="Episode 1")
+    ...     again = open_or_create_project_at(d, "ep_01", title="ignored")
+    ...     again.root == made.root, again.read_spec().title
+    (True, 'Episode 1')
+    """
+    from braidio._paths import safe_component
+
+    root = Path(projects_dir) / safe_component(project_id, label="project_id")
+    if root.is_dir() and any(root.iterdir()):
+        return Project(root)  # not a project: nw says so, and nothing is written
+    try:
+        return create_project_at(projects_dir, project_id, title=title)
+    except FileExistsError:
+        return Project(root)  # another host created it between the check and here

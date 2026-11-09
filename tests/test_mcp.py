@@ -760,7 +760,11 @@ def test_weave_project_records_cost(monkeypatch):
             },
         },
     )()
-    monkeypatch.setattr(braidio, "weave_project", lambda proj, scr, **kw: episode)
+    monkeypatch.setattr(
+        braidio,
+        "weave_project",
+        lambda proj, scr, **kw: braidio.WeaveReceipt(episode, cost_usd_actual=0.3),
+    )
     ledger = {}
     server2 = _local_server(ledger=ledger)
     r = _call(
@@ -776,6 +780,7 @@ def test_weave_project_records_cost(monkeypatch):
         },
     )
     assert r.structured_content["cost_usd"] == pytest.approx(0.30)
+    assert r.structured_content["cost_usd_actual"] == pytest.approx(0.30)
     assert r.structured_content["url"] == "file:///x.mp3"
     retrieval = r.structured_content["retrieval"]
     assert retrieval["download"] == {
@@ -1049,6 +1054,38 @@ def test_docs_fetch_pins_the_address_it_validated():
     assert hops == ["93.184.216.34"] and len(lookups) == 1
 
 
+@pytest.mark.parametrize(
+    "disposition, attachment",
+    [
+        (b'Content-Disposition: attachment; filename="essay.md"\r\n', True),
+        (b"Content-Disposition: inline\r\n", False),
+        (b"", False),
+    ],
+)
+def test_docs_fetch_reports_whether_the_body_came_as_a_download(
+    disposition, attachment
+):
+    """braidio#166: the response, not the URL, says a body is the file."""
+    from braidio.mcp import _docs
+
+    body = (
+        b"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n"
+        + disposition
+        + b"Content-Length: 2\r\n\r\nhi"
+    )
+    fetched = _docs.fetch_uri(
+        "http://public.example/x",
+        resolver=lambda host, port: ["93.184.216.34"],
+        connector=_scripted_connector([body], []),
+    )
+    data, ctype = fetched  # still a 2-tuple
+    assert (data, ctype, _docs.is_attachment(fetched)) == (
+        b"hi",
+        "text/html",
+        attachment,
+    )
+
+
 def test_docs_fetch_enforces_the_byte_cap(monkeypatch):
     from braidio.mcp import _docs
 
@@ -1244,7 +1281,7 @@ def test_weave_project_costs_the_profile_it_was_given(monkeypatch):
 
     def _weave(proj, scr, **kw):
         captured.update(kw)
-        return episode
+        return braidio.WeaveReceipt(episode)
 
     monkeypatch.setattr(braidio, "weave_project", _weave)
     server = _local_server(ledger={})
@@ -1502,7 +1539,9 @@ def test_weave_project_reports_sting_applied_in_result(monkeypatch):
             "body": {"url": "file:///x.mp3"},
         },
     )()
-    monkeypatch.setattr(braidio, "weave_project", lambda proj, scr, **kw: episode)
+    monkeypatch.setattr(
+        braidio, "weave_project", lambda proj, scr, **kw: braidio.WeaveReceipt(episode)
+    )
     server = _local_server(ledger={})
     _call(server, "create_project", {"project_id": "st2", "title": "ST2"})
 
@@ -1909,6 +1948,72 @@ def test_ingest_document_refuses_a_share_host_s_sign_in_page(monkeypatch):
 
 
 @pytest.mark.parametrize(
+    "share",
+    [
+        # pasted already in download form: graze does not rewrite these
+        "https://www.dropbox.com/scl/fi/abc/essay.pdf?rlkey=x&dl=1",
+        "https://dl.dropboxusercontent.com/s/abc/essay.pdf",
+        "https://drive.google.com/uc?export=download&id=1AbC",
+        "https://drive.google.com/u/0/uc?export=download&id=1AbC",
+        "https://drive.usercontent.google.com/download?id=1AbC&export=download",
+        "https://docs.google.com/uc?export=download&id=1AbC",
+    ],
+)
+def test_ingest_document_refuses_a_sign_in_page_from_a_download_link(
+    monkeypatch, share
+):
+    """braidio#166: a private link pasted already in download form is not
+    rewritten, but its HTML is still the host's sign-in page."""
+    from fastmcp.exceptions import ToolError
+
+    from braidio.mcp import _docs
+
+    page = (b"<!DOCTYPE html><html><body>Sign in</body></html>", "text/html")
+    monkeypatch.setattr(_docs, "fetch_uri", lambda uri: page)
+    server = _local_server(ledger={})
+    _call(server, "create_project", {"project_id": "d", "title": "D"})
+    with pytest.raises(ToolError, match="expected document bytes"):
+        _call(server, "ingest_document", {"project_id": "d", "uri": share})
+
+
+@pytest.mark.parametrize(
+    "body, ctype, uri, expected",
+    [
+        # a shared web page: its download IS html
+        (
+            b"<html><body><p>The essay, as a page.</p></body></html>",
+            "text/html",
+            "https://drive.google.com/uc?export=download&id=1AbC",
+            "The essay, as a page.",
+        ),
+        # a README whose first bytes are markup sniffs as html too
+        (
+            b'<p align="center">Title</p>\n\n# The essay\n\nBody text.',
+            "text/plain",
+            "https://www.dropbox.com/s/a1/README.md?dl=1",
+            None,
+        ),
+    ],
+)
+def test_ingest_document_reads_a_file_that_came_as_a_download(
+    monkeypatch, body, ctype, uri, expected
+):
+    """A share host sends the file as an attachment and never its sign-in page:
+    so markup in a downloaded file is the document, not the host's page."""
+    from braidio.mcp import _docs
+
+    monkeypatch.setattr(
+        _docs, "fetch_uri", lambda u: _docs.Fetched(body, ctype, attachment=True)
+    )
+    server = _local_server(ledger={})
+    _call(server, "create_project", {"project_id": "d", "title": "D"})
+    out = _call(
+        server, "ingest_document", {"project_id": "d", "uri": uri}
+    ).structured_content
+    assert out["text"] == expected if expected else "Body text." in out["text"]
+
+
+@pytest.mark.parametrize(
     "uri",
     [
         "https://docs.google.com/document/d/1X/pub",
@@ -2060,7 +2165,11 @@ def test_weave_project_is_priced_at_the_weave_config_s_model(
     server = _local_server(ledger={})
     _call(server, "create_project", {"project_id": "demo", "title": "Demo"})
     with monkeypatch.context() as m:
-        m.setattr(braidio, "weave_project", lambda proj, scr, **kw: episode)
+        m.setattr(
+            braidio,
+            "weave_project",
+            lambda proj, scr, **kw: braidio.WeaveReceipt(episode),
+        )
         r = _call(server, "weave_project", {"project_id": "demo", "script": _THOUSAND})
     assert braidio.WeaveConfig().model_id == _V2
     assert r.structured_content["cost_usd"] == pytest.approx(0.11)
@@ -2085,7 +2194,9 @@ def test_weave_project_is_priced_at_the_weave_config_s_model(
         proj, script_from_json(_THOUSAND), config=braidio.WeaveConfig(model_id=_V3)
     )
 
-    monkeypatch.setattr(braidio, "weave_project", lambda proj, scr, **kw: episode)
+    monkeypatch.setattr(
+        braidio, "weave_project", lambda proj, scr, **kw: braidio.WeaveReceipt(episode)
+    )
     r = _call(server, "weave_project", {"project_id": "demo", "script": _THOUSAND})
     assert r.structured_content["cost_usd"] == pytest.approx(0.33)
 
@@ -2207,10 +2318,244 @@ def test_estimate_cost_equals_a_first_weave_s_cost(
         (),
         {"id": "9a23da78-0a3e-4acf-a557-48bd6e519038", "body": {"url": "file:///x"}},
     )()
-    monkeypatch.setattr(braidio, "weave_project", lambda proj, scr, **kw: episode)
+    monkeypatch.setattr(
+        braidio, "weave_project", lambda proj, scr, **kw: braidio.WeaveReceipt(episode)
+    )
     server = _local_server(ledger={})
     _call(server, "create_project", {"project_id": "demo", "title": "Demo"})
     for chosen in [{}, *({"format_id": f} for f in braidio.FORMATS)]:
         args = {"project_id": "demo", "script": _TALK, **chosen}
         woven = _call(server, "weave_project", args).structured_content["cost_usd"]
         assert _usd(server, _TALK, **chosen) == pytest.approx(woven), chosen
+
+
+# --- weave_project reports what the run synthesized (braidio#159) ----------------
+
+
+@pytest.mark.skipif(not braidio.HAS_NW, reason="nw not installed")
+def test_weave_project_reports_actual_spend_and_a_rerun_as_savings(monkeypatch):
+    """The first weave synthesizes the narration; an unchanged re-run reuses it.
+    ``cost_usd`` stays the script's estimate both times, while ``cost_usd_actual``
+    (what a metering ledger reads first) is the spend, then ``0.0``."""
+
+    def _write(out, tag=b"X"):
+        Path(out).parent.mkdir(parents=True, exist_ok=True)
+        Path(out).write_bytes(tag)
+        return Path(out)
+
+    def _narrate(text, out, *, return_cache_status=False, **kw):
+        return (_write(out), False) if return_cache_status else _write(out)
+
+    monkeypatch.setattr(braidio, "narrate", _narrate)
+    monkeypatch.setattr(braidio, "weave_timeline", lambda items, out, **kw: _write(out))
+    monkeypatch.setattr(braidio, "duration_s", lambda path: 3.0)
+    ledger = {}
+    server = _local_server(ledger=ledger)
+    _call(server, "create_project", {"project_id": "demo", "title": "Demo"})
+    args = {
+        "project_id": "demo",
+        "script": {
+            "title": "t",
+            "id_slug": "01",
+            "beats": [{"type": "narration", "text": "n" * 1000}],
+        },
+    }
+    first = _call(server, "weave_project", args).structured_content
+    again = _call(server, "weave_project", args).structured_content
+
+    assert first["cost_usd"] == again["cost_usd"] == pytest.approx(0.30)
+    assert first["cost_usd_actual"] == pytest.approx(0.30)
+    assert again["cost_usd_actual"] == 0.0
+    assert again["cache_hit_savings_usd"] == pytest.approx(0.30)
+    recorded = [
+        e["cost_usd_actual"] for e in ledger.values() if e["tool"] == "weave_project"
+    ]
+    assert recorded == [pytest.approx(0.30), 0.0]
+
+
+@_NW
+def test_an_unpriced_weave_leaves_cost_usd_actual_unknown():
+    """An unknown spend is ``None``, never ``0.0``: a ledger reading
+    ``cost_usd_actual`` first then falls back to the estimate."""
+    from braidio.mcp.tools import _weave_spend
+
+    receipt = braidio.WeaveReceipt(None, cost_usd_actual=0.0, has_unknown_costs=True)
+    assert _weave_spend(receipt)["cost_usd_actual"] is None
+
+
+@_NW
+def test_a_failed_weave_s_partial_spend_reaches_the_ledger(monkeypatch):
+    """A weave can synthesize and then fail (the mix): the call errors, so its
+    result carries no cost, and the retry reuses the takes at $0. The ledger's
+    error path records what the failed run spent, read off the exception."""
+
+    def _write(out, tag=b"X"):
+        Path(out).parent.mkdir(parents=True, exist_ok=True)
+        Path(out).write_bytes(tag)
+        return Path(out)
+
+    def _narrate(text, out, *, return_cache_status=False, **kw):
+        return (_write(out), False) if return_cache_status else _write(out)
+
+    def _broken_mix(items, out, **kw):
+        raise RuntimeError("mix failed")
+
+    monkeypatch.setattr(braidio, "narrate", _narrate)
+    monkeypatch.setattr(braidio, "duration_s", lambda path: 3.0)
+    monkeypatch.setattr(braidio, "weave_timeline", _broken_mix)
+    ledger = {}
+    server = _local_server(ledger=ledger)
+    _call(server, "create_project", {"project_id": "demo", "title": "Demo"})
+    args = {
+        "project_id": "demo",
+        "script": {
+            "title": "t",
+            "id_slug": "01",
+            "beats": [{"type": "narration", "text": "n" * 1000}],
+        },
+    }
+    with pytest.raises(Exception, match="mix failed"):
+        _call(server, "weave_project", args)
+
+    (entry,) = [e for e in ledger.values() if e["tool"] == "weave_project"]
+    assert entry["status"] == "error"
+    assert entry["cost_usd_actual"] == pytest.approx(0.30)
+    assert entry["cost_is_lower_bound"] is True
+
+
+def _weave_stubs(monkeypatch):
+    """Synthesis stubbed (1000 chars of narration: an estimate of $0.30)."""
+
+    def _write(out, tag=b"X"):
+        Path(out).parent.mkdir(parents=True, exist_ok=True)
+        Path(out).write_bytes(tag)
+        return Path(out)
+
+    def _narrate(text, out, *, return_cache_status=False, **kw):
+        return (_write(out), False) if return_cache_status else _write(out)
+
+    monkeypatch.setattr(braidio, "narrate", _narrate)
+    monkeypatch.setattr(braidio, "duration_s", lambda path: 3.0)
+    monkeypatch.setattr(braidio, "weave_timeline", lambda items, out, **kw: _write(out))
+    return {
+        "project_id": "demo",
+        "script": {
+            "title": "t",
+            "id_slug": "01",
+            "beats": [{"type": "narration", "text": "n" * 1000}],
+        },
+    }
+
+
+@pytest.mark.skipif(not braidio.HAS_NW, reason="nw not installed")
+def test_a_failure_after_the_weave_still_meters_its_spend(monkeypatch):
+    """The weave finished and billed, then building the result failed: the
+    error row must carry the spend, or the retry's reuse makes it free."""
+    from braidio.mcp import tools
+
+    args = _weave_stubs(monkeypatch)
+
+    def _boom(*a, **kw):
+        raise RuntimeError("retrieval claim failed")
+
+    monkeypatch.setattr(tools, "_episode_retrieval", _boom)
+    ledger = {}
+    server = _local_server(ledger=ledger)
+    _call(server, "create_project", {"project_id": "demo", "title": "Demo"})
+    with pytest.raises(Exception, match="retrieval claim failed"):
+        _call(server, "weave_project", args)
+    (entry,) = [e for e in ledger.values() if e["tool"] == "weave_project"]
+    assert entry["status"] == "error"
+    assert entry["cost_usd"] == pytest.approx(0.30)
+
+
+@pytest.mark.skipif(not braidio.HAS_NW, reason="nw not installed")
+def test_the_deployed_metering_bills_a_weave_actual_then_partial(monkeypatch):
+    """The connectors meter with enlace_metering, not braidio's local
+    middleware: through it, a weave records what it synthesized, a re-run
+    $0, and a weave that fails after synthesis its partial spend."""
+    em = pytest.importorskip("enlace_metering.middleware")
+    from enlace_metering import UsageLedger as EnlaceLedger
+    from py2mcp import mk_mcp_from_refs
+
+    from braidio.mcp import INSTRUCTIONS, TOOL_REFS
+
+    args = _weave_stubs(monkeypatch)
+    store = {}
+    server = mk_mcp_from_refs(
+        TOOL_REFS,
+        name="t",
+        instructions=INSTRUCTIONS,
+        middleware=[em.MeteringMiddleware(EnlaceLedger(store), allowed={OWNER})],
+    )
+    _mock_token(monkeypatch, OWNER)  # production: identity from the verified token
+    _call(server, "create_project", {"project_id": "demo", "title": "Demo"})
+    _call(server, "weave_project", args)
+    _call(server, "weave_project", args)
+    monkeypatch.setattr(
+        braidio,
+        "weave_timeline",
+        lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("mix")),
+    )
+    failing = {
+        **args,
+        "script": {
+            **args["script"],
+            "beats": [{"type": "narration", "text": "m" * 1000}],
+        },
+    }
+    with pytest.raises(Exception, match="mix"):
+        _call(server, "weave_project", failing)
+    rows = sorted(
+        (e for e in store.values() if e["tool"] == "weave_project"),
+        key=lambda e: e["id"],
+    )
+    assert [r["status"] for r in rows] == ["done", "done", "error"]
+    assert [r["cost_usd"] for r in rows] == [
+        pytest.approx(0.30),
+        0.0,
+        pytest.approx(0.30),
+    ]
+
+
+@_NW
+def test_weave_project_tool_keeps_the_connectors_own_no_format_voice(monkeypatch):
+    """braidio#191 moved the library's unnamed-delivery default; the graph tool
+    pins ``fallback_delivery=None`` so a deployed connector's voice (and what
+    ``estimate_cost`` quotes) does not move with it."""
+    episode = type(
+        "Ann",
+        (),
+        {"id": "9a23da78-0a3e-4acf-a557-48bd6e519038", "body": {"url": "file:///x"}},
+    )()
+    seen = {}
+
+    def _weave(proj, scr, **kw):
+        seen.update(kw)
+        return braidio.WeaveReceipt(episode)
+
+    monkeypatch.setattr(braidio, "weave_project", _weave)
+    server = _local_server(ledger={})
+    _call(server, "create_project", {"project_id": "demo", "title": "Demo"})
+    _call(server, "weave_project", {"project_id": "demo", "script": _THOUSAND})
+    assert "fallback_delivery" in seen and seen["fallback_delivery"] is None
+
+
+@_NW
+def test_save_script_keeps_the_connectors_own_no_format_voice(monkeypatch):
+    """braidio#191: ``save_script`` pins the same ``fallback_delivery=None`` as
+    ``weave_project``, so saving then weaving leaves one weave-config node."""
+    import nw
+
+    server = _local_server(ledger={})
+    _call(server, "create_project", {"project_id": "sw", "title": "SW"})
+    script = {
+        "title": "t",
+        "id_slug": "01",
+        "beats": [{"type": "narration", "text": "hello"}],
+    }
+    _call(server, "save_script", {"project_id": "sw", "script": script})
+    proj = Workspace.for_email(OWNER).open_project("sw")
+    before = nw.annotations_at_tier(proj.root, "weave-configs")
+    assert before and before[0].body["config"].get("model_id") in (None, _V2)
+    assert braidio.defaults.default_delivery().model_id == _V3  # the fallback differs

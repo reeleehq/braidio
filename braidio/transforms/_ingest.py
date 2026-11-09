@@ -67,6 +67,7 @@ from braidio.rights import (
     plan_production,
 )
 from braidio.script import Script, SegmentBeat
+from braidio.sound_design import SoundDesign
 from braidio.tts import tts_backend
 from braidio.weave_config import WeaveConfig
 from braidio.bodies._domain import (
@@ -97,6 +98,7 @@ from braidio.transforms._common import (
     TIER_PRODUCTION_STRUCTURE,
     TIER_RENDER_PROFILE,
     TIER_DIALOGUE_CAST,
+    TIER_SOUND_DESIGN_CONFIG,
     TIER_NARRATIVE_BEAT,
     TIER_DIALOGUE_BEAT,
     TIER_SCENE_BREAK,
@@ -151,6 +153,9 @@ class IngestedScript:
     #: The singleton ``dialogue-cast/v1`` node, when the script has a dialogue
     #: beat to cast; ``None`` when it has none (thorwhalen/braidio#46).
     cast: Annotation | None = None
+    #: The singleton ``sound-design-config/v1`` node, when the production asked
+    #: for sound design; ``None`` when it did not (braidio#161).
+    sound_design: Annotation | None = None
 
 
 @dataclass(frozen=True)
@@ -186,6 +191,7 @@ def ingest_script(
     profile: Profile | None = None,
     rights: RightsPolicy | None = None,
     cast: ConversationCast | None = None,
+    sound_design: SoundDesign | None = None,
 ) -> IngestedScript:
     """Write ``script``'s authoring nodes into ``project``'s graph.
 
@@ -254,6 +260,7 @@ def ingest_script(
         profile=profile,
         publishable=publishable,
         cast=cast if cast is not None else DEFAULT_CAST,
+        sound_design=sound_design,
     )
     # Phase 2 — commit, by identity.
     committed = _commit_nodes(project, nodes)
@@ -276,6 +283,9 @@ def ingest_script(
         plan=plan,
         dialogue_beats=tuple(a for k, a in ordered if k == "dialogue"),
         cast=committed.get((TIER_DIALOGUE_CAST, TIER_DIALOGUE_CAST)),
+        sound_design=committed.get(
+            (TIER_SOUND_DESIGN_CONFIG, TIER_SOUND_DESIGN_CONFIG)
+        ),
     )
 
 
@@ -293,6 +303,7 @@ def _plan_nodes(
     profile: Profile | None,
     publishable: frozenset[str],
     cast: ConversationCast,
+    sound_design: SoundDesign | None = None,
 ) -> list[_AuthoringNode]:
     """Every authoring node this ingest will write, validated, in write order.
 
@@ -311,6 +322,8 @@ def _plan_nodes(
     cast_node = _cast_node(cast=cast, plan=plan, tts=config.tts)
     if cast_node is not None:
         nodes.append(cast_node)
+    if sound_design is not None:
+        nodes.append(_sound_design_node(sound_design, plan=plan))
 
     # The rights plan, not the raw script: a beat the profile dropped is simply
     # absent here, and a substituted one arrives already rewritten. ``orig`` is
@@ -465,6 +478,33 @@ def _cast_turns(
     return pairs
 
 
+def _sound_design_node(design: SoundDesign, *, plan: RenderPlan) -> _AuthoringNode:
+    """The singleton ``sound-design-config/v1`` node (nw's schema): written
+    only when the production asks for sound design, so a production that does
+    not keeps exactly the graph it had (the absence rule, as for structure).
+    Its licence intent is the rights plan's profile; validating it against
+    nw's model here is what makes a bad knob fail before the first write.
+    """
+    from nw.bodies.sound_design import (
+        SOUND_DESIGN_CONFIG_BODY_SCHEMA_URI,
+        SoundDesignConfigBodyV1,
+    )
+
+    if design.designer is not None or design.writer is not None:
+        raise ValueError(
+            "sound design: a custom designer or writer runs on the fast path only "
+            "(render_production); the graph path designs with nw's foley "
+            "Transform, which records and caches the call."
+        )
+
+    return _AuthoringNode(
+        tier=TIER_SOUND_DESIGN_CONFIG,
+        identity=TIER_SOUND_DESIGN_CONFIG,
+        body=_json(SoundDesignConfigBodyV1(**design.to_config(plan.profile))),
+        body_schema_uri=SOUND_DESIGN_CONFIG_BODY_SCHEMA_URI,
+    )
+
+
 def _structure_node(*, structure, bed) -> _AuthoringNode | None:
     """The singleton ``production-structure/v1`` node, or ``None``.
 
@@ -557,7 +597,9 @@ def _segment_nodes(
         # segment-extraction Transform reads start/end from here.
         reference=MediaRef(
             asset_id=str(resolved.asset_path),
-            interval=TimeInterval.from_seconds(
+            # a computed float window (LRCLIB's 3.48 s is not binary-exact),
+            # rounded to the tick by lacing's one rule (braidio#181, #189)
+            interval=TimeInterval.from_seconds_lossy(
                 resolved.start_s, resolved.end_s, rate=_RATE
             ),
         ),

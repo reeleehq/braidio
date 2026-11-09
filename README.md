@@ -131,6 +131,10 @@ render_production(
 )
 ```
 
+### Timed pauses and the model
+
+A silence of any length is an SSML break in the text: `Narration('Breathe in.<break time="4s"/> And out.<break time="6s"/>')`. braidio keeps a break the voice renders itself (ElevenLabs' v2 models, up to 3 s) and, everywhere else (`eleven_v3`, `eleven_v4`, any non-ElevenLabs voice), cuts the beat there and inserts exactly that silence. The parsing is `voxy.pauses`, shared with the rest of the fleet's speech tools. `eleven_v4`, ElevenLabs' current model, is the `v4-presenter` / `v4-narrator` delivery (`render_production(..., delivery="v4-narrator")`); `dataclasses.replace(braidio.V4_NARRATOR, language_code="fr")` fixes the language it reads in.
+
 ### Cost tracking
 
 ElevenLabs TTS is braidio's only spend (everything else is local ffmpeg). `braidio.estimate_cost(script)` previews a production's cost before you pay for synthesis, and real renders attribute a per-character cost onto their artifacts. Dollars are a **rate estimate** — set your ElevenLabs plan's rate for exact figures:
@@ -212,7 +216,20 @@ play.
 Path("ep.srt").write_text(braidio.captions_for(script, timeline, max_chars=42))
 ```
 
-`braidio.captions` is part of the core (pure, no extra dependencies);
+`braidio.captions` is part of the core (pure, no extra dependencies).
+
+For narration braidio did **not** render (another TTS, a hand recording) there is
+no timeline, so measure one: `braidio.align_script(script_or_text, words)` walks the
+authored text against the word times of any word-level transcript, and returns the
+`timeline` (for `plan_spans`) and `cues` carrying your words at the measured
+times, never the recogniser's. It is free and offline.
+
+```python
+a = braidio.align_script(script, scribe_words, duration_s=mix_seconds)
+Path("ep.srt").write_text(braidio.captions_from_cues(a.cues, max_chars=42))
+spans = braidio.video.plan_spans(a.timeline)
+```
+
 For a production you will **reopen and re-edit** — swap a still, change a
 move, re-render — the picture track lives in the project graph instead: four
 `lacing` bodies (`still/v1`, `video-panel/v1`, `video-cut/v1`,
@@ -234,7 +251,9 @@ braidio's data home, where the host's router and lister would never find it.
 
 `braidio.project.create_project_at(projects_dir, project_id)` is the host-placed
 create on its own. It is deliberately outside `braidio.mcp`, so placing a project
-never pulls the `[mcp]` extra.
+never pulls the `[mcp]` extra. `open_or_create_project_at(projects_dir, project_id, title=...)`
+opens the project when it is there and creates it otherwise: what a host keeping
+one project per production calls each time.
 
 `braidio.video`'s dependencies are imported inside the functions that use them, so
 `import braidio.video` works on a bare install and the planners stay usable —

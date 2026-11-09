@@ -21,7 +21,7 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from braidio.tts import narrate, text_to_dialogue
+from braidio.tts import text_to_dialogue, voice_for
 
 # Curated conversational voices (casual, not narrator).
 JESSICA = "cgSgspJ2msm6clMCkdW9"  # playful, bright, warm (F)
@@ -176,10 +176,11 @@ def render_turns_sequential(
 
     ``api_key`` is threaded to :func:`braidio.tts.narrate`; ``None`` (default)
     keeps the ``$ELEVENLABS_API_KEY`` fallback. ``narrate_fn`` is the per-turn
-    synthesizer (default :func:`braidio.tts.narrate`): a renderer given another
+    synthesizer (default: the ElevenLabs voice, :func:`braidio.tts.voice_for`,
+    so replacing ``braidio.narrate`` reaches it, braidio#199): a renderer given another
     TTS backend (:func:`braidio.tts.narrator_from_speak`) renders dialogue here,
     since only ElevenLabs has the one-pass path."""
-    synthesize = narrate_fn or narrate
+    synthesize = narrate_fn or voice_for().narrate
     work = Path(work_dir)
     work.mkdir(parents=True, exist_ok=True)
     parts: list[Path] = []

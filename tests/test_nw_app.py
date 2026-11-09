@@ -153,7 +153,29 @@ def test_every_graph_tier_and_reader_is_public():
     for name in picture:
         assert getattr(public, name) is getattr(_video_cut, name), name
     assert (tiers | readers | picture) <= set(public.__all__)
-    # reelee's adapter (reelee/_braidio.py) imports these private names until
-    # reeleehq/braidio#156: they must stay the very public objects, not copies.
+    # The pre-#146 private aliases are gone (braidio#156): reelee reads the
+    # public names (reeleehq/reelee#884), and a host has one name per reader.
     for private in ("_content_keyed_prepare", "_frames_dir", "_panel_source"):
-        assert getattr(_video_cut, private) is getattr(public, private[1:]), private
+        assert not hasattr(_video_cut, private), private
+
+
+def test_open_or_create_project_at_opens_creates_and_refuses(tmp_path):
+    """braidio#182: one call a host makes per production, without nw's marker
+    file; a folder holding something that is not a project is never overwritten."""
+    pytest.importorskip("nw")
+    from braidio.project import Project, open_or_create_project_at
+
+    made = open_or_create_project_at(tmp_path, "ep", title="Ep")
+    assert isinstance(made, Project)
+    (made.root / "data").mkdir(exist_ok=True)
+    assert open_or_create_project_at(tmp_path, "ep").root == made.root
+    stray = tmp_path / "stray"
+    stray.mkdir()
+    (stray / "notes.txt").write_text("mine")
+    with pytest.raises(FileNotFoundError):
+        open_or_create_project_at(tmp_path, "stray")
+    assert (stray / "notes.txt").read_text() == "mine"
+    with pytest.raises(ValueError):
+        open_or_create_project_at(tmp_path, "../escape")
+    (tmp_path / "empty").mkdir()  # an empty folder is a place to create one
+    assert isinstance(open_or_create_project_at(tmp_path, "empty"), Project)

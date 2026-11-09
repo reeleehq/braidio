@@ -207,3 +207,66 @@ def test_render_video_refuses_an_empty_panel_list():
 
     with pytest.raises(ValueError, match="at least one panel"):
         render_video([], audio_path="a.mp3", out_path="o.mp4")
+
+
+def test_prepare_still_rebuilds_when_the_source_changes(tmp_path):
+    """The cache key is the input, not the output path (braidio#213)."""
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    from braidio.video import prepare_still
+
+    Image.new("RGB", (40, 20), "red").save(tmp_path / "a.png")
+    Image.new("RGB", (40, 20), "blue").save(tmp_path / "b.png")
+    dst = tmp_path / "out.jpg"
+    red = prepare_still(tmp_path / "a.png", dst, size=(64, 36)).read_bytes()
+    blue = prepare_still(tmp_path / "b.png", dst, size=(64, 36)).read_bytes()
+    assert blue != red
+    # same input again: reused (mtime unchanged), a new size: rebuilt
+    mtime = dst.stat().st_mtime_ns
+    prepare_still(tmp_path / "b.png", dst, size=(64, 36))
+    assert dst.stat().st_mtime_ns == mtime
+    assert Image.open(prepare_still(tmp_path / "b.png", dst, size=(32, 18))).size == (
+        32,
+        18,
+    )
+    # no sidecar -> unknown origin -> rebuilt; refresh forces it too
+    (tmp_path / "out.jpg.src").unlink()
+    prepare_still(tmp_path / "b.png", dst, size=(32, 18))
+    assert (tmp_path / "out.jpg.src").exists()
+    before = dst.stat().st_mtime_ns
+    prepare_still(tmp_path / "b.png", dst, size=(32, 18), refresh=True)
+    assert dst.stat().st_mtime_ns != before
+
+
+def test_prepare_still_interrupted_rebuild_leaves_no_stale_claim(tmp_path, monkeypatch):
+    """A rebuild that dies after writing dst must not leave the old stamp vouching."""
+    pytest.importorskip("PIL")
+    import os
+
+    from PIL import Image
+
+    from braidio import video
+
+    Image.new("RGB", (40, 20), "red").save(tmp_path / "a.png")
+    Image.new("RGB", (40, 20), "blue").save(tmp_path / "b.png")
+    dst = tmp_path / "out.jpg"
+    video.prepare_still(tmp_path / "a.png", dst, size=(64, 36))
+
+    real_replace = os.replace
+
+    def replace(a, b):
+        if str(b).endswith(".src"):
+            raise KeyboardInterrupt
+        return real_replace(a, b)
+
+    with monkeypatch.context() as m:
+        m.setattr(os, "replace", replace)
+        with pytest.raises(KeyboardInterrupt):
+            video.prepare_still(tmp_path / "b.png", dst, size=(64, 36))
+    blue_dst = dst.read_bytes()
+    # red is asked for again: must be rebuilt, not served blue's canvas
+    assert (
+        video.prepare_still(tmp_path / "a.png", dst, size=(64, 36)).read_bytes()
+        != blue_dst
+    )

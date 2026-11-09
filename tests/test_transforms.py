@@ -664,6 +664,165 @@ def test_a_format_narrates_with_its_delivery_on_the_graph(
     assert seen and set(seen) == {braidio.DEEP_DIVE.narration_delivery.model_id}
 
 
+def test_a_delivery_without_a_format_voices_the_graph(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """braidio#182: ``weave_project(delivery=)`` is the fast path's
+    ``delivery=``, by object or by name, with no format and no hand-built
+    config."""
+    seen = []
+    real = braidio.narrate
+
+    def _narrate(text, out, **kw):
+        seen.append((kw["model_id"], kw["voice_settings"]))
+        return real(text, out, **kw)
+
+    monkeypatch.setattr(braidio, "narrate", _narrate)
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source, delivery="v3-narrator")
+    expected = braidio.DELIVERIES["v3-narrator"]
+    assert seen and set(m for m, _ in seen) == {expected.model_id}
+    assert all(v == dict(expected.voice_settings) for _, v in seen)
+
+
+def test_an_unnamed_delivery_resolves_like_the_fast_path(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """braidio#191: no format, config or delivery -> ``default_delivery()``, the
+    resolution ``render_production`` uses (env, user config, package default)."""
+    monkeypatch.setenv("BRAIDIO_DELIVERY", "v3-narrator")
+    seen = []
+    real = braidio.narrate
+
+    def _narrate(text, out, **kw):
+        seen.append((kw["model_id"], kw["voice_settings"]))
+        return real(text, out, **kw)
+
+    monkeypatch.setattr(braidio, "narrate", _narrate)
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source)
+    expected = braidio.default_delivery()
+    assert expected.name == "v3-narrator"
+    assert seen and all(
+        v == dict(expected.voice_settings) and m == expected.model_id for m, v in seen
+    )
+
+
+def test_an_unnamed_delivery_leaves_a_voiced_project_alone(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """braidio#191 must not re-bill: the default applies before the first render
+    only, and says nothing when the caller named nothing."""
+    calls = _counting_narrate(monkeypatch)
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source, delivery=braidio.V2_TUNED)
+    voiced = len(calls)
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        braidio.weave_project(project, script, source=source)
+    assert len(calls) == voiced
+
+
+def test_no_fallback_delivery_keeps_the_bare_weave_config(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """braidio#191's seam: ``fallback_delivery=None`` is the old behaviour (what
+    the MCP graph tools pass), and a later unnamed re-weave of a project voiced
+    that way neither warns nor reports a delivery as kept."""
+    import warnings
+
+    calls = _counting_narrate(monkeypatch)
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source, fallback_delivery=None)
+    voiced = len(calls)
+    assert set(calls) == {braidio.WeaveConfig().model_id}
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        again = braidio.weave_project(
+            project, script, source=source, fallback_delivery=None, return_receipt=True
+        )
+    assert len(calls) == voiced and not again.delivery_kept
+
+
+def test_a_new_delivery_does_not_re_bill_a_voiced_project(
+    project, script_and_source, patched_synthesis, monkeypatch
+):
+    """The delivery is protected exactly as a format's is (braidio#135): it sets
+    a project's first render; ``config=`` is how to change a later one."""
+    calls = _counting_narrate(monkeypatch)
+    script, source = script_and_source
+    braidio.weave_project(project, script, source=source, delivery=braidio.V2_TUNED)
+    voiced = len(calls)
+    with pytest.warns(UserWarning, match="was not applied"):
+        braidio.weave_project(
+            project, script, source=source, delivery=braidio.V3_NARRATOR
+        )
+    assert len(calls) == voiced
+    assert set(calls) == {braidio.V2_TUNED.model_id}
+
+
+def test_a_named_delivery_kept_off_a_voiced_project_says_so(
+    project, script_and_source, patched_synthesis
+):
+    """braidio#192: the re-bill protection keeps the project's voice; a caller
+    who named another delivery is told, not silently ignored."""
+    script, source = script_and_source
+    first = braidio.weave_project(
+        project, script, source=source, delivery=braidio.V2_TUNED, return_receipt=True
+    )
+    assert not first.delivery_kept
+    with pytest.warns(UserWarning, match="was not applied"):
+        kept = braidio.weave_project(
+            project,
+            script,
+            source=source,
+            delivery=braidio.V3_NARRATOR,
+            return_receipt=True,
+        )
+    assert kept.delivery_kept  # on the receipt, which a long-running host keeps
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # the same delivery again: nothing to say
+        same = braidio.weave_project(
+            project,
+            script,
+            source=source,
+            delivery=braidio.V2_TUNED,
+            return_receipt=True,
+        )
+    assert not same.delivery_kept
+
+
+def test_an_unknown_delivery_name_is_refused_before_anything_is_written(project):
+    import nw
+
+    with pytest.raises(ValueError, match="unknown delivery 'v9'"):
+        braidio.weave_project(
+            project, braidio.Script(title="t", id_slug="t", beats=[]), delivery="v9"
+        )
+    assert not nw.annotations_at_tier(project.root, "weave-configs")
+
+
+def test_a_delivery_applies_over_a_format_and_over_an_explicit_config():
+    from braidio.transforms import format_config
+
+    over_fmt = format_config(braidio.DEEP_DIVE, delivery=braidio.V3_NARRATOR)
+    assert over_fmt.model_id == braidio.V3_NARRATOR.model_id
+    assert over_fmt.crossfade_s == braidio.DEEP_DIVE.weave.crossfade_s  # format's knobs
+    cfg = braidio.WeaveConfig(crossfade_s=0.3)
+    both = format_config(config=cfg, delivery=braidio.V3_NARRATOR)
+    assert (both.crossfade_s, both.model_id) == (0.3, braidio.V3_NARRATOR.model_id)
+    assert format_config(config=cfg) is cfg  # unchanged without a delivery
+    # an explicit config keeps its own voice over the format's delivery
+    mine = braidio.WeaveConfig(model_id="eleven_multilingual_v2")
+    assert format_config(braidio.DEEP_DIVE, config=mine).model_id == mine.model_id
+    with pytest.raises(TypeError, match="Delivery or its name"):
+        format_config(delivery={"model_id": "x"})
+
+
 def _counting_narrate(monkeypatch):
     """Count synthesis calls over the patched stub (the re-bill measure)."""
     calls = []
@@ -1528,6 +1687,26 @@ def test_an_unpriced_rate_makes_the_receipt_a_lower_bound(
     assert receipt.has_unknown_costs
 
 
+def test_the_receipt_totals_with_nws_rule():
+    """``WeaveReceipt.of`` totals with ``nw.transforms.total_cost`` (braidio#179):
+    the same three fields, and a non-finite total reads as unknown, which a
+    plain ``sum`` reported as a known (infinite) spend."""
+    from types import SimpleNamespace
+
+    def _result(cost, saved=0.0, unknown=False):
+        return SimpleNamespace(
+            cost_usd_actual=cost, cache_hit_savings_usd=saved, has_unknown_costs=unknown
+        )
+
+    receipt = braidio.WeaveReceipt.of(None, [_result(0.25), _result(0.0, 0.5)])
+    assert (receipt.cost_usd_actual, receipt.cache_hit_savings_usd) == (0.25, 0.5)
+    assert not receipt.has_unknown_costs
+    assert braidio.WeaveReceipt.of(None, [_result(float("inf"))]).has_unknown_costs
+    assert braidio.WeaveReceipt.of(None, [_result(float("nan"))]).has_unknown_costs
+    assert braidio.WeaveReceipt.of(None, [_result(0.0, float("inf"))]).has_unknown_costs
+    assert braidio.WeaveReceipt.of(None, [_result(0.25)], failed=True).has_unknown_costs
+
+
 def test_without_the_flag_the_episode_is_returned_as_before(
     project, script_and_source, patched_synthesis
 ):
@@ -2139,15 +2318,22 @@ def test_a_noop_reweave_walks_freshness_once(
     project, script_and_source, patched_synthesis, monkeypatch
 ):
     """braidio#171: freshness changes only through a write, so a re-weave that
-    writes nothing needs one walk of the graph, not about two per beat."""
-    import nw
+    writes nothing needs one walk of the graph, not about two per beat.
+
+    Counted at nw's one walk primitive, which both of its entry points use
+    (``stale_verdicts_all`` for braidio's "current node" readers, and
+    ``fresh_equivalents`` for reuse since braidio#180), so a second walk
+    through either would show."""
+    import nw.freshness
 
     script, source = script_and_source
     first = braidio.weave_project(project, script, source=source)
     walks = []
-    real = nw.stale_verdicts_all
+    real = nw.freshness._verdicts_for
     monkeypatch.setattr(
-        nw, "stale_verdicts_all", lambda root: walks.append(root) or real(root)
+        nw.freshness,
+        "_verdicts_for",
+        lambda *a, **kw: walks.append(1) or real(*a, **kw),
     )
     again = braidio.weave_project(project, script, source=source)
     assert again.id == first.id
@@ -2206,3 +2392,50 @@ def test_a_voice_never_woven_names_the_newest_fresh_mix(
     b = braidio.weave_project(project, script, source=source)
     monkeypatch.setenv("BRAIDIO_TTS_VOICE", "voiceC")  # no mix is voiced so
     assert project.current_episode().id == b.id
+
+
+def test_segment_with_non_binary_exact_timings_weaves(
+    project, tmp_path, monkeypatch, patched_synthesis
+):
+    """Real timings are not binary-exact: LRCLIB's ``3.48`` used to raise
+    ``LossyTimeConversionError`` at ingest (braidio#181). The window is rounded
+    to the graph's 1 ms tick, and the extraction cuts the window the graph
+    *recorded*, not the raw resolved floats (sub-tick inputs make the two
+    differ, so a cut from the raw floats fails here)."""
+    cuts = []
+
+    def _extract(asset, start, end, out, **kw):
+        cuts.append((start, end))
+        Path(out).parent.mkdir(parents=True, exist_ok=True)
+        Path(out).write_bytes(b"CLIP")
+        return Path(out)
+
+    monkeypatch.setattr(braidio, "extract_padded", _extract)
+    song = tmp_path / "lrclib.mp3"
+    song.write_bytes(b"SONG")
+    script = braidio.Script(
+        title="Real timings",
+        id_slug="real",
+        beats=[braidio.SegmentBeat(reference="a lyric line", label="line")],
+    )
+    braidio.weave_project(
+        project, script, source=_FakeSource(song, start_s=3.4804, end_s=7.3096)
+    )
+    assert cuts == [(3.48, 7.31)]
+
+
+@pytest.mark.parametrize("x", [0.0005, 0.0025, 0.0055, 3.48, 22.8866])
+def test_every_float_window_rounds_by_one_rule(x):
+    """braidio#184/#189: the ingest's clip window, the video panels' spans and
+    the importer's media refs round a float second to the tick the same way
+    (lacing's ``TimeInterval.from_seconds_lossy``); two rules disagreed on
+    ties such as 0.0005 before."""
+    from lacing import TimeInterval
+
+    from braidio.importing._writer import _media_ref
+    from braidio.transforms._common import _RATE
+    from braidio.transforms._video_panels import span_interval
+
+    expected = TimeInterval.from_seconds_lossy(x, x + 1, rate=_RATE)
+    assert span_interval(x, x + 1) == expected
+    assert _media_ref("a", x, x + 1).interval == expected

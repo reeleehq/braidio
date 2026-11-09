@@ -41,7 +41,9 @@ from dataclasses import dataclass
 
 from lacing import Annotation
 from nw import TransformInputs
+from nw.transforms import total_cost
 
+from braidio.defaults import default_delivery as _default_delivery
 from braidio.transforms._common import (
     ELEVENLABS_SECRET,
     fresh_ids_pass,
@@ -65,6 +67,8 @@ from braidio.transforms._common import (
     TIER_VIDEO_PANEL,
     TIER_VIDEO_CUT,
     TIER_LABEL_TRACK,
+    TIER_SOUND_DESIGN,
+    TIER_SOUND_DESIGN_CONFIG,
     graph_index,
     node_ref,
 )
@@ -79,6 +83,11 @@ from braidio.transforms import (  # noqa: F401
     _episode,
     _video_panels,
     _video_cut,
+    _sound,
+)
+from braidio.transforms._sound import (
+    NAME as SOUND_DESIGN_TRANSFORM,
+    sound_design_of,
 )
 from braidio.transforms._episode import (
     MemberSpan,
@@ -133,6 +142,8 @@ VIDEO_CUT_FINISH_TRANSFORM = _video_cut.FINISH_NAME
 video_cut_reuses_existing = _video_cut.reuses_existing_cut
 
 __all__ = [
+    "SOUND_DESIGN_TRANSFORM",
+    "sound_design_of",
     "format_config",
     "resolve_config",
     "ingest_script",
@@ -189,6 +200,8 @@ __all__ = [
     "TIER_VIDEO_PANEL",
     "TIER_VIDEO_CUT",
     "TIER_LABEL_TRACK",
+    "TIER_SOUND_DESIGN",
+    "TIER_SOUND_DESIGN_CONFIG",
     "VOICE_ASSIGNMENT_TRANSFORM",
     "NARRATION_RENDER_TRANSFORM",
     "DIALOGUE_RENDER_TRANSFORM",
@@ -203,10 +216,10 @@ __all__ = [
 
 #: What a narration render was synthesized with: the config keys a re-weave
 #: must keep, or every one of those renders re-synthesizes (and re-bills).
-VOICE_KEYS = ("model_id", "voice_settings")
+VOICE_KEYS = ("model_id", "voice_settings", "language_code")
 
 
-def format_config(fmt=None, *, config=None, voice_id=None):
+def format_config(fmt=None, *, config=None, voice_id=None, delivery=None):
     """The weave-config a production asks for: one rule for every writer.
 
     ``config`` else the format's ``weave``, carrying the narration voice —
@@ -216,11 +229,32 @@ def format_config(fmt=None, *, config=None, voice_id=None):
     settings: what the fast path renders with (braidio#120). An explicit
     ``config`` is used as given. Pure: :func:`resolve_config` is what applies
     it to a project.
+
+    ``delivery`` (a :class:`~braidio.delivery.Delivery` or the name of one)
+    is what the narrator speaks with when the caller names it rather than a
+    format, the fast path's ``delivery=`` (braidio#182): it replaces the
+    format's ``narration_delivery`` and, with neither a format nor a
+    ``config``, applies to a default :class:`~braidio.weave_config.WeaveConfig`.
+    With an explicit ``config`` too, the delivery's model and settings are
+    applied on top of it: naming both means both.
+
+    >>> format_config(delivery="v3-narrator").model_id
+    'eleven_v3'
+    >>> format_config() is None
+    True
     """
-    if config is None and fmt is not None:
+    if delivery is not None:
+        from braidio.delivery import as_delivery
+
+        delivery = as_delivery(delivery)
+    if delivery is None and config is None and fmt is not None:
         delivery = fmt.narration_delivery
-        config = fmt.weave.with_(
-            model_id=delivery.model_id, voice_settings=dict(delivery.voice_settings)
+    if delivery is not None:
+        base = config if config is not None else (fmt.weave if fmt else WeaveConfig())
+        config = base.with_(
+            model_id=delivery.model_id,
+            voice_settings=dict(delivery.voice_settings),
+            language_code=delivery.language_code,
         )
     if voice_id is None and fmt is not None:
         voice_id = fmt.narration_voice
@@ -229,7 +263,15 @@ def format_config(fmt=None, *, config=None, voice_id=None):
     return config
 
 
-def resolve_config(project, fmt=None, *, config=None, voice_id=None):
+def resolve_config(
+    project,
+    fmt=None,
+    *,
+    config=None,
+    voice_id=None,
+    delivery=None,
+    fallback_delivery=_default_delivery,
+):
     """The weave-config to ingest into ``project``: :func:`format_config`, minus
     any change to what its narration was already synthesized with.
 
@@ -242,18 +284,52 @@ def resolve_config(project, fmt=None, *, config=None, voice_id=None):
     saved, not yet woven) there is nothing to re-bill, and the format's
     delivery applies. ``weave_project`` and ``save_script`` both resolve
     through here, so saving and then weaving never rewrites the config node.
+    A ``delivery`` is protected exactly like a format's: it sets the model and
+    settings of a project's first render, not of a later one. With no format,
+    config or delivery at all, an unvoiced project gets ``fallback_delivery()``:
+    by default :func:`braidio.defaults.default_delivery` (env, user config,
+    package default), what the fast path renders with (braidio#191): a
+    zero-argument callable, or a :class:`~braidio.delivery.Delivery` / its name,
+    read when called (not at import, so patch the env, not the function). Pass
+    ``None`` to keep the bare :class:`~braidio.weave_config.WeaveConfig`.
     """
     import nw
 
-    resolved = format_config(fmt, config=config, voice_id=voice_id)
-    if config is not None or not nw.annotations_at_tier(
-        project.root, "narration-renders"
-    ):
+    unvoiced = not nw.annotations_at_tier(project.root, "narration-renders")
+    if unvoiced and (delivery, config, fmt) == (None, None, None) and fallback_delivery:
+        # Nothing names a voice: use the fallback (by default what the fast
+        # path resolves), so one script is voiced alike on both paths
+        # (braidio#191). Before the first render only; it is never "named", so
+        # it can neither warn nor be reported as kept.
+        fallback = (
+            fallback_delivery() if callable(fallback_delivery) else fallback_delivery
+        )
+        return format_config(voice_id=voice_id, delivery=fallback)
+    resolved = format_config(fmt, config=config, voice_id=voice_id, delivery=delivery)
+    if config is not None or unvoiced:
         return resolved
     nodes = nw.annotations_at_tier(project.root, "weave-configs")
     recorded = dict(nodes[0].body.get("config", {})) if nodes else {}
     kept = {key: recorded[key] for key in VOICE_KEYS if key in recorded}
-    return (resolved or WeaveConfig()).with_(**kept)
+    final = (resolved or WeaveConfig()).with_(**kept)
+    if delivery is not None and _voice_of(final) != _voice_of(resolved):
+        import warnings
+
+        warnings.warn(
+            f"delivery {getattr(delivery, 'name', delivery)!r} was not applied: "
+            "this project is already voiced, and keeping its model and settings "
+            "is what stops a re-weave from re-billing every narration beat "
+            "(braidio#135). Pass config= to re-voice it on purpose.",
+            UserWarning,
+            stacklevel=3,
+        )
+    return final
+
+
+def _voice_of(config) -> dict:
+    """The :data:`VOICE_KEYS` a weave-config voices narration with."""
+    snapshot = config.to_dict() if config is not None else {}
+    return {key: snapshot.get(key) for key in VOICE_KEYS}
 
 
 def weave_project(
@@ -269,6 +345,9 @@ def weave_project(
     rights=None,
     cast=None,
     voice_id=None,
+    delivery=None,
+    fallback_delivery=_default_delivery,
+    sound_design=None,
     api_key=None,
     return_receipt: bool = False,
 ):
@@ -309,6 +388,16 @@ def weave_project(
     re-stales (and re-bills) every narration render that did not name its own
     voice. Left unset it writes nothing (thorwhalen/braidio#115).
 
+    ``delivery`` (a :class:`~braidio.delivery.Delivery` or its name) is what
+    the narrator speaks with when the caller names one without a format: it
+    wins over the format's ``narration_delivery`` and goes through
+    :func:`resolve_config` like one, so a project already voiced keeps its
+    model and settings (braidio#182). Naming nothing (no ``delivery``, format
+    or config) voices a project that has no narration render yet with
+    ``fallback_delivery()``, by default the fast path's
+    :func:`braidio.defaults.default_delivery` (braidio#191); ``None`` keeps the
+    bare :class:`~braidio.weave_config.WeaveConfig`.
+
     ``profile`` (a :class:`~braidio.rights.Profile`) and ``rights`` (a
     :class:`~braidio.rights.RightsPolicy`) are the rights seam, and they mean
     exactly what they mean on :func:`braidio.render.render_production`: the
@@ -329,6 +418,16 @@ def weave_project(
     returns the episode already there and writes nothing. After a real change
     the previous episode stays in the graph as history, stale; the returned
     one is current (thorwhalen/braidio#51).
+
+    ``sound_design`` (a :class:`~braidio.sound_design.SoundDesign`) asks foley
+    to design sound effects over the finished episode (braidio#161), through
+    nw's ``narration_to_sound_design.foley`` Transform: the episode itself is
+    unchanged, and the design is its own ``sound-design/v1`` node derived from
+    it (the mix in falaw's content store, its credits and timeline in the
+    body), on the receipt as ``sound_design`` and read back with
+    :func:`sound_design_of`. Its spend is unknown, so a receipt that ran it
+    says ``has_unknown_costs``. ``None`` writes nothing, and a later weave
+    without it removes the design's config, so its design reads stale.
 
     ``api_key`` is the caller's ElevenLabs key, and means exactly what it
     means on :func:`braidio.render.render_production`: ``None`` (default)
@@ -353,7 +452,20 @@ def weave_project(
     """
     import nw
 
-    config = resolve_config(project, fmt, config=config, voice_id=voice_id)
+    if sound_design is not None:
+        # before any voice is paid for; nw's Transform writes the mix itself
+        sound_design.require(writes_mix=False)
+    requested = format_config(fmt, config=config, voice_id=voice_id, delivery=delivery)
+    config = resolve_config(
+        project,
+        fmt,
+        config=config,
+        voice_id=voice_id,
+        delivery=delivery,
+        fallback_delivery=fallback_delivery,
+    )
+    # a named delivery the re-bill protection did not apply (braidio#192)
+    delivery_kept = delivery is not None and _voice_of(config) != _voice_of(requested)
     if fmt is not None:
         structure = structure if structure is not None else fmt.structure
         cast = cast if cast is not None else fmt.cast
@@ -368,6 +480,7 @@ def weave_project(
         profile=profile,
         rights=rights,
         cast=cast,
+        sound_design=sound_design,
     )
     voice = nw.get_transform(VOICE_ASSIGNMENT_TRANSFORM)
     narration = nw.get_transform(NARRATION_RENDER_TRANSFORM)
@@ -381,15 +494,22 @@ def weave_project(
 
     results = []
 
-    def run(transform, *primary, secrets=None):
-        results.append(_execute(transform, project, *primary, secrets=secrets))
+    def run(transform, *primary, secrets=None, context=None):
+        results.append(
+            _execute(transform, project, *primary, secrets=secrets, context=context)
+        )
+        if not results[-1].annotations:
+            raise RuntimeError(f"{transform.name} produced nothing to weave on")
         out = results[-1].annotations[0]
         note_output(project, out)  # a node the held walk did not know: walk again
         return out
 
     render_by_authoring_id = {}
-    # one freshness walk per write, not ~two per beat (braidio#171)
-    with fresh_ids_pass():
+    woven = None
+    # one freshness walk per write, not ~two per beat (braidio#171): nw's pass
+    # for the reuse lookups (dropped by nw's own writers), braidio's for the
+    # "current node" readers (fresh_ids, dropped by note_output)
+    with nw.freshness_pass(), fresh_ids_pass():
         try:
             for beat in ing.narration_beats:
                 run(voice, beat)
@@ -407,10 +527,24 @@ def weave_project(
                 for kind, auth in ing.ordered
             )
             woven = run(episode, *members)
+            designed = (
+                None
+                if ing.sound_design is None
+                else run(
+                    nw.get_transform(SOUND_DESIGN_TRANSFORM),
+                    woven,
+                    context={ing.sound_design.body_schema_uri: (ing.sound_design,)},
+                )
+            )
         except Exception as exc:  # annotated and re-raised, never swallowed
-            exc.weave_receipt = WeaveReceipt.of(None, results, failed=True)
+            # the episode, when the failure came after it (the sound design)
+            exc.weave_receipt = WeaveReceipt.of(woven, results, failed=True)
             raise
-    return WeaveReceipt.of(woven, results) if return_receipt else woven
+    if not return_receipt:
+        return woven
+    return WeaveReceipt.of(
+        woven, results, sound_design=designed, delivery_kept=delivery_kept
+    )
 
 
 @dataclass(frozen=True)
@@ -422,7 +556,8 @@ class WeaveReceipt:
     (:mod:`braidio.cost`; ``0.0`` for a stage that reused its render or hit the
     synthesis cache), not an ElevenLabs invoice. ``has_unknown_costs`` is
     ``True`` when some executed stage could not be priced (an unpriced rate,
-    even on a reuse, or a stage that failed), so ``cost_usd_actual`` is then a
+    even on a reuse, a stage that failed, or a non-finite total), so
+    ``cost_usd_actual`` is then a
     lower bound, never a reading of "free". ``episode`` is ``None`` only on
     the partial receipt a failed run attaches to its exception.
     """
@@ -431,30 +566,53 @@ class WeaveReceipt:
     cost_usd_actual: float = 0.0
     cache_hit_savings_usd: float = 0.0
     has_unknown_costs: bool = False
+    #: The episode's ``sound-design/v1`` node when the run designed one
+    #: (``weave_project(sound_design=...)``, braidio#161); ``None`` otherwise.
+    sound_design: Annotation | None = None
+
+    #: ``True`` when ``weave_project(delivery=...)`` named a delivery that was
+    #: not applied, because the project was already voiced and keeping its
+    #: model and settings is what stops a re-bill (braidio#135, #192).
+    #: ``config=`` re-voices on purpose.
+    delivery_kept: bool = False
 
     @classmethod
-    def of(cls, episode, results, *, failed: bool = False) -> "WeaveReceipt":
+    def of(
+        cls,
+        episode,
+        results,
+        *,
+        failed: bool = False,
+        sound_design=None,
+        delivery_kept: bool = False,
+    ) -> "WeaveReceipt":
         """The receipt of ``episode`` over the stages' ``results``.
 
         ``failed``: a stage raised after these ``results``; what it spent is
-        not in them, so the total is a lower bound.
+        not in them, so the total is a lower bound. The totalling rule is nw's
+        (``nw.transforms.total_cost``), which also reads a non-finite sum as
+        unknown.
         """
-        results = list(results)
+        total = total_cost(results, failed=failed)
         return cls(
             episode=episode,
-            cost_usd_actual=sum((r.cost_usd_actual for r in results), 0.0),
-            cache_hit_savings_usd=sum((r.cache_hit_savings_usd for r in results), 0.0),
-            has_unknown_costs=failed or any(r.has_unknown_costs for r in results),
+            cost_usd_actual=total.cost_usd_actual,
+            cache_hit_savings_usd=total.cache_hit_savings_usd,
+            has_unknown_costs=total.has_unknown_costs,
+            sound_design=sound_design,
+            delivery_kept=delivery_kept,
         )
 
 
-def _execute(transform, project, *primary, secrets=None):
+def _execute(transform, project, *primary, secrets=None, context=None):
     """``plan`` then ``execute`` one transform over ``primary``; its ``TransformResult``.
 
     ``secrets`` is offered only when there is one — the Transform's ``execute``
     then declares the keyword or it is a caller bug worth a ``TypeError``.
+    ``context`` is for a Transform that reads its context from its inputs
+    rather than from the graph (nw's sound design reads its config there).
     """
-    inputs = TransformInputs(primary=tuple(primary))
+    inputs = TransformInputs(primary=tuple(primary), context=context or {})
     plan, skeleton = transform.plan(project, inputs)
     kwargs = {} if secrets is None else {"secrets": secrets}
     return transform.execute(project, plan, skeleton, **kwargs)

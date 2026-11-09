@@ -100,7 +100,7 @@ def test_weave_project_threads_the_header_key_and_none_without_it(monkeypatch, h
 
     def _weave(proj, scr, **kw):
         seen.append(kw.get("api_key"))
-        return episode
+        return braidio.WeaveReceipt(episode)
 
     monkeypatch.setattr(braidio, "weave_project", _weave)
     ledger = {}

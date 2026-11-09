@@ -6,6 +6,7 @@ reaches ElevenLabs, not just that it used the stub; the stub is free and local
 """
 
 import io
+from pathlib import Path
 import shutil
 
 import numpy as np
@@ -79,6 +80,33 @@ def test_deep_dive_renders_narration_and_dialogue_through_speak(
     assert [voice for _, voice in speak.calls] == [GEORGE, JESSICA, CHRIS]
     assert out.exists() and braidio.duration_s(out) > 1.0
     assert timeline.settings["resolved"]["tts"].endswith("_ToneSpeaker")
+    # the turn-by-turn dialogue cleans up its per-turn parts (braidio#137)
+    leftovers = [
+        d
+        for d in (tmp_path / "tts").iterdir()
+        if d.is_dir() and not d.name.startswith("_render_")  # the render's own
+    ]
+    assert leftovers == []
+
+
+def test_an_explicit_speak_wins_over_the_config_s_backend(tmp_path, no_elevenlabs):
+    """``speak=`` beats ``config.tts`` (braidio#137's one resolver)."""
+    registered, explicit = _ToneSpeaker(), _ToneSpeaker()
+    braidio.tts.register_tts("test-registered", registered)
+    try:
+        braidio.render_production(
+            braidio.Script(
+                title="t", id_slug="w", beats=[braidio.Narration(text="Hello.")]
+            ),
+            source=None,
+            config=braidio.WeaveConfig(tts="test-registered"),
+            speak=explicit,
+            out_path=tmp_path / "ep.mp3",
+            tts_dir=tmp_path / "tts",
+        )
+    finally:
+        braidio.tts.unregister_tts("test-registered")
+    assert explicit.calls and not registered.calls
 
 
 def test_a_paced_format_speaks_every_turn_through_speak(tmp_path, no_elevenlabs):
@@ -145,7 +173,7 @@ def test_without_speak_the_render_records_elevenlabs(tmp_path, monkeypatch):
         out.write_bytes(audio)
         return out
 
-    monkeypatch.setattr(render_mod, "narrate", _narrate)
+    monkeypatch.setattr(braidio, "narrate", _narrate)
     script = braidio.Script(
         title="Plain", id_slug="plain", beats=[braidio.Narration(text="Plain words.")]
     )
@@ -158,3 +186,95 @@ def test_without_speak_the_render_records_elevenlabs(tmp_path, monkeypatch):
         episodes_dir=tmp_path / "eps",
     )
     assert timeline.settings["resolved"]["tts"] == "elevenlabs"
+
+
+class _OnePassVoice:
+    """A whole voice strategy: its own narration and a one-pass dialogue."""
+
+    name = "test-one-pass"
+
+    def __init__(self):
+        self.calls = []
+
+    def narrate(self, text, out_path, *, return_cache_status=False, **kw):
+        self.calls.append(("narrate", text))
+        path = _tone(Path(out_path).with_suffix(".wav"))
+        return (path, False) if return_cache_status else path
+
+    def render_dialogue(
+        self, turns, cast, *, out_path, return_cache_status=False, **kw
+    ):
+        self.calls.append(("dialogue", tuple(t for _, t in turns)))
+        path = _tone(Path(out_path).with_suffix(".wav"))
+        return (path, False) if return_cache_status else path
+
+
+def _tone(path):
+    rate = 44100
+    samples = (np.sin(np.linspace(0, 440 * 2 * np.pi, rate // 2)) * 8000).astype(
+        np.int16
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    wavfile.write(path, rate, samples)
+    return path
+
+
+def test_a_ready_voice_renders_narration_and_one_pass_dialogue(tmp_path, no_elevenlabs):
+    """braidio#199: a Voice strategy is used whole, its dialogue in one pass."""
+    voice = _OnePassVoice()
+    out, tl = braidio.render_production(
+        braidio.Script(
+            title="t",
+            id_slug="v",
+            beats=[
+                braidio.Narration(text="Hello."),
+                braidio.Dialogue(turns=[("host_a", "Yes?"), ("host_b", "No.")]),
+            ],
+        ),
+        source=None,
+        voice=voice,
+        out_path=tmp_path / "ep.mp3",
+        tts_dir=tmp_path / "tts",
+        return_timeline=True,
+    )
+    assert voice.calls == [("narrate", "Hello."), ("dialogue", ("Yes?", "No."))]
+    assert tl.settings["resolved"]["tts"] == "test-one-pass"
+
+
+def test_voice_for_refuses_what_is_not_a_voice():
+    with pytest.raises(TypeError, match="braidio.tts.VoiceBackend"):
+        braidio.tts.voice_for(voice=lambda text, *, voice: (b"", "wav"))
+    with pytest.raises(TypeError, match="an instance"):
+        braidio.tts.voice_for(voice=braidio.tts.ElevenLabsVoice)  # the class
+    with pytest.raises(TypeError, match="not both"):
+        braidio.tts.voice_for(
+            voice=_OnePassVoice(), speak=lambda t, *, voice: (b"", "wav")
+        )
+
+
+def test_replacing_braidio_narrate_reaches_every_elevenlabs_path(
+    tmp_path, monkeypatch, no_elevenlabs
+):
+    """The one replacement point (braidio#199): multivoice and the per-line
+    dialogue baseline no longer bind ``narrate`` at import."""
+    from braidio.conversation import DEFAULT_CAST, render_turns_sequential
+    from braidio.multivoice import POOL_4, render_multivoice
+
+    spoken = []
+
+    def fake(text, out_path, **kw):
+        spoken.append(text)
+        return _tone(Path(out_path))
+
+    monkeypatch.setattr(braidio, "narrate", fake)
+    monkeypatch.setattr("braidio.multivoice.level_part", lambda src, dst, **kw: src)
+    render_multivoice(
+        ["One.", "Two."], POOL_4, out_path=tmp_path / "mv.wav", work_dir=tmp_path / "mv"
+    )
+    render_turns_sequential(
+        [("A", "Three.")],
+        DEFAULT_CAST,
+        out_path=tmp_path / "seq.wav",
+        work_dir=tmp_path / "seq",
+    )
+    assert "Three." in spoken and any("One." in s for s in spoken)

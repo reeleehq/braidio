@@ -57,7 +57,7 @@ def silent_narration(monkeypatch):
     def fake_narrate(text, out_path, **kw):
         return silence(Path(out_path), 1.0)
 
-    monkeypatch.setattr(render_mod, "narrate", fake_narrate)
+    monkeypatch.setattr(braidio, "narrate", fake_narrate)
 
 
 def _render(script, tmp_path, **kw):

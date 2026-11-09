@@ -122,6 +122,8 @@ from braidio.delivery import (  # noqa: F401
     V3_CREATIVE,
     V3_PRESENTER,
     V3_NARRATOR,
+    V4_PRESENTER,
+    V4_NARRATOR,
     NARRATION,
     CONVERSATIONAL,
 )
@@ -185,6 +187,7 @@ from braidio.formats import (  # noqa: F401
 # --- composition + weaving (audio) ---
 from braidio.compose import compose_narration  # noqa: F401
 from braidio.render import render_production  # noqa: F401
+from braidio.sound_design import SoundDesign  # noqa: F401
 from braidio.timeline import (  # noqa: F401
     BeatSpan,
     TimelineBreakdown,
@@ -196,9 +199,13 @@ from braidio.timeline import (  # noqa: F401
 from braidio.captions import (  # noqa: F401
     Cue,
     captions_for,
+    captions_from_cues,
     cues_for,
     format_srt,
 )
+
+# --- time an authored script on audio braidio did not render (measured words) ---
+from braidio.align import Alignment, align_script  # noqa: F401
 
 # --- markdown document -> narration beats (read-aloud) ---
 from braidio.markdown_script import (  # noqa: F401
@@ -249,26 +256,106 @@ except PackageNotFoundError:  # pragma: no cover - source tree, not installed
 # lacing/nw. `HAS_GRAPH` / `HAS_NW` report what's available.
 HAS_GRAPH = False
 HAS_NW = False
-try:  # needs lacing
-    from braidio import bodies  # noqa: F401  (registers schemas)
-    from braidio.provenance import (  # noqa: F401
-        record_render,
-        stale_after,
-        descendants_of,
+#: Why a layer did not load (``None`` when it did): the ``ImportError`` the
+#: guards below swallow. The swallowing is right for a bare install, and the
+#: same guard would hide a *broken* layer (an nw below braidio's floor, a bad
+#: import), so CI asserts the layer loads whenever its dependencies import
+#: (``tests/test_optional_layers.py``, braidio#187) and names this on failure.
+_GRAPH_IMPORT_ERROR: ImportError | None = None
+_NW_IMPORT_ERROR: ImportError | None = None
+#: Optional distributions a layer needs. A layer whose dependencies are not all
+#: installed is simply absent (the bare install, silent); anything that fails
+#: *after* that preflight is a defect in braidio or a version skew (braidio#207).
+_GRAPH_DEPS = ("lacing",)
+_NW_DEPS = ("lacing", "nw", "falaw")
+
+
+def _missing(deps) -> list[str]:
+    """The distributions in ``deps`` that cannot be imported (decided without importing).
+
+    A dependency whose spec cannot be found, or is a bare namespace folder with
+    no code (``origin is None``), is absent; one whose spec lookup itself raises is
+    treated as present, so the import that follows reports it.
+    """
+    import importlib.util
+
+    out = []
+    for dep in deps:
+        try:
+            spec = importlib.util.find_spec(dep)
+        except (ValueError, ImportError):
+            continue
+        if spec is None or spec.origin is None:
+            out.append(dep)
+    return out
+
+
+def _layer_failed(layer: str, exc: ImportError, loaded: list[str]) -> None:
+    """Report a layer that failed although its dependencies are installed.
+
+    Left half-registered with its flag ``False`` (lacing and nw have no unregister
+    to roll it back with), so it is said once, naming what did load. A
+    ``RuntimeWarning``, because ``ImportWarning`` is ignored by default and the
+    point is that this is not hidden.
+    """
+    import warnings
+
+    detail = (
+        "imported before the failure: "
+        + ", ".join(loaded)
+        + " (what they register stays registered)"
+        if loaded
+        else "no module of it had loaded (a module that failed partway may still "
+        "have registered some of its own)"
+    )
+    warnings.warn(
+        f"braidio's {layer} layer failed to load ({exc!r}); {detail}",
+        RuntimeWarning,
+        stacklevel=1,
     )
 
-    HAS_GRAPH = True
-except ImportError:  # pragma: no cover - optional dep
-    pass
-try:  # needs nw
-    from braidio.project import Project  # noqa: F401
-    from braidio import transforms  # noqa: F401  (registers braidio's nw.Transforms)
-    from braidio.transforms import WeaveReceipt, weave_project  # noqa: F401
-    from braidio.genre import COMMENTARY_WEAVE  # noqa: F401  (registers the nw.Genre)
 
-    HAS_NW = True
-except ImportError:  # pragma: no cover - optional dep
-    pass
+#: What each layer registered before it failed (empty when it loaded or was absent).
+_graph_loaded: list[str] = []
+_nw_loaded: list[str] = []
+
+if _absent := _missing(_GRAPH_DEPS):
+    _GRAPH_IMPORT_ERROR = ModuleNotFoundError(f"No module named {_absent[0]!r}")
+else:
+    try:
+        from braidio import bodies  # noqa: F401  (registers schemas)
+
+        _graph_loaded.append("bodies")
+        from braidio.provenance import (  # noqa: F401
+            record_render,
+            stale_after,
+            descendants_of,
+        )
+
+        HAS_GRAPH = True
+    except ImportError as _exc:  # pragma: no cover - defect, not absence
+        _GRAPH_IMPORT_ERROR = _exc
+        _layer_failed("graph", _exc, _graph_loaded)
+if _absent := _missing(_NW_DEPS):
+    _NW_IMPORT_ERROR = ModuleNotFoundError(f"No module named {_absent[0]!r}")
+elif not HAS_GRAPH:  # the nw layer imports the graph's bodies: one failure, one report
+    _NW_IMPORT_ERROR = _GRAPH_IMPORT_ERROR
+else:
+    try:
+        from braidio.project import Project  # noqa: F401
+
+        _nw_loaded.append("project")
+        from braidio import transforms  # noqa: F401  (registers braidio's nw.Transforms)
+
+        _nw_loaded.append("transforms")
+        from braidio.transforms import WeaveReceipt, weave_project  # noqa: F401
+        from braidio.genre import COMMENTARY_WEAVE  # noqa: F401  (registers the nw.Genre)
+
+        HAS_NW = True
+    except ImportError as _exc:  # pragma: no cover - defect, not absence
+        _NW_IMPORT_ERROR = _exc
+        _layer_failed("nw", _exc, _nw_loaded)
+del _absent  # layer bookkeeping, not API
 
 
 def skills_dir():
@@ -307,6 +394,9 @@ __all__ = [
     # captions
     "Cue",
     "captions_for",
+    "captions_from_cues",
+    "Alignment",
+    "align_script",
     "cues_for",
     "format_srt",
     # script
@@ -337,6 +427,7 @@ __all__ = [
     "PUBLISHABLE_CLIP_RIGHTS",
     # render
     "render_production",
+    "SoundDesign",
     # sources
     "SegmentSource",
     "ResolvedSegment",

@@ -25,6 +25,7 @@ from urllib.parse import urlparse
 from urllib.request import url2pathname
 
 from lacing import Annotation, Artifact, NodeRef, TimeInterval
+from nw.bodies.sound_design import SOUND_DESIGN_CONFIG_TIER, SOUND_DESIGN_TIER
 
 # Tier names (must match braidio.bodies._tiers).
 TIER_WEAVE_CONFIG = "weave-configs"
@@ -46,9 +47,14 @@ TIER_STILL = "stills"
 TIER_VIDEO_PANEL = "video-panels"
 TIER_VIDEO_CUT = "video-cuts"
 TIER_LABEL_TRACK = "label-tracks"
+#: Sound design (braidio#161) uses nw's own tiers and schemas: the singleton
+#: switch + knobs, and the designed mix nw's foley Transform produces.
+TIER_SOUND_DESIGN_CONFIG = SOUND_DESIGN_CONFIG_TIER
+TIER_SOUND_DESIGN = SOUND_DESIGN_TIER
 
 #: Rate for the (incidental) NodeRef intervals on non-media nodes.
 _RATE = 1000
+
 
 #: The provider name braidio's two paid Transforms read from
 #: ``execute(secrets=)`` (nw's per-caller credential seam, thorwhalen/braidio#58).
@@ -89,6 +95,7 @@ SINGLETON_TIERS = frozenset(
         TIER_PRODUCTION_STRUCTURE,
         TIER_RENDER_PROFILE,
         TIER_DIALOGUE_CAST,
+        TIER_SOUND_DESIGN_CONFIG,
     }
 )
 
@@ -104,6 +111,7 @@ AUTHORING_TIERS = (
     TIER_PRODUCTION_STRUCTURE,
     TIER_RENDER_PROFILE,
     TIER_DIALOGUE_CAST,
+    TIER_SOUND_DESIGN_CONFIG,
     TIER_NARRATIVE_BEAT,
     TIER_DIALOGUE_BEAT,
     TIER_SCENE_BREAK,
@@ -188,46 +196,36 @@ def annotation_parents(ann: Annotation) -> list:
 def fresh_equivalent(project, skeleton: Annotation) -> Annotation | None:
     """An existing node this ``skeleton`` would only duplicate, or ``None``.
 
-    Equivalent means: same tier, the same **annotation** parents, the same
-    :func:`planned_value` — and **verified fresh** by nw's freshness walk, so
-    its recorded upstream digests still match its parents' current values.
-    That last clause is what makes this safe after a re-ingest: a parent
-    rewritten in place keeps its id, so an old render still has "the same
-    parents" while being exactly the node that must not be reused
-    (thorwhalen/braidio#51). Reuse is by *value*, never by id alone.
+    nw's rule, :func:`nw.fresh_equivalents` (reeleehq/nw#203): same tier,
+    schema and producer, the same **annotation** parents, the same
+    :func:`planned_value` (the body minus what execution fills in), and
+    **verified fresh** by nw's freshness walk, so a parent rewritten in place
+    (same id, new value) never lets an old render be reused
+    (thorwhalen/braidio#51). This is what makes re-running the weave
+    idempotent: a no-op re-run adds no voice-assignment, no render, no
+    episode.
 
-    This is what makes re-running the weave idempotent — a no-op re-run adds
-    no voice-assignment, no render, no episode. It reads :func:`fresh_ids`:
-    one full freshness walk per call, or one per write inside a
-    :func:`fresh_ids_pass` (braidio#171).
-
-    Only the annotation half of ``was_derived_from`` is compared. Since nw#55 a
-    declared input schema also contributes the artifact ids its body names
-    (``_asset_refs``), so a node written before the declaration has none and a
-    whole-list comparison would never match it — one re-plan would re-render
-    every such node. Freshness loses nothing by ignoring them: a declared
-    asset id is read off a parent's body, so a replaced artifact changes that
-    parent's value, which the freshness walk below already refuses. Lineage
-    does lose something, deliberately: a reused pre-declaration node keeps
-    its old provenance, with no asset edge, until something re-renders it —
-    re-rendering instead would mint a new node and orphan whatever was built
-    on the old one (video panels, cuts).
+    The reference is not compared (``reference_of``, nw#218): a non-media
+    node's :func:`node_ref` is a fresh token per node, never the same twice,
+    and a media node's place is already in its planned value and parents.
+    Only the annotation half of ``was_derived_from`` is compared, so a node
+    written before nw#55's asset edges still matches. The producer
+    (``transform:<name>@<impl_version>``) is compared, so after an
+    ``impl_version`` bump the old version's node is not reused. Inside
+    :func:`nw.freshness_pass` (``weave_project`` opens one) the walk is shared
+    across lookups until a write (braidio#171).
     """
     import nw
 
-    parents = set(annotation_parents(skeleton))
-    value = planned_value(skeleton)
-    candidates = [
-        a
-        for a in nw.annotations_at_tier(project.root, skeleton.tier)
-        if a.id != skeleton.id
-        and set(annotation_parents(a)) == parents
-        and planned_value(a) == value
-    ]
-    if not candidates:
-        return None
-    fresh = fresh_ids(project)
-    return next((a for a in reversed(candidates) if a.id in fresh), None)
+    (existing,) = nw.fresh_equivalents(
+        project, [skeleton], value_of=planned_value, reference_of=_no_reference
+    )
+    return existing
+
+
+def _no_reference(_ann: Annotation) -> None:
+    """``reference_of`` for :func:`fresh_equivalent`: references are not compared."""
+    return None
 
 
 def fresh_ids(project) -> set:
@@ -372,6 +370,33 @@ def node_ref(tier: str) -> NodeRef:
         scene_path=f"{tier}/{uuid.uuid4()}",
         interval=TimeInterval.from_seconds(0.0, 1.0, rate=_RATE),
     )
+
+
+def settle_take(take, out_path: Path) -> Path:
+    """Where a voice's take belongs in the project: ``out_path``'s folder.
+
+    A voice returns the file it wrote, and may write its own format (``.wav``)
+    or hand back a file of its own cache, outside the project. A node must
+    point at bytes the project holds, so a take elsewhere is copied in beside
+    ``out_path`` (with its own suffix); one already there is used as it is.
+
+    >>> import tempfile
+    >>> with tempfile.TemporaryDirectory() as d:
+    ...     src = Path(d) / "cache" / "x.wav"; src.parent.mkdir(); _ = src.write_bytes(b"A")
+    ...     out = Path(d) / "proj" / "take.mp3"; out.parent.mkdir()
+    ...     settle_take(src, out).relative_to(d).as_posix()
+    'proj/take.wav'
+    """
+    import shutil
+
+    if take is None:
+        raise TypeError("the voice returned no take: a voice returns the file it wrote")
+    take = Path(take)
+    if take.resolve().parent == Path(out_path).resolve().parent:
+        return take
+    settled = Path(out_path).with_suffix(take.suffix)
+    shutil.copyfile(take, settled)
+    return settled
 
 
 def file_url(path: str | Path) -> str:

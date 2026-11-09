@@ -216,8 +216,9 @@ def estimate_cost(
     """
     if format_id is not None and delivery is not None:
         raise ToolError(
-            f"estimate_cost: pass format_id or delivery, not both — format "
-            f"{format_id!r} fixes its own delivery (render_format takes none)"
+            f"estimate_cost: pass format_id or delivery, not both — no render "
+            f"tool takes both (format {format_id!r} renders with its own delivery), "
+            "and an estimate prices what a render will submit"
         )
     model_id, dialogue_model_id = _render_models(_format(format_id), delivery)
     roll = braidio.estimate_cost(
@@ -406,10 +407,11 @@ def ingest_document(
         raise ToolError(f"no project {project_id!r} — call create_project first")
     try:
         if uri:
-            direct_url, rewritten = _docs.resolve_file_link(uri)
-            data, ctype = _docs.fetch_uri(direct_url)
+            link = _docs.resolve_file_link(uri)
+            fetched = _docs.fetch_uri(link.url)
+            data, ctype = fetched
             _docs.refuse_archive_document(data)
-            if rewritten:  # a rewritten link's page is the host's, not the document
+            if _docs.is_host_page(link, fetched):  # sign-in page, not the document
                 _docs.refuse_page_or_archive(data, uri=uri, kind="document")
             src = uri
         elif text is not None:
@@ -475,7 +477,7 @@ def save_script(
     ingested = braidio.transforms.ingest_script(
         proj,
         scr,
-        config=braidio.transforms.resolve_config(proj, fmt),
+        config=braidio.transforms.resolve_config(proj, fmt, fallback_delivery=None),
         source=src,
         structure=structure,
         bed=bed,
@@ -731,14 +733,41 @@ def _render_cost(scr, profile: str, *, model_id: str, dialogue_model_id: str) ->
     }
 
 
+def _weave_spend(receipt) -> dict:
+    """What a weave actually synthesized, for the spend ledger (braidio#159).
+
+    ``cost_usd`` stays the estimate of every beat the script renders;
+    ``cost_usd_actual`` is what *this* run synthesized (``0.0`` on a re-run
+    that reused every render), which a metering ledger reads first. When some
+    stage could not be priced it is ``None``, so the ledger falls back to the
+    estimate rather than recording an unknown spend as free. A run that fails
+    part-way reports nothing here: its partial spend is on the exception
+    (``exc.weave_receipt``), for the metering layer's error path.
+    """
+    return {
+        "cost_usd_actual": (
+            None if receipt.has_unknown_costs else round(receipt.cost_usd_actual, 6)
+        ),
+        "cache_hit_savings_usd": round(receipt.cache_hit_savings_usd, 6),
+        "cost_note": _COST_NOTE,
+    }
+
+
+#: What the two spend figures mean, for whoever reads the result.
+_COST_NOTE = (
+    "cost_usd estimates synthesizing the whole script; cost_usd_actual is what "
+    "this run synthesized (0 when every take was reused)"
+)
+
+
 def _delivery(name: str):
     """Resolve a delivery/register preset name to its :class:`braidio.Delivery`."""
-    if name not in braidio.DELIVERIES:
-        raise ToolError(
-            f"unknown delivery {name!r}; use one of {sorted(braidio.DELIVERIES)} "
-            "(list_deliveries describes them)"
-        )
-    return braidio.DELIVERIES[name]
+    from braidio.delivery import as_delivery
+
+    try:
+        return as_delivery(name)
+    except (TypeError, ValueError) as exc:
+        raise ToolError(f"{exc} (list_deliveries describes them)") from exc
 
 
 def _episode_retrieval(project_id: str, episode_id: str) -> dict:
@@ -1022,17 +1051,55 @@ def weave_project(
         script=scr,
         tool="weave_project",
     )
+    # ``fallback_delivery=None`` on the graph tools: the connector's no-format
+    # voice stays the bare weave config the deployed projects already carry
+    # (braidio#191); only the library default moved.
     proj = ws.open_project(project_id)
-    episode = braidio.weave_project(
+    # A failed weave carries its partial spend as ``exc.weave_receipt`` for
+    # the metering layer's error path; ``weave_project`` attaches it itself.
+    receipt = braidio.weave_project(
         proj,
         scr,
         source=src,
         fmt=fmt,
+        fallback_delivery=None,
         structure=structure,
         bed=bed,
         profile=_profile(profile),
         api_key=caller_elevenlabs_key(),
+        return_receipt=True,
     )
+    try:
+        return _weave_result(
+            receipt,
+            proj=proj,
+            project_id=project_id,
+            scr=scr,
+            fmt=fmt,
+            profile=profile,
+            sting_applied=sting_applied,
+            sting_ignored_reason=sting_ignored_reason,
+        )
+    except Exception as exc:  # noqa: BLE001 — not swallowed: carry the spend, re-raise
+        # The weave synthesized (and billed) already: a failure reporting it
+        # must still meter it, or the retry's reuse makes it free.
+        exc.weave_receipt = receipt
+        raise
+
+
+def _weave_result(
+    receipt,
+    *,
+    proj,
+    project_id: str,
+    scr,
+    fmt,
+    profile: str,
+    sting_applied,
+    sting_ignored_reason,
+) -> dict:
+    """The ``weave_project`` tool's result for a finished weave."""
+    episode = receipt.episode
     body = episode.body
     return {
         "episode": to_json(body),
@@ -1044,12 +1111,14 @@ def weave_project(
             # what the graph voiced the narration with: the project's config
             # (None = ingest's default WeaveConfig, as ingest itself resolves it)
             model_id=(
-                braidio.transforms.resolve_config(proj, fmt) or braidio.WeaveConfig()
+                braidio.transforms.resolve_config(proj, fmt, fallback_delivery=None)
+                or braidio.WeaveConfig()
             ).model_id,
             # the dialogue half of the one-shot rule: the format's cast, else
             # the default cast — as the graph's dialogue-cast node resolves it
             dialogue_model_id=_render_models(fmt)[1],
         ),
+        **_weave_spend(receipt),
         "sting_applied": sting_applied,
         "sting_ignored_reason": sting_ignored_reason,
     }

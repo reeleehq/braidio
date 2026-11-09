@@ -112,9 +112,12 @@ def test_a_graph_layer_that_half_loads_says_which_part_did():
     registered with ``HAS_GRAPH`` False, and that is reported, not swallowed."""
     _need("lacing")
     first, *warned = _import_with(fail="braidio.provenance")
-    assert first.startswith("False")
+    assert first == "False False", first  # nw needs the graph: one failure, one report
+    assert len(warned) == 1, warned
     assert any(
-        "RuntimeWarning" in w and "graph layer" in w and "partially loaded: bodies" in w
+        "RuntimeWarning" in w
+        and "graph layer" in w
+        and "imported before the failure: bodies" in w
         for w in warned
     ), warned
 
@@ -130,7 +133,7 @@ def test_a_lacing_missing_a_submodule_is_a_defect_not_an_absence():
     """An old lacing that is installed but lacks a module braidio imports."""
     _need("lacing")
     first, *warned = _import_with(fail="lacing.schema")
-    assert first.startswith("False") and any("layer failed" in w for w in warned)
+    assert first == "False False" and len(warned) == 1 and "layer failed" in warned[0]
 
 
 def test_a_bare_install_stays_silent():
@@ -141,3 +144,19 @@ def test_a_bare_install_stays_silent():
 def test_a_missing_nw_leaves_the_graph_layer_and_says_nothing():
     _need("lacing")
     assert _import_with(absent="nw") == ["True False"]
+
+
+def test_a_stub_dependency_without_a_spec_does_not_crash_the_import():
+    """``find_spec`` raises ValueError for a module object with ``__spec__ = None``."""
+    done = subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-c",
+            "import sys, types; sys.modules['lacing'] = types.ModuleType('lacing');"
+            " import braidio; print(braidio.HAS_GRAPH)",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert done.returncode == 0, done.stderr

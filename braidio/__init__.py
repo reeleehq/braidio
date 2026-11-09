@@ -260,10 +260,23 @@ _NW_DEPS = ("lacing", "nw", "falaw")
 
 
 def _missing(deps) -> list[str]:
-    """The distributions in ``deps`` that cannot be imported (decided without importing)."""
+    """The distributions in ``deps`` that cannot be imported (decided without importing).
+
+    A dependency whose spec cannot be found, or is a bare namespace folder with
+    no code (``origin is None``), is absent; one whose spec lookup itself raises is
+    treated as present, so the import that follows reports it.
+    """
     import importlib.util
 
-    return [d for d in deps if importlib.util.find_spec(d) is None]
+    out = []
+    for dep in deps:
+        try:
+            spec = importlib.util.find_spec(dep)
+        except (ValueError, ImportError):
+            continue
+        if spec is None or spec.origin is None:
+            out.append(dep)
+    return out
 
 
 def _layer_failed(layer: str, exc: ImportError, loaded: list[str]) -> None:
@@ -276,7 +289,14 @@ def _layer_failed(layer: str, exc: ImportError, loaded: list[str]) -> None:
     """
     import warnings
 
-    detail = "partially loaded: " + ", ".join(loaded) if loaded else "nothing loaded"
+    detail = (
+        "imported before the failure: "
+        + ", ".join(loaded)
+        + " (what they register stays registered)"
+        if loaded
+        else "no module of it had loaded (a module that failed partway may still "
+        "have registered some of its own)"
+    )
     warnings.warn(
         f"braidio's {layer} layer failed to load ({exc!r}); {detail}",
         RuntimeWarning,
@@ -307,6 +327,8 @@ else:
         _layer_failed("graph", _exc, _graph_loaded)
 if _absent := _missing(_NW_DEPS):
     _NW_IMPORT_ERROR = ModuleNotFoundError(f"No module named {_absent[0]!r}")
+elif not HAS_GRAPH:  # the nw layer imports the graph's bodies: one failure, one report
+    _NW_IMPORT_ERROR = _GRAPH_IMPORT_ERROR
 else:
     try:
         from braidio.project import Project  # noqa: F401
@@ -322,6 +344,7 @@ else:
     except ImportError as _exc:  # pragma: no cover - defect, not absence
         _NW_IMPORT_ERROR = _exc
         _layer_failed("nw", _exc, _nw_loaded)
+del _absent  # layer bookkeeping, not API
 
 
 def skills_dir():

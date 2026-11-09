@@ -2,20 +2,18 @@
 
 # About this build
 
-This documentation was built on **2026-11-09 01:13 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/cd85edd4bc86a3d3c717db6af69de53ae1d02b49"><code>cd85edd</code></a> on branch <code>main</code>, for **braidio 0.0.123** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-09 01:38 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/9b48f593e3af03427b4e0b6d6bb805f837bf04b2"><code>9b48f59</code></a> on branch <code>main</code>, for **braidio 0.0.124** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.0.123) is ahead of the latest release on PyPI (0.0.122): these docs describe unreleased code.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/cd85edd4bc86a3d3c717db6af69de53ae1d02b49"><code>cd85edd4bc86a3d3c717db6af69de53ae1d02b49</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/9b48f593e3af03427b4e0b6d6bb805f837bf04b2"><code>9b48f593e3af03427b4e0b6d6bb805f837bf04b2</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | <code>0.0.123</code>                                                                                                                                    |
+| Tags at this commit | <code>0.0.124</code>                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -24,9 +22,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/42543749953">42543749953</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/42545982447">42545982447</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>c82c3b54d9e7269a32afbc92d26d5a2c011a5a3a</code> (in the history of the built commit) |
+| Event commit | <code>fa49684da028ff3e29b3eaa2f5d2517547c2c061</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -51,13 +49,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.122/">0.0.122</a>, older than the documented version (0.0.123).
+Latest release: <a href="https://pypi.org/project/braidio/0.0.124/">0.0.124</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout cd85edd4bc86a3d3c717db6af69de53ae1d02b49
+git checkout 9b48f593e3af03427b4e0b6d6bb805f837bf04b2
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

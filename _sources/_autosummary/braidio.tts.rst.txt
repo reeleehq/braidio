@@ -22,6 +22,7 @@ braidio.tts
       register_tts
       resolve_voice_id
       text_to_dialogue
+      text_to_dialogue_with_timestamps
       tts_backend
       tts_name
       unregister_tts
@@ -32,6 +33,7 @@ braidio.tts
 
    .. autosummary::
    
+      DialogueSegment
       ElevenLabsVoice
       SpeakVoice
       TTSBackend

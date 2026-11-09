@@ -1,0 +1,36 @@
+braidio.dialogue\_lines
+=======================
+
+.. automodule:: braidio.dialogue_lines
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      MASTER_SUFFIX
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      line_cost
+      render_dialogue_lines
+      rerender_line
+      synthesize_line
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      DialogueLine
+      DialogueTake
+      LineSynthesizer
+   
+   .. rubric:: Exceptions
+
+   .. autosummary::
+   
+      DialogueTimingError
+      StaleTakeError
+   

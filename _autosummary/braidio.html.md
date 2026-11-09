@@ -1570,6 +1570,7 @@ quiet passage stays quiet relative to its loud neighbours.
 | [`cost`](braidio.cost.html.md#module-braidio.cost)                       | Cost model for braidio's paid operations (ElevenLabs TTS).                                                 |
 | [`defaults`](braidio.defaults.html.md#module-braidio.defaults)               | User-overridable, persisted defaults for how braidio renders a voice.                                      |
 | [`delivery`](braidio.delivery.html.md#module-braidio.delivery)               | Narration *delivery* presets — model + voice settings (issue #10, expressiveness).                         |
+| [`dialogue_lines`](braidio.dialogue_lines.html.md#module-braidio.dialogue_lines)   | Addressable dialogue lines (braidio#145): one take, every turn re-voiceable.                               |
 | [`formats`](braidio.formats.html.md#module-braidio.formats)                 | Ready-made **format templates** — high-quality presets under standard names.                               |
 | [`kinds`](braidio.kinds.html.md#module-braidio.kinds)                     | Production kinds braidio defines.                                                                          |
 | [`leveling`](braidio.leveling.html.md#module-braidio.leveling)               | Level one spoken part to a loudness target with a single measured gain.                                    |

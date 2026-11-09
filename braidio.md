@@ -1,4 +1,4 @@
-> built 2026-11-09 00:43 UTC from 1312017 (main) · braidio 0.0.121. Details: build_info.json
+> built 2026-11-09 01:13 UTC from cd85edd (main) · braidio 0.0.123. Details: build_info.json
 
 # index.html.md
 
@@ -149,6 +149,10 @@ ElevenLabs TTS is braidio’s only spend (everything else is local ffmpeg). `bra
 | `BRAIDIO_TTS_USD_PER_1K_CHARS` | USD per 1000 characters. Unset → a conservative default; `none` → mark spend *unpriced* (character counts still reported, dollars `None`). |
 | `BRAIDIO_TTS_VOICE`            | Default ElevenLabs voice id for narration.                                                                                                 |
 | `ELEVENLABS_API_KEY`           | The key synthesis bills when a render is given no `api_key=`.                                                                              |
+
+### A conversation as addressable lines
+
+`braidio.render_dialogue_lines(turns, cast, out_path=...)` voices a multi-speaker exchange in one Text-to-Dialogue pass (so the cross-turn prosody is kept) and returns a `DialogueTake`: the deliverable, a lossless FLAC master, and one timed `DialogueLine` per turn. `braidio.rerender_line(take, index, text=...)` re-voices one turn alone and splices it into the master (`mixing.splice`), so only that line’s characters are billed and the other lines do not degrade; `braidio.line_cost(take, index)` quotes it first. A take round-trips through `to_dict` / `from_dict`. Edits of one take must be serialized by the caller (last writer wins). The voicing is a seam: `synthesize=` takes any `LineSynthesizer`.
 
 Every render entry point — `narrate`, `render_dialogue`, `render_production`, `render_format` and the graph driver `weave_project` — takes an explicit `api_key=` for a caller’s own ElevenLabs key; `None` (the default) resolves from the environment. On the graph path the key reaches the two synthesis transforms through nw’s `execute(secrets=)` seam and is never persisted: not in a node, provenance, a cache key or a usage ledger (thorwhalen/braidio#58). The MCP server reads it from the `X-Elevenlabs-Key` request header, never from a tool argument.
 
@@ -1123,6 +1127,239 @@ False
 
 * **Return type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
+
+
+# _autosummary/braidio.dialogue_lines.html.md
+
+# braidio.dialogue_lines
+
+Addressable dialogue lines (braidio#145): one take, every turn re-voiceable.
+
+[`render_dialogue_lines()`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.render_dialogue_lines) is [`braidio.conversation.render_dialogue()`](_autosummary/braidio.conversation.html.md#braidio.conversation.render_dialogue)’s
+one Text-to-Dialogue pass, timed: it returns a [`DialogueTake`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.DialogueTake) whose
+[`DialogueLine`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.DialogueLine)s say where each turn sits in the take.
+[`rerender_line()`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.rerender_line) re-synthesizes ONE turn and splices it in, leaving every
+other line’s audio (and its cross-turn prosody) untouched and unbilled.
+[`line_cost()`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.line_cost) quotes a line before it is rendered.
+
+Three choices keep a take editable many times over:
+
+- **A lossless master.** Beside the deliverable (`take.path`, in the take’s
+  `output_format`) sits a FLAC master (`take.master`). Splices operate on
+  the master; the deliverable is re-encoded from it after each edit. So an
+  unedited line is always ONE lossy generation from the master, however many
+  edits came before, instead of one more generation per edit.
+- **Content-checked takes.** A take records the master’s SHA-256. A take whose
+  master has since changed (another edit wrote over it in place) is refused
+  with [`StaleTakeError`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.StaleTakeError), before any spend, rather than cut at offsets
+  that no longer describe the file.
+- **Cuts in the pauses, with fades.** A re-rendered line replaces the take from
+  the middle of the pause before it to the middle of the pause after it (the
+  file’s edges for the first and last line), and brings the same amount of its
+  own lead-in and decay along, so neither the old line’s tail nor the new
+  line’s is lost. Each join gets mixing’s join fade, out and in.
+
+### Module Attributes
+
+| [`MASTER_SUFFIX`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.MASTER_SUFFIX)   | `take.mp3` -> `take.mp3.master.flac`.   |
+|------------------------------------------------------------------|-----------------------------------------|
+
+### Functions
+
+| [`line_cost`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.line_cost)(take, index, \*[, text])                 | What re-rendering line `index` (as `text`, default its own) would cost.                                                        |
+|-----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
+| [`render_dialogue_lines`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.render_dialogue_lines)(turns[, cast, ...])          | [`render_dialogue()`](_autosummary/braidio.conversation.html.md#braidio.conversation.render_dialogue), as addressable lines. |
+| [`rerender_line`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.rerender_line)(take, index, \*[, text, ...])        | Re-voice line `index` of `take` and splice it in; the others stay.                                                             |
+| [`synthesize_line`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.synthesize_line)(voice_id, text, \*, model_id, ...) | The default [`LineSynthesizer`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.LineSynthesizer): a single-input timed Text-to-Dialogue call.      |
+
+### Classes
+
+| [`DialogueLine`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.DialogueLine)(index, role, text, offset_s, ...)   | One turn of a [`DialogueTake`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.DialogueTake): who says what, and where it sits.   |
+|---------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|
+| [`DialogueTake`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.DialogueTake)(path, lines, master, master_sha256) | A rendered exchange whose turns are addressable lines.                                                           |
+| [`LineSynthesizer`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.LineSynthesizer)(\*args, \*\*kwargs)              | Voices ONE line: `(audio, segments, was_cached)`.                                                                |
+
+### Exceptions
+
+| [`DialogueTimingError`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.DialogueTimingError)   | A timed take came back without the timings a line needs.      |
+|------------------------------------------------------------------------|---------------------------------------------------------------|
+| [`StaleTakeError`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.StaleTakeError)        | A take's master no longer holds the audio the take describes. |
+
+### *class* braidio.dialogue_lines.DialogueLine(index, role, text, offset_s, duration_s)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+One turn of a [`DialogueTake`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.DialogueTake): who says what, and where it sits.
+
+`offset_s`/`duration_s` are seconds into the take. They span the
+turn’s voice segments (earliest start to latest end), so the pause
+*between* two turns belongs to neither line.
+
+#### *property* end_s *: [float](https://docs.python.org/3/builtins/functions.html#float)*
+
+Where the line ends in the take.
+
+### *class* braidio.dialogue_lines.DialogueTake(path, lines, master, master_sha256, cast=ConversationCast(roles={'A': 'cgSgspJ2msm6clMCkdW9', 'B': 'iP95p4xoKVk53GoZ742B'}, model_id='eleven_v3', settings={'stability': 0.45}), output_format='mp3_44100_128')
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+A rendered exchange whose turns are addressable lines.
+
+`path` is the deliverable (in `output_format`); `master` the lossless
+FLAC every splice operates on, and `master_sha256` its content hash, so
+a take whose master has changed since is refused instead of mis-cut.
+`lines` are the turns in order, timed (`turns` is their `(role, text)`
+view); `cast` and `output_format` are what [`rerender_line()`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.rerender_line) needs to
+re-voice one.
+
+A take is checked when built: one line per turn, indexed `0..n-1` in
+order, each with its turn’s role and text, every role in the cast, and the
+lines in time order without overlap.
+
+[`to_dict()`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.DialogueTake.to_dict)/[`from_dict()`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.DialogueTake.from_dict) round-trip it through JSON, so a host can
+store a take and re-render a line of it in a later request. A stored dict
+is data the host wrote: `from_dict` checks its consistency, NOT where
+`path` and `master` point. A host that keeps takes for several users
+must check both against its own root before trusting them, since
+[`rerender_line()`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.rerender_line) writes to them.
+
+#### *classmethod* from_dict(d)
+
+The take [`to_dict()`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.DialogueTake.to_dict) recorded; raises `ValueError` if inconsistent.
+
+* **Return type:**
+  [`DialogueTake`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.DialogueTake)
+
+#### to_dict()
+
+A JSON-able record of the take (no secret ever lives on a take).
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
+
+#### *property* turns *: [tuple](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[tuple](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [str](https://docs.python.org/3/builtins/stdtypes.html#str)], ...]*
+
+what was sent to the dialogue endpoint.
+
+* **Type:**
+  `(role, text)` per line
+
+### *exception* braidio.dialogue_lines.DialogueTimingError
+
+Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
+
+A timed take came back without the timings a line needs.
+
+### *class* braidio.dialogue_lines.LineSynthesizer(\*args, \*\*kwargs)
+
+Bases: [`Protocol`](https://docs.python.org/3/library/typing.html#typing.Protocol)
+
+Voices ONE line: `(audio, segments, was_cached)`.
+
+`audio` is in `output_format`; `segments` must time input `0` (the
+line) in it; `was_cached` says whether no paid call was made. A
+synthesizer without native timings returns one segment spanning its
+voiced audio.
+
+### braidio.dialogue_lines.MASTER_SUFFIX *= '.master.flac'*
+
+`take.mp3` ->
+`take.mp3.master.flac`.
+
+* **Type:**
+  The lossless master’s name beside the deliverable
+
+### *exception* braidio.dialogue_lines.StaleTakeError
+
+Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
+
+A take’s master no longer holds the audio the take describes.
+
+### braidio.dialogue_lines.line_cost(take, index, , text=None)
+
+What re-rendering line `index` (as `text`, default its own) would cost.
+
+Free and offline: a [`rerender_line()`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.rerender_line) submits that one line’s text and
+nothing else, priced at the cast’s model like any other estimate
+([`braidio.cost.tts_cost_usd()`](_autosummary/braidio.cost.html.md#braidio.cost.tts_cost_usd); `usd` is `None` when unpriced).
+
+* **Return type:**
+  [`CostRollup`](_autosummary/braidio.cost.html.md#braidio.cost.CostRollup)
+
+### braidio.dialogue_lines.render_dialogue_lines(turns, cast=ConversationCast(roles={'A': 'cgSgspJ2msm6clMCkdW9', 'B': 'iP95p4xoKVk53GoZ742B'}, model_id='eleven_v3', settings={'stability': 0.45}), , out_path, api_key=None, output_format='mp3_44100_128', seed=None, cache=True, refresh=False, return_cache_status=False)
+
+[`render_dialogue()`](_autosummary/braidio.conversation.html.md#braidio.conversation.render_dialogue), as addressable lines.
+
+ONE Text-to-Dialogue pass ([`braidio.tts.text_to_dialogue_with_timestamps()`](_autosummary/braidio.tts.html.md#braidio.tts.text_to_dialogue_with_timestamps)),
+so the cross-turn prosody of `render_dialogue` is kept, and each turn’s
+place in the take comes from the API’s own voice segments (turns timed as
+overlapping are split at the overlap’s midpoint; see [`DialogueLine`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.DialogueLine)).
+Returns a [`DialogueTake`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.DialogueTake); [`rerender_line()`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.rerender_line) re-voices one of its
+lines.
+
+`out_path` gets the API’s audio as is; beside it, the lossless master
+(`MASTER_SUFFIX`) later edits splice. Unlike `render_dialogue` there is
+**no R-tight pass**: trimming the dead gaps would move every line after the
+first trim away from the timings the API reported.
+
+Billing, caching and the key are `render_dialogue`’s: the whole
+exchange’s characters, once; a cache hit (audio *and* timings, stored
+together) costs $0 and makes no API call, and `return_cache_status=True`
+returns `(take, was_cached)` to say which. `api_key` reaches the
+ElevenLabs client only — not the cache key, not the take. An empty turn,
+an unknown role or an unspliceable `output_format` is refused before any
+spend; a response lacking some turn’s timings raises
+[`DialogueTimingError`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.DialogueTimingError) naming them (re-roll with `refresh=True`).
+
+* **Return type:**
+  [`DialogueTake`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.DialogueTake) | [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`DialogueTake`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.DialogueTake), [`bool`](https://docs.python.org/3/builtins/functions.html#bool)]
+
+### braidio.dialogue_lines.rerender_line(take, index, \*, text=None, api_key=None, out_path=None, seed=None, cache=True, refresh=False, return_cache_status=False, synthesize=<function synthesize_line>)
+
+Re-voice line `index` of `take` and splice it in; the others stay.
+
+The line (`text`, default its current text — put eleven_v3 `[audio
+tags]` in it to change the delivery) is voiced ALONE by `synthesize`
+(default [`synthesize_line()`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.synthesize_line): a single-input timed Text-to-Dialogue
+call with its role’s voice and the cast’s model and settings). Only its
+characters are billed ([`line_cost()`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.line_cost) quotes them first).
+
+The take is cut from the middle of the pause before the line to the
+middle of the pause after it (the file’s edges for the first and last
+line), and the new voice goes in with as much of its own lead-in and
+decay as the cut removed, so the pauses keep their length and every later
+line moves by the change in the line’s duration. Joins are faded
+(mixing’s join fade). The splice runs on the lossless master; the
+deliverable is then encoded once from it in the take’s `output_format`.
+
+Refused before any spend: empty text, a role the cast lacks, an
+unspliceable format, and a stale take ([`StaleTakeError`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.StaleTakeError): its master
+has changed since, typically because an in-place edit returned a newer
+take — use that one). A response without timings for the line raises
+[`DialogueTimingError`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.DialogueTimingError); it is cached, so re-roll with
+`refresh=True`.
+
+Cached like any dialogue call: re-rendering the same text with the same
+`seed` is a $0 cache hit, so pass `refresh=True` (or a new `seed`)
+to re-roll a line. `return_cache_status=True` returns
+`(take, was_cached)`.
+
+Written to `out_path` (default: over `take.path`, in place) with its
+master beside it. Returns the new [`DialogueTake`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.DialogueTake); `take` itself
+is a value and is not changed, but after an in-place edit it is stale.
+
+* **Return type:**
+  [`DialogueTake`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.DialogueTake) | [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`DialogueTake`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.DialogueTake), [`bool`](https://docs.python.org/3/builtins/functions.html#bool)]
+
+### braidio.dialogue_lines.synthesize_line(voice_id, text, , model_id, settings, seed, output_format, api_key, cache, refresh)
+
+The default [`LineSynthesizer`](_autosummary/braidio.dialogue_lines.html.md#braidio.dialogue_lines.LineSynthesizer): a single-input timed Text-to-Dialogue call.
+
+Same voice, model and settings as the take, so the line matches it; billed
+for this line’s characters only, and cached like any dialogue call.
+
+* **Return type:**
+  [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes), [`Sequence`](https://docs.python.org/3/library/typing.html#typing.Sequence)[[`DialogueSegment`](_autosummary/braidio.tts.html.md#braidio.tts.DialogueSegment)], [`bool`](https://docs.python.org/3/builtins/functions.html#bool)]
 
 
 # _autosummary/braidio.formats.html.md
@@ -2826,6 +3063,7 @@ quiet passage stays quiet relative to its loud neighbours.
 | [`cost`](_autosummary/braidio.cost.html.md#module-braidio.cost)                       | Cost model for braidio's paid operations (ElevenLabs TTS).                                                 |
 | [`defaults`](_autosummary/braidio.defaults.html.md#module-braidio.defaults)               | User-overridable, persisted defaults for how braidio renders a voice.                                      |
 | [`delivery`](_autosummary/braidio.delivery.html.md#module-braidio.delivery)               | Narration *delivery* presets — model + voice settings (issue #10, expressiveness).                         |
+| [`dialogue_lines`](_autosummary/braidio.dialogue_lines.html.md#module-braidio.dialogue_lines)   | Addressable dialogue lines (braidio#145): one take, every turn re-voiceable.                               |
 | [`formats`](_autosummary/braidio.formats.html.md#module-braidio.formats)                 | Ready-made **format templates** — high-quality presets under standard names.                               |
 | [`kinds`](_autosummary/braidio.kinds.html.md#module-braidio.kinds)                     | Production kinds braidio defines.                                                                          |
 | [`leveling`](_autosummary/braidio.leveling.html.md#module-braidio.leveling)               | Level one spoken part to a loudness target with a single measured gain.                                    |
@@ -4892,25 +5130,27 @@ what the renderers call.
 
 ### Functions
 
-| [`narrate`](_autosummary/braidio.tts.html.md#braidio.tts.narrate)(text, out_path, \*[, api_key, ...])   | Synthesize `text` to `out_path` (mp3).                                                                                                    |
-|------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
-| [`narrator_from_speak`](_autosummary/braidio.tts.html.md#braidio.tts.narrator_from_speak)(speak, \*[, strip_tags])  | A [`narrate()`](_autosummary/braidio.tts.html.md#braidio.tts.narrate)-shaped synthesizer that speaks through `speak`.                              |
-| [`register_tts`](_autosummary/braidio.tts.html.md#braidio.tts.register_tts)(name[, speak, voice, ...])       | Register `speak` as the voice backend `name` (replacing any before).                                                                      |
-| [`resolve_voice_id`](_autosummary/braidio.tts.html.md#braidio.tts.resolve_voice_id)([voice_id])                  | Voice id from arg → `VOICE_ENV_VAR` env → default.                                                                                        |
-| [`text_to_dialogue`](_autosummary/braidio.tts.html.md#braidio.tts.text_to_dialogue)(turns, \*[, model_id, ...])  | Synthesize a multi-speaker exchange in ONE pass (ElevenLabs Text-to-Dialogue).                                                            |
-| [`tts_backend`](_autosummary/braidio.tts.html.md#braidio.tts.tts_backend)(name)                             | The backend registered as `name`; `KeyError` naming the registered ones.                                                                  |
-| [`tts_name`](_autosummary/braidio.tts.html.md#braidio.tts.tts_name)(speak)                               | The voice backend a render used, as its settings record names it.                                                                         |
-| [`unregister_tts`](_autosummary/braidio.tts.html.md#braidio.tts.unregister_tts)(name)                          | Remove the backend registered as `name`; returns it, or `None`.                                                                           |
-| [`voice_for`](_autosummary/braidio.tts.html.md#braidio.tts.voice_for)([tts, speak, voice])                | The voice a render speaks with: a ready `voice` wins, then an explicit `speak`, then the registered backend `tts` names, then ElevenLabs. |
-| [`voice_native_break_s`](_autosummary/braidio.tts.html.md#braidio.tts.voice_native_break_s)(voice, model_id)         | The longest SSML `<break>` `voice` renders itself on `model_id`.                                                                          |
+| [`narrate`](_autosummary/braidio.tts.html.md#braidio.tts.narrate)(text, out_path, \*[, api_key, ...])        | Synthesize `text` to `out_path` (mp3).                                                                                                    |
+|-----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
+| [`narrator_from_speak`](_autosummary/braidio.tts.html.md#braidio.tts.narrator_from_speak)(speak, \*[, strip_tags])       | A [`narrate()`](_autosummary/braidio.tts.html.md#braidio.tts.narrate)-shaped synthesizer that speaks through `speak`.                              |
+| [`register_tts`](_autosummary/braidio.tts.html.md#braidio.tts.register_tts)(name[, speak, voice, ...])            | Register `speak` as the voice backend `name` (replacing any before).                                                                      |
+| [`resolve_voice_id`](_autosummary/braidio.tts.html.md#braidio.tts.resolve_voice_id)([voice_id])                       | Voice id from arg → `VOICE_ENV_VAR` env → default.                                                                                        |
+| [`text_to_dialogue`](_autosummary/braidio.tts.html.md#braidio.tts.text_to_dialogue)(turns, \*[, model_id, ...])       | Synthesize a multi-speaker exchange in ONE pass (ElevenLabs Text-to-Dialogue).                                                            |
+| [`text_to_dialogue_with_timestamps`](_autosummary/braidio.tts.html.md#braidio.tts.text_to_dialogue_with_timestamps)(turns, \*[, ...]) | [`text_to_dialogue()`](_autosummary/braidio.tts.html.md#braidio.tts.text_to_dialogue), plus *when* each input is spoken in the take.                        |
+| [`tts_backend`](_autosummary/braidio.tts.html.md#braidio.tts.tts_backend)(name)                                  | The backend registered as `name`; `KeyError` naming the registered ones.                                                                  |
+| [`tts_name`](_autosummary/braidio.tts.html.md#braidio.tts.tts_name)(speak)                                    | The voice backend a render used, as its settings record names it.                                                                         |
+| [`unregister_tts`](_autosummary/braidio.tts.html.md#braidio.tts.unregister_tts)(name)                               | Remove the backend registered as `name`; returns it, or `None`.                                                                           |
+| [`voice_for`](_autosummary/braidio.tts.html.md#braidio.tts.voice_for)([tts, speak, voice])                     | The voice a render speaks with: a ready `voice` wins, then an explicit `speak`, then the registered backend `tts` names, then ElevenLabs. |
+| [`voice_native_break_s`](_autosummary/braidio.tts.html.md#braidio.tts.voice_native_break_s)(voice, model_id)              | The longest SSML `<break>` `voice` renders itself on `model_id`.                                                                          |
 
 ### Classes
 
-| [`ElevenLabsVoice`](_autosummary/braidio.tts.html.md#braidio.tts.ElevenLabsVoice)()                            | The default voice: ElevenLabs, with its on-disk cache and its one-pass Text-to-Dialogue (braidio#137).                                                                                                                       |
-|-----------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`SpeakVoice`](_autosummary/braidio.tts.html.md#braidio.tts.SpeakVoice)(speak, name)                      | Any other voice: a [`Speak`](_autosummary/braidio.tts.html.md#braidio.tts.Speak) callable (a registered backend, a local model, a test).                                                                                            |
-| [`TTSBackend`](_autosummary/braidio.tts.html.md#braidio.tts.TTSBackend)([speak, usd_per_1k_chars, voice]) | A named voice backend: its `speak` (or a whole `voice`) and what it costs.                                                                                                                                                   |
-| [`VoiceBackend`](_autosummary/braidio.tts.html.md#braidio.tts.VoiceBackend)(\*args, \*\*kwargs)             | What a render speaks through (braidio#137, #199): a `name` for the render record and cache keys, and the two calls, both with [`narrate()`](_autosummary/braidio.tts.html.md#braidio.tts.narrate)'s `return_cache_status` convention. |
+| [`DialogueSegment`](_autosummary/braidio.tts.html.md#braidio.tts.DialogueSegment)(input_index, voice_id, ...)   | One span of a timed dialogue take: who spoke which input, and when.                                                                                                                                                          |
+|------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`ElevenLabsVoice`](_autosummary/braidio.tts.html.md#braidio.tts.ElevenLabsVoice)()                             | The default voice: ElevenLabs, with its on-disk cache and its one-pass Text-to-Dialogue (braidio#137).                                                                                                                       |
+| [`SpeakVoice`](_autosummary/braidio.tts.html.md#braidio.tts.SpeakVoice)(speak, name)                       | Any other voice: a [`Speak`](_autosummary/braidio.tts.html.md#braidio.tts.Speak) callable (a registered backend, a local model, a test).                                                                                            |
+| [`TTSBackend`](_autosummary/braidio.tts.html.md#braidio.tts.TTSBackend)([speak, usd_per_1k_chars, voice])  | A named voice backend: its `speak` (or a whole `voice`) and what it costs.                                                                                                                                                   |
+| [`VoiceBackend`](_autosummary/braidio.tts.html.md#braidio.tts.VoiceBackend)(\*args, \*\*kwargs)              | What a render speaks through (braidio#137, #199): a `name` for the render record and cache keys, and the two calls, both with [`narrate()`](_autosummary/braidio.tts.html.md#braidio.tts.narrate)'s `return_cache_status` convention. |
 
 ### braidio.tts.DEFAULT_MODEL_ID *= 'eleven_v3'*
 
@@ -4924,6 +5164,15 @@ word. Override per-render with `delivery=`, or persist your own in
 ### braidio.tts.DEFAULT_TTS *= 'elevenlabs'*
 
 How a render’s settings record names the default voice backend (no `speak=`).
+
+### *class* braidio.tts.DialogueSegment(input_index, voice_id, start_s, end_s)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+One span of a timed dialogue take: who spoke which input, and when.
+
+ElevenLabs’ `VoiceSegment` in braidio’s vocabulary (seconds, from the
+start of the take). One input (turn) may span several segments.
 
 ### *class* braidio.tts.ElevenLabsVoice
 
@@ -5112,6 +5361,24 @@ seedless call freezes one random take — pass a `seed` for reproducibility.
   [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes), [`bool`](https://docs.python.org/3/builtins/functions.html#bool)]
 * **Returns:**
   raw audio bytes in `output_format`.
+
+### braidio.tts.text_to_dialogue_with_timestamps(turns, , model_id='eleven_v3', output_format='mp3_44100_128', settings=None, seed=None, api_key=None, cache=True, refresh=False, return_cache_status=False)
+
+[`text_to_dialogue()`](_autosummary/braidio.tts.html.md#braidio.tts.text_to_dialogue), plus *when* each input is spoken in the take.
+
+One Text-to-Dialogue pass through ElevenLabs’ `convert_with_timestamps`
+— the same cross-turn prosody as [`text_to_dialogue()`](_autosummary/braidio.tts.html.md#braidio.tts.text_to_dialogue), billed the same
+(per character of the submitted text) — returning
+`(audio, segments)`: the take’s bytes and its
+[`DialogueSegment`](_autosummary/braidio.tts.html.md#braidio.tts.DialogueSegment)s, in the API’s order.
+
+Cached exactly like [`text_to_dialogue()`](_autosummary/braidio.tts.html.md#braidio.tts.text_to_dialogue) (same parameters, same
+`cache`/`refresh` semantics), under its own key, with the audio and
+the timings stored as **one** entry: a cache hit returns both, with no API
+call. The caller’s `api_key` reaches the client and nothing else — it is
+not part of the key and never written to the cache.
+
+`return_cache_status=True` returns `(audio, segments, was_cached)`.
 
 ### braidio.tts.tts_backend(name)
 
@@ -5979,18 +6246,20 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-09 00:43 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/1312017211bad299a8cac6368b69a81d25bc4752"><code>1312017</code></a> on branch <code>main</code>, for **braidio 0.0.121** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-09 01:13 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/cd85edd4bc86a3d3c717db6af69de53ae1d02b49"><code>cd85edd</code></a> on branch <code>main</code>, for **braidio 0.0.123** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.123) is ahead of the latest release on PyPI (0.0.122): these docs describe unreleased code.
 
 ## Source
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/1312017211bad299a8cac6368b69a81d25bc4752"><code>1312017211bad299a8cac6368b69a81d25bc4752</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/cd85edd4bc86a3d3c717db6af69de53ae1d02b49"><code>cd85edd4bc86a3d3c717db6af69de53ae1d02b49</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | none                                                                                                                                                    |
+| Tags at this commit | <code>0.0.123</code>                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -5999,9 +6268,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/42541070297">42541070297</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/42543749953">42543749953</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>1312017211bad299a8cac6368b69a81d25bc4752</code> (in the history of the built commit) |
+| Event commit | <code>c82c3b54d9e7269a32afbc92d26d5a2c011a5a3a</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6026,13 +6295,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.121/">0.0.121</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/braidio/0.0.122/">0.0.122</a>, older than the documented version (0.0.123).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 1312017211bad299a8cac6368b69a81d25bc4752
+git checkout cd85edd4bc86a3d3c717db6af69de53ae1d02b49
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

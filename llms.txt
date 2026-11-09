@@ -15,6 +15,7 @@
 - [braidio.cost](_autosummary/braidio.cost.html.md): Cost model for braidio’s paid operations (ElevenLabs TTS).
 - [braidio.defaults](_autosummary/braidio.defaults.html.md): User-overridable, persisted defaults for how braidio renders a voice.
 - [braidio.delivery](_autosummary/braidio.delivery.html.md): Narration &#42;delivery&#42; presets — model + voice settings (issue #10, expressiveness).
+- [braidio.dialogue_lines](_autosummary/braidio.dialogue_lines.html.md): Addressable dialogue lines (braidio#145): one take, every turn re-voiceable.
 - [braidio.formats](_autosummary/braidio.formats.html.md): Ready-made &#42;&#42;format templates&#42;&#42; — high-quality presets under standard names.
 - [braidio.kinds](_autosummary/braidio.kinds.html.md): Production kinds braidio defines. Pure (no optional deps).
 - [braidio.leveling](_autosummary/braidio.leveling.html.md): Level one spoken part to a loudness target with a single measured gain.
@@ -38,7 +39,7 @@
 - [braidio.weave](_autosummary/braidio.weave.html.md): Weave narration + audio clips on a timeline (#21) — the reusable mix engine.
 - [braidio.weave_config](_autosummary/braidio.weave_config.html.md): WeaveConfig — every editing choice for weaving narration + segments (#20).
 - [For AI agents](ai-agents.html.md): &#96;braidio&#96; ships artifacts for coding agents alongside its code. This page lists
-- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-11-09 00:43 UTC&#42;&#42; from commit &lt;a href="https://github.com/ree...
+- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-11-09 01:13 UTC&#42;&#42; from commit &lt;a href="https://github.com/ree...
 
 ## Optional
 

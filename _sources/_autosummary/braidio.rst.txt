@@ -120,6 +120,7 @@
    cost
    defaults
    delivery
+   dialogue_lines
    downloads
    formats
    genre

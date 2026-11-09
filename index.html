@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="_static/documentation_options.js?v=cdca99f8"></script>
+    <script src="_static/documentation_options.js?v=5e4a978b"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -57,7 +57,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.121" />
+  <meta name="docsearch:version" content="0.0.123" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -530,6 +530,10 @@ full control:</p>
 </tbody>
 </table>
 </div>
+</section>
+<section id="a-conversation-as-addressable-lines">
+<h3>A conversation as addressable lines<a class="headerlink" href="#a-conversation-as-addressable-lines" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">braidio.render_dialogue_lines(turns,</span> <span class="pre">cast,</span> <span class="pre">out_path=...)</span></code> voices a multi-speaker exchange in one Text-to-Dialogue pass (so the cross-turn prosody is kept) and returns a <code class="docutils literal notranslate"><span class="pre">DialogueTake</span></code>: the deliverable, a lossless FLAC master, and one timed <code class="docutils literal notranslate"><span class="pre">DialogueLine</span></code> per turn. <code class="docutils literal notranslate"><span class="pre">braidio.rerender_line(take,</span> <span class="pre">index,</span> <span class="pre">text=...)</span></code> re-voices one turn alone and splices it into the master (<code class="docutils literal notranslate"><span class="pre">mixing.splice</span></code>), so only that line’s characters are billed and the other lines do not degrade; <code class="docutils literal notranslate"><span class="pre">braidio.line_cost(take,</span> <span class="pre">index)</span></code> quotes it first. A take round-trips through <code class="docutils literal notranslate"><span class="pre">to_dict</span></code> / <code class="docutils literal notranslate"><span class="pre">from_dict</span></code>. Edits of one take must be serialized by the caller (last writer wins). The voicing is a seam: <code class="docutils literal notranslate"><span class="pre">synthesize=</span></code> takes any <code class="docutils literal notranslate"><span class="pre">LineSynthesizer</span></code>.</p>
 <p>Every render entry point — <code class="docutils literal notranslate"><span class="pre">narrate</span></code>, <code class="docutils literal notranslate"><span class="pre">render_dialogue</span></code>, <code class="docutils literal notranslate"><span class="pre">render_production</span></code>, <code class="docutils literal notranslate"><span class="pre">render_format</span></code> and the graph driver <code class="docutils literal notranslate"><span class="pre">weave_project</span></code> — takes an explicit <code class="docutils literal notranslate"><span class="pre">api_key=</span></code> for a caller’s own ElevenLabs key; <code class="docutils literal notranslate"><span class="pre">None</span></code> (the default) resolves from the environment. On the graph path the key reaches the two synthesis transforms through nw’s <code class="docutils literal notranslate"><span class="pre">execute(secrets=)</span></code> seam and is never persisted: not in a node, provenance, a cache key or a usage ledger (thorwhalen/braidio#58). The MCP server reads it from the <code class="docutils literal notranslate"><span class="pre">X-Elevenlabs-Key</span></code> request header, never from a tool argument.</p>
 </section>
 <section id="any-voice-backend-speak">
@@ -698,7 +702,7 @@ everything else.</p>
 </section>
 </section>
 
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-09 00:43 UTC from <a href="https://github.com/reeleehq/braidio/commit/1312017211bad299a8cac6368b69a81d25bc4752">1312017</a> (main) · braidio 0.0.121 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-09 01:13 UTC from <a href="https://github.com/reeleehq/braidio/commit/cd85edd4bc86a3d3c717db6af69de53ae1d02b49">cd85edd</a> (main) · braidio 0.0.123 · <a href="about-this-build.html">about this build</a></p>
 
                 </article>
               
@@ -742,6 +746,7 @@ everything else.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parametrize-anything">Parametrize anything</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#timed-pauses-and-the-model">Timed pauses and the model</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cost-tracking">Cost tracking</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#a-conversation-as-addressable-lines">A conversation as addressable lines</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#any-voice-backend-speak">Any voice backend (<code class="docutils literal notranslate"><span class="pre">speak=</span></code>)</a></li>
 </ul>
 </li>

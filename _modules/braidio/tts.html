@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../../_static/documentation_options.js?v=cdca99f8"></script>
+    <script src="../../_static/documentation_options.js?v=5e4a978b"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.121" />
+  <meta name="docsearch:version" content="0.0.123" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -1212,6 +1212,56 @@ window.runMermaid = runMermaid;</script>
     <span class="k">return</span> <span class="n">_cache</span><span class="o">.</span><span class="n">default_cache_dir</span><span class="p">(</span><span class="s2">"braidio-dialogue"</span><span class="p">,</span> <span class="n">env_key</span><span class="o">=</span><span class="n">DIALOGUE_CACHE_ENV_KEY</span><span class="p">)</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_dialogue_inputs</span><span class="p">(</span><span class="n">turns</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""``(voice_id, text)`` pairs (or ``{"voice_id", "text"}``) → API inputs."""</span>
+    <span class="n">inputs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">turns</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">)):</span>
+            <span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"voice_id"</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">"text"</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">]})</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"voice_id"</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="s2">"voice_id"</span><span class="p">],</span> <span class="s2">"text"</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]})</span>
+    <span class="k">return</span> <span class="n">inputs</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_dialogue_cache_key</span><span class="p">(</span>
+    <span class="n">endpoint</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">model_id</span><span class="p">,</span> <span class="n">output_format</span><span class="p">,</span> <span class="n">settings</span><span class="p">,</span> <span class="n">seed</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The cache key of a dialogue call: every audio-affecting parameter, and</span>
+<span class="sd">    the endpoint (a timed take is a different value from a plain one). The</span>
+<span class="sd">    caller's API key is deliberately absent: it does not affect the audio."""</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">mixing</span><span class="w"> </span><span class="kn">import</span> <span class="n">_cache</span>
+
+    <span class="k">return</span> <span class="n">_cache</span><span class="o">.</span><span class="n">sha256_key</span><span class="p">(</span>
+        <span class="n">endpoint</span><span class="p">,</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+        <span class="n">model_id</span><span class="p">,</span>
+        <span class="n">output_format</span><span class="p">,</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">settings</span> <span class="ow">or</span> <span class="p">{},</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+        <span class="s2">""</span> <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">seed</span><span class="p">),</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_dialogue_request</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">model_id</span><span class="p">,</span> <span class="n">output_format</span><span class="p">,</span> <span class="n">settings</span><span class="p">,</span> <span class="n">seed</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+    <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"inputs"</span><span class="p">:</span> <span class="n">inputs</span><span class="p">,</span> <span class="s2">"model_id"</span><span class="p">:</span> <span class="n">model_id</span><span class="p">,</span> <span class="s2">"output_format"</span><span class="p">:</span> <span class="n">output_format</span><span class="p">}</span>
+    <span class="k">if</span> <span class="n">settings</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s2">"settings"</span><span class="p">]</span> <span class="o">=</span> <span class="n">settings</span>
+    <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s2">"seed"</span><span class="p">]</span> <span class="o">=</span> <span class="n">seed</span>
+    <span class="k">return</span> <span class="n">kwargs</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_elevenlabs_client</span><span class="p">(</span><span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">elevenlabs.client</span><span class="w"> </span><span class="kn">import</span> <span class="n">ElevenLabs</span>
+
+    <span class="k">return</span> <span class="n">ElevenLabs</span><span class="p">(</span>
+        <span class="n">api_key</span><span class="o">=</span><span class="n">api_key</span>
+        <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ELEVENLABS_API_KEY"</span><span class="p">)</span>
+        <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ELEVEN_API_KEY"</span><span class="p">)</span>
+    <span class="p">)</span>
+
+
 <div class="viewcode-block" id="text_to_dialogue">
 <a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.text_to_dialogue">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">text_to_dialogue</span><span class="p">(</span>
@@ -1255,50 +1305,158 @@ window.runMermaid = runMermaid;</script>
 
 <span class="sd">    Returns: raw audio bytes in ``output_format``.</span>
 <span class="sd">    """</span>
-    <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
-
     <span class="kn">from</span><span class="w"> </span><span class="nn">mixing</span><span class="w"> </span><span class="kn">import</span> <span class="n">_cache</span>
 
-    <span class="n">inputs</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">turns</span><span class="p">:</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">)):</span>
-            <span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"voice_id"</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">"text"</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">]})</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"voice_id"</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="s2">"voice_id"</span><span class="p">],</span> <span class="s2">"text"</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]})</span>
-
+    <span class="n">inputs</span> <span class="o">=</span> <span class="n">_dialogue_inputs</span><span class="p">(</span><span class="n">turns</span><span class="p">)</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">model_id</span><span class="o">=</span><span class="n">model_id</span><span class="p">,</span> <span class="n">output_format</span><span class="o">=</span><span class="n">output_format</span><span class="p">,</span> <span class="n">settings</span><span class="o">=</span><span class="n">settings</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span>
+    <span class="p">)</span>
     <span class="n">cache_dir</span> <span class="o">=</span> <span class="n">_cache</span><span class="o">.</span><span class="n">resolve_cache_dir</span><span class="p">(</span><span class="n">cache</span><span class="p">,</span> <span class="n">default_factory</span><span class="o">=</span><span class="n">_dialogue_cache_dir</span><span class="p">)</span>
     <span class="n">key</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="n">cache_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">key</span> <span class="o">=</span> <span class="n">_cache</span><span class="o">.</span><span class="n">sha256_key</span><span class="p">(</span>
-            <span class="s2">"text_to_dialogue"</span><span class="p">,</span>
-            <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
-            <span class="n">model_id</span><span class="p">,</span>
-            <span class="n">output_format</span><span class="p">,</span>
-            <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">settings</span> <span class="ow">or</span> <span class="p">{},</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
-            <span class="s2">""</span> <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">seed</span><span class="p">),</span>
-        <span class="p">)</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">_dialogue_cache_key</span><span class="p">(</span><span class="s2">"text_to_dialogue"</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">refresh</span><span class="p">:</span>
             <span class="n">cached</span> <span class="o">=</span> <span class="n">_cache</span><span class="o">.</span><span class="n">read_cache</span><span class="p">(</span><span class="n">cache_dir</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s2">".audio"</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">cached</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">return</span> <span class="p">(</span><span class="n">cached</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span> <span class="k">if</span> <span class="n">return_cache_status</span> <span class="k">else</span> <span class="n">cached</span>
 
-    <span class="kn">from</span><span class="w"> </span><span class="nn">elevenlabs.client</span><span class="w"> </span><span class="kn">import</span> <span class="n">ElevenLabs</span>
-
-    <span class="n">client</span> <span class="o">=</span> <span class="n">ElevenLabs</span><span class="p">(</span>
-        <span class="n">api_key</span><span class="o">=</span><span class="n">api_key</span>
-        <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ELEVENLABS_API_KEY"</span><span class="p">)</span>
-        <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ELEVEN_API_KEY"</span><span class="p">)</span>
+    <span class="n">client</span> <span class="o">=</span> <span class="n">_elevenlabs_client</span><span class="p">(</span><span class="n">api_key</span><span class="p">)</span>
+    <span class="n">audio</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+        <span class="n">client</span><span class="o">.</span><span class="n">text_to_dialogue</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="o">**</span><span class="n">_dialogue_request</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">))</span>
     <span class="p">)</span>
-    <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"inputs"</span><span class="p">:</span> <span class="n">inputs</span><span class="p">,</span> <span class="s2">"model_id"</span><span class="p">:</span> <span class="n">model_id</span><span class="p">,</span> <span class="s2">"output_format"</span><span class="p">:</span> <span class="n">output_format</span><span class="p">}</span>
-    <span class="k">if</span> <span class="n">settings</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">kwargs</span><span class="p">[</span><span class="s2">"settings"</span><span class="p">]</span> <span class="o">=</span> <span class="n">settings</span>
-    <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">kwargs</span><span class="p">[</span><span class="s2">"seed"</span><span class="p">]</span> <span class="o">=</span> <span class="n">seed</span>
-    <span class="n">audio</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">client</span><span class="o">.</span><span class="n">text_to_dialogue</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
 
     <span class="k">if</span> <span class="n">cache_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">key</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">_cache</span><span class="o">.</span><span class="n">write_cache</span><span class="p">(</span><span class="n">cache_dir</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">audio</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s2">".audio"</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="k">if</span> <span class="n">return_cache_status</span> <span class="k">else</span> <span class="n">audio</span></div>
+
+
+
+<div class="viewcode-block" id="DialogueSegment">
+<a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.DialogueSegment">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DialogueSegment</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""One span of a timed dialogue take: who spoke which input, and when.</span>
+
+<span class="sd">    ElevenLabs' ``VoiceSegment`` in braidio's vocabulary (seconds, from the</span>
+<span class="sd">    start of the take). One input (turn) may span several segments.</span>
+<span class="sd">    """</span>
+
+    <span class="n">input_index</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">voice_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">start_s</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">end_s</span><span class="p">:</span> <span class="nb">float</span></div>
+
+
+
+<span class="c1">#: The cache entry suffix of a timed take: audio and timings in ONE value, so a</span>
+<span class="c1">#: cache hit can never pair one take's audio with another take's timings.</span>
+<span class="n">_TIMED_DIALOGUE_SUFFIX</span> <span class="o">=</span> <span class="s2">".timed.json"</span>
+<span class="n">_TIMED_DIALOGUE_ENDPOINT</span> <span class="o">=</span> <span class="s2">"text_to_dialogue_with_timestamps"</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_timed_payload</span><span class="p">(</span><span class="n">response</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What a timed take is cached as: its audio and voice segments, read off</span>
+<span class="sd">    the SDK response by attribute (its JSON dump uses wire aliases that vary)."""</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"audio_base_64"</span><span class="p">:</span> <span class="n">response</span><span class="o">.</span><span class="n">audio_base_64</span><span class="p">,</span>
+        <span class="s2">"voice_segments"</span><span class="p">:</span> <span class="p">[</span>
+            <span class="p">{</span>
+                <span class="s2">"dialogue_input_index"</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">dialogue_input_index</span><span class="p">,</span>
+                <span class="s2">"voice_id"</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">voice_id</span><span class="p">,</span>
+                <span class="s2">"start_time_seconds"</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">start_time_seconds</span><span class="p">,</span>
+                <span class="s2">"end_time_seconds"</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">end_time_seconds</span><span class="p">,</span>
+            <span class="p">}</span>
+            <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">response</span><span class="o">.</span><span class="n">voice_segments</span> <span class="ow">or</span> <span class="p">()</span>
+        <span class="p">],</span>
+    <span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_timed_from_payload</span><span class="p">(</span><span class="n">payload</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">DialogueSegment</span><span class="p">,</span> <span class="o">...</span><span class="p">]]:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">base64</span>
+
+    <span class="n">segments</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+        <span class="n">DialogueSegment</span><span class="p">(</span>
+            <span class="n">input_index</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="s2">"dialogue_input_index"</span><span class="p">]),</span>
+            <span class="n">voice_id</span><span class="o">=</span><span class="n">s</span><span class="p">[</span><span class="s2">"voice_id"</span><span class="p">],</span>
+            <span class="n">start_s</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="s2">"start_time_seconds"</span><span class="p">]),</span>
+            <span class="n">end_s</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="s2">"end_time_seconds"</span><span class="p">]),</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"voice_segments"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">()</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">payload</span><span class="p">[</span><span class="s2">"audio_base_64"</span><span class="p">]),</span> <span class="n">segments</span>
+
+
+<div class="viewcode-block" id="text_to_dialogue_with_timestamps">
+<a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.text_to_dialogue_with_timestamps">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">text_to_dialogue_with_timestamps</span><span class="p">(</span>
+    <span class="n">turns</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">model_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DIALOGUE_MODEL_ID</span><span class="p">,</span>
+    <span class="n">output_format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"mp3_44100_128"</span><span class="p">,</span>
+    <span class="n">settings</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">refresh</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">return_cache_status</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">""":func:`text_to_dialogue`, plus *when* each input is spoken in the take.</span>
+
+<span class="sd">    One Text-to-Dialogue pass through ElevenLabs' ``convert_with_timestamps``</span>
+<span class="sd">    — the same cross-turn prosody as :func:`text_to_dialogue`, billed the same</span>
+<span class="sd">    (per character of the submitted text) — returning</span>
+<span class="sd">    ``(audio, segments)``: the take's bytes and its</span>
+<span class="sd">    :class:`DialogueSegment`\\ s, in the API's order.</span>
+
+<span class="sd">    Cached exactly like :func:`text_to_dialogue` (same parameters, same</span>
+<span class="sd">    ``cache``/``refresh`` semantics), under its own key, with the audio and</span>
+<span class="sd">    the timings stored as **one** entry: a cache hit returns both, with no API</span>
+<span class="sd">    call. The caller's ``api_key`` reaches the client and nothing else — it is</span>
+<span class="sd">    not part of the key and never written to the cache.</span>
+
+<span class="sd">    ``return_cache_status=True`` returns ``(audio, segments, was_cached)``.</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">mixing</span><span class="w"> </span><span class="kn">import</span> <span class="n">_cache</span>
+
+    <span class="n">inputs</span> <span class="o">=</span> <span class="n">_dialogue_inputs</span><span class="p">(</span><span class="n">turns</span><span class="p">)</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">model_id</span><span class="o">=</span><span class="n">model_id</span><span class="p">,</span> <span class="n">output_format</span><span class="o">=</span><span class="n">output_format</span><span class="p">,</span> <span class="n">settings</span><span class="o">=</span><span class="n">settings</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span>
+    <span class="p">)</span>
+    <span class="n">cache_dir</span> <span class="o">=</span> <span class="n">_cache</span><span class="o">.</span><span class="n">resolve_cache_dir</span><span class="p">(</span><span class="n">cache</span><span class="p">,</span> <span class="n">default_factory</span><span class="o">=</span><span class="n">_dialogue_cache_dir</span><span class="p">)</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">cache_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">_dialogue_cache_key</span><span class="p">(</span><span class="n">_TIMED_DIALOGUE_ENDPOINT</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">refresh</span><span class="p">:</span>
+            <span class="n">cached</span> <span class="o">=</span> <span class="n">_cache</span><span class="o">.</span><span class="n">read_cache</span><span class="p">(</span>
+                <span class="n">cache_dir</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="n">_TIMED_DIALOGUE_SUFFIX</span><span class="p">,</span> <span class="n">loads</span><span class="o">=</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">cached</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">audio</span><span class="p">,</span> <span class="n">segments</span> <span class="o">=</span> <span class="n">_timed_from_payload</span><span class="p">(</span><span class="n">cached</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">return_cache_status</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">audio</span><span class="p">,</span> <span class="n">segments</span><span class="p">,</span> <span class="kc">True</span>
+                <span class="k">return</span> <span class="n">audio</span><span class="p">,</span> <span class="n">segments</span>
+
+    <span class="n">client</span> <span class="o">=</span> <span class="n">_elevenlabs_client</span><span class="p">(</span><span class="n">api_key</span><span class="p">)</span>
+    <span class="n">convert</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">client</span><span class="o">.</span><span class="n">text_to_dialogue</span><span class="p">,</span> <span class="s2">"convert_with_timestamps"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">convert</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+            <span class="s2">"this elevenlabs SDK has no text_to_dialogue.convert_with_timestamps, "</span>
+            <span class="s2">"so a dialogue take cannot be timed per line; upgrade elevenlabs"</span>
+        <span class="p">)</span>
+    <span class="n">payload</span> <span class="o">=</span> <span class="n">_timed_payload</span><span class="p">(</span><span class="n">convert</span><span class="p">(</span><span class="o">**</span><span class="n">_dialogue_request</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)))</span>
+
+    <span class="k">if</span> <span class="n">cache_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">key</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">_cache</span><span class="o">.</span><span class="n">write_cache</span><span class="p">(</span>
+            <span class="n">cache_dir</span><span class="p">,</span>
+            <span class="n">key</span><span class="p">,</span>
+            <span class="n">payload</span><span class="p">,</span>
+            <span class="n">suffix</span><span class="o">=</span><span class="n">_TIMED_DIALOGUE_SUFFIX</span><span class="p">,</span>
+            <span class="n">dumps</span><span class="o">=</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span>
+        <span class="p">)</span>
+    <span class="n">audio</span><span class="p">,</span> <span class="n">segments</span> <span class="o">=</span> <span class="n">_timed_from_payload</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">segments</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="k">if</span> <span class="n">return_cache_status</span> <span class="k">else</span> <span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">segments</span><span class="p">)</span></div>
 
 </pre></div>
 

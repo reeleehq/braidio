@@ -13,6 +13,7 @@
 - [braidio.cost](braidio.cost.html.md): Cost model for braidio’s paid operations (ElevenLabs TTS).
 - [braidio.defaults](braidio.defaults.html.md): User-overridable, persisted defaults for how braidio renders a voice.
 - [braidio.delivery](braidio.delivery.html.md): Narration &#42;delivery&#42; presets — model + voice settings (issue #10, expressiveness).
+- [braidio.dialogue_lines](braidio.dialogue_lines.html.md): Addressable dialogue lines (braidio#145): one take, every turn re-voiceable.
 - [braidio.formats](braidio.formats.html.md): Ready-made &#42;&#42;format templates&#42;&#42; — high-quality presets under standard names.
 - [braidio.kinds](braidio.kinds.html.md): Production kinds braidio defines. Pure (no optional deps).
 - [braidio.leveling](braidio.leveling.html.md): Level one spoken part to a loudness target with a single measured gain.

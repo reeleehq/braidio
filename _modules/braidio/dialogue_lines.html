@@ -1,0 +1,1496 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="alternate" type="text/markdown" href="dialogue_lines.html.md">
+<link rel="describedby" href="../../llms.txt" type="text/markdown">
+    <title>braidio.dialogue_lines &#8212; braidio</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=75c7c72ae941e8b558d8" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=75c7c72ae941e8b558d8" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d75fae25" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/epythet.css?v=47c21ad2" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=75c7c72ae941e8b558d8"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
+
+    <script src="../../_static/documentation_options.js?v=5e4a978b"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=fd10adb8"></script>
+    <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.esm.min.mjs";
+
+
+
+
+
+const initStyles = () => {
+    const defaultStyle = document.createElement('style');
+    defaultStyle.textContent = "pre.mermaid {\n    /* Same as .mermaid-container > pre */\n    display: block;\n    width: 100%;\n}\n\npre.mermaid > svg {\n    /* Same as .mermaid-container > pre > svg */\n    height: 500px;\n    width: 100%;\n    max-width: 100% !important;\n}";
+    document.head.appendChild(defaultStyle);
+
+    const fullscreenStyle = document.createElement('style');
+    fullscreenStyle.textContent = ".mermaid-container {\n    position: relative;\n    display: flex;\n    flex-direction: row;\n    width: 100%;\n}\n\n.mermaid-container > pre {\n    display: block;\n    width: 100%;\n}\n\n.mermaid-container > pre > svg {\n    height: 500px;\n    width: 100%;\n    max-width: 100% !important;\n}\n\n.mermaid-fullscreen-btn {\n    position: absolute;\n    width: 28px;\n    height: 28px;\n    background: rgba(255, 255, 255, 0.95);\n    border: 1px solid rgba(0, 0, 0, 0.3);\n    border-radius: 4px;\n    cursor: pointer;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    transition: all 0.2s;\n    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);\n    font-size: 14px;\n    line-height: 1;\n    padding: 0;\n    color: #333;\n}\n\n.mermaid-fullscreen-btn:hover {\n    opacity: 100% !important;\n    background: rgba(255, 255, 255, 1);\n    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);\n    transform: scale(1.1);\n}\n\n.mermaid-fullscreen-btn.dark-theme {\n    background: rgba(50, 50, 50, 0.95);\n    border: 1px solid rgba(255, 255, 255, 0.3);\n    color: #e0e0e0;\n}\n\n.mermaid-fullscreen-btn.dark-theme:hover {\n    background: rgba(60, 60, 60, 1);\n    box-shadow: 0 3px 10px rgba(255, 255, 255, 0.2);\n}\n\n.mermaid-fullscreen-modal {\n    display: none;\n    position: fixed !important;\n    top: 0 !important;\n    left: 0 !important;\n    width: 95vw;\n    height: 100vh;\n    background: rgba(255, 255, 255, 0.98);\n    z-index: 9999;\n    padding: 20px;\n    overflow: auto;\n}\n\n.mermaid-fullscreen-modal.dark-theme {\n    background: rgba(0, 0, 0, 0.98);\n}\n\n.mermaid-fullscreen-modal.active {\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n\n.mermaid-container-fullscreen {\n    position: relative;\n    width: 95vw;\n    height: 90vh;\n    max-width: 95vw;\n    max-height: 90vh;\n    background: white;\n    border-radius: 8px;\n    padding: 20px;\n    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);\n    overflow: auto;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n\n.mermaid-container-fullscreen.dark-theme {\n    background: #1a1a1a;\n    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);\n}\n\n.mermaid-container-fullscreen pre.mermaid {\n    width: 100%;\n    height: 100%;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n\n.mermaid-container-fullscreen .mermaid svg {\n    height: 100% !important;\n    width: 100% !important;\n    cursor: grab;\n}\n\n.mermaid-fullscreen-close {\n    position: fixed !important;\n    top: 20px !important;\n    right: 20px !important;\n    width: 40px;\n    height: 40px;\n    background: rgba(255, 255, 255, 0.95);\n    border: 1px solid rgba(0, 0, 0, 0.2);\n    border-radius: 50%;\n    cursor: pointer;\n    z-index: 10000;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);\n    transition: all 0.2s;\n    font-size: 24px;\n    line-height: 1;\n    color: #333;\n}\n\n.mermaid-fullscreen-close:hover {\n    background: white;\n    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);\n    transform: scale(1.1);\n}\n\n.mermaid-fullscreen-close.dark-theme {\n    background: rgba(50, 50, 50, 0.95);\n    border: 1px solid rgba(255, 255, 255, 0.2);\n    color: #e0e0e0;\n}\n\n.mermaid-fullscreen-close.dark-theme:hover {\n    background: rgba(60, 60, 60, 1);\n    box-shadow: 0 6px 16px rgba(255, 255, 255, 0.2);\n}\n\n.mermaid-fullscreen-modal .mermaid-fullscreen-btn {\n    display: none !important;\n}";
+    document.head.appendChild(fullscreenStyle);
+}
+
+// Detect if page has dark background
+const isDarkTheme = () => {
+    // We use a set of heuristics:
+    // 1. Check for common dark mode classes or attributes
+    // 2. Check computed background color brightness
+    if (document.documentElement.classList.contains('dark') ||
+        document.documentElement.getAttribute('data-theme') === 'dark' ||
+        document.body.classList.contains('dark') ||
+        document.body.getAttribute('data-theme') === 'dark') {
+        // console.log("Dark theme detected via class/attribute");
+        return true;
+    }
+    if (document.documentElement.classList.contains('light') ||
+        document.documentElement.getAttribute('data-theme') === 'light' ||
+        document.body.classList.contains('light') ||
+        document.body.getAttribute('data-theme') === 'light') {
+        // console.log("Light theme detected via class/attribute");
+        return false;
+    }
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        // console.log("Dark theme detected via prefers-color-scheme");
+        return true;
+    }
+    const bgColor = window.getComputedStyle(document.body).backgroundColor;
+    const match = bgColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)/);
+    if (match) {
+        const r = parseInt(match[1]);
+        const g = parseInt(match[2]);
+        const b = parseInt(match[3]);
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        // console.log("Background color brightness:", brightness);
+        return brightness < 128;
+    }
+    // console.log("No dark or light theme detected, defaulting to light theme");
+    return false;
+};
+
+let darkTheme = isDarkTheme();
+let modal = null;
+let modalContent = null;
+let previousScrollOffset = [window.scrollX, window.scrollY];
+let _lazyObserver = null;
+let _renderQueue = Promise.resolve();
+let closeModal = () => {};
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal?.classList.contains('active')) {
+        closeModal();
+    }
+});
+
+// Apply d3 zoom to each SVG. Idempotent: an SVG already wrapped is skipped,
+// so this is safe to call both for the initial batch and for diagrams that
+// render lazily once they become visible.
+const addZoomToSvgs = (svgs) => {
+    svgs.each(function() {
+        if (this.getAttribute('data-zoom-applied') === 'true') return;
+        var svg = d3.select(this);
+        svg.html("<g class='wrapper'>" + svg.html() + "</g>");
+        var inner = svg.select("g");
+        var zoom = d3.zoom().on("zoom", function(event) {
+            inner.attr("transform", event.transform);
+        });
+        svg.call(zoom);
+        this.setAttribute('data-zoom-applied', 'true');
+    });
+};
+
+const runMermaid = async (rerun) => {
+    console.log("Running mermaid diagrams, rerun =", rerun);
+    // clear all existing mermaid charts
+    let all_mermaids = document.querySelectorAll(".mermaid");
+
+    if (rerun) {
+        // Disconnect any previous lazy rendering observer
+        if (_lazyObserver) {
+            _lazyObserver.disconnect();
+            _lazyObserver = null;
+        }
+
+        all_mermaids.forEach((el) => {
+            el.removeAttribute('data-mermaid-deferred');
+            el.removeAttribute('data-mermaid-render-failed');
+            if(!el.hasAttribute("data-original-code")) {
+                // store original code
+                // console.log(`Storing original code for first run: `, el.innerHTML);
+                el.setAttribute('data-original-code', el.innerHTML);
+            }
+            if(el.getAttribute("data-processed") === "true") {
+                // remove and restore original
+                el.removeAttribute("data-processed");
+                // console.log(`Restoring original code for re-run: `, el.getAttribute('data-original-code'));
+                el.innerHTML = el.getAttribute('data-original-code');
+            } else {
+                // store original code
+                // console.log(`Storing original code for re-run: `, el.innerHTML);
+                el.setAttribute('data-original-code', el.innerHTML);
+            }
+        });
+
+        // Separate visible and hidden elements. Mermaid's layout engine measures
+        // text dimensions via the DOM, which fails for elements hidden by a parent
+        // (e.g., Reveal.js non-active slides, sphinx-design unopened tabs),
+        // producing broken SVGs. Render visible elements now, defer hidden ones.
+        const visible = [];
+        const hidden = [];
+        all_mermaids.forEach((el) => {
+            // offsetParent is null for display:none ancestors.
+            // getClientRects().length > 0 catches position:fixed elements
+            // (which also have null offsetParent but are still visible).
+            if (el.offsetParent !== null || el.getClientRects().length > 0) {
+                visible.push(el);
+            } else {
+                hidden.push(el);
+                el.setAttribute('data-mermaid-deferred', 'true');
+            }
+        });
+
+        if (visible.length > 0) {
+            try {
+                await mermaid.run({ nodes: visible });
+            } catch (e) {
+                console.error("Mermaid rendering failed:", e);
+            }
+        }
+
+        // Lazily render hidden elements when they become visible.
+        // Uses a promise chain (_renderQueue) to serialize rendering,
+        // since IntersectionObserver may report multiple entries at once
+        // and mermaid.run() is not safe to call concurrently.
+        if (hidden.length > 0) {
+            if (typeof IntersectionObserver === 'undefined') {
+                console.warn("IntersectionObserver not available; hidden mermaid diagrams will not render.");
+            } else {
+                _renderQueue = Promise.resolve();
+                _lazyObserver = new IntersectionObserver((entries) => {
+                    for (const entry of entries) {
+                        if (entry.isIntersecting && entry.target.getAttribute("data-processed") !== "true") {
+                            _lazyObserver.unobserve(entry.target);
+                            const el = entry.target;
+                            _renderQueue = _renderQueue.then(async () => {
+                                try {
+                                    await mermaid.run({ nodes: [el] });
+                                    el.removeAttribute('data-mermaid-deferred');
+                                    // Apply zoom to the now-rendered diagram, matching
+                                    // the decoration visible diagrams receive.
+                                    if (false) {
+                                        addZoomToSvgs(d3.selectAll("").select(function() {
+                                            return this.querySelector("svg");
+                                        }));
+                                    }
+                                } catch (e) {
+                                    console.error("Mermaid deferred rendering failed:", e);
+                                    el.removeAttribute('data-mermaid-deferred');
+                                    el.setAttribute('data-mermaid-render-failed', 'true');
+                                }
+                            });
+                        }
+                    }
+                });
+                hidden.forEach((el) => _lazyObserver.observe(el));
+            }
+        }
+    }
+
+    all_mermaids = document.querySelectorAll(".mermaid");
+    // Exclude deferred (hidden) and render-failed elements from completion checks
+    const mermaids_active = document.querySelectorAll(".mermaid:not([data-mermaid-deferred]):not([data-mermaid-render-failed])");
+    const mermaids_processed = document.querySelectorAll(".mermaid:not([data-mermaid-deferred]):not([data-mermaid-render-failed])[data-processed='true']");
+
+    if (false) {
+        const mermaids_to_add_zoom = 0 === -1 ? mermaids_active.length : 0;
+        if(mermaids_to_add_zoom > 0) {
+            var svgs = d3.selectAll("").select(function() {
+                return this.querySelector("svg");
+            });
+            // Wait until every active (visible) diagram has rendered. Deferred
+            // diagrams are excluded, so a fixed d3_node_count that counts a
+            // hidden diagram no longer loops forever waiting for its SVG.
+            if(mermaids_active.length !== mermaids_processed.length) {
+                setTimeout(() => runMermaid(false), 200);
+                return;
+            }
+            addZoomToSvgs(svgs);
+        }
+    } else if(mermaids_active.length !== mermaids_processed.length) {
+        // Wait for mermaid to process all diagrams
+        setTimeout(() => runMermaid(false), 200);
+        return;
+    }
+
+    // Stop here if not adding fullscreen capability
+    if (!true) return;
+
+    if (modal !== null ) {
+        // Destroy existing modal
+        modal.remove();
+        modal = null;
+        modalContent = null;
+    }
+
+    modal = document.createElement('div');
+    modal.className = 'mermaid-fullscreen-modal' + (darkTheme ? ' dark-theme' : '');
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Fullscreen diagram viewer');
+    modal.innerHTML = `
+        <button class="mermaid-fullscreen-close${darkTheme ? ' dark-theme' : ''}" aria-label="Close fullscreen">✕</button>
+        <div class="mermaid-container-fullscreen${darkTheme ? ' dark-theme' : ''}"></div>
+    `;
+    document.body.appendChild(modal);
+
+    modalContent = modal.querySelector('.mermaid-container-fullscreen');
+    const closeBtn = modal.querySelector('.mermaid-fullscreen-close');
+
+    closeModal = () => {
+        modal.classList.remove('active');
+        modalContent.innerHTML = '';
+        document.body.style.overflow = ''
+        window.scrollTo({left: previousScrollOffset[0], top: previousScrollOffset[1], behavior: 'instant'});
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+    document.querySelectorAll('.mermaid').forEach((mermaidDiv) => {
+        if (mermaidDiv.parentNode.classList.contains('mermaid-container') ||
+            mermaidDiv.closest('.mermaid-fullscreen-modal')) {
+            // Already processed, adjust button class if needed
+            const existingBtn = mermaidDiv.parentNode.querySelector('.mermaid-fullscreen-btn');
+            if (existingBtn) {
+                existingBtn.className = 'mermaid-fullscreen-btn' + (darkTheme ? ' dark-theme' : '');
+            }
+            return;
+        }
+
+        const container = document.createElement('div');
+        container.className = 'mermaid-container';
+        mermaidDiv.parentNode.insertBefore(container, mermaidDiv);
+        container.appendChild(mermaidDiv);
+
+        const fullscreenBtn = document.createElement('button');
+        fullscreenBtn.className = 'mermaid-fullscreen-btn' + (darkTheme ? ' dark-theme' : '');
+        fullscreenBtn.setAttribute('aria-label', 'View diagram in fullscreen');
+        fullscreenBtn.textContent = "\u26f6";
+        fullscreenBtn.style.opacity = "50%";
+
+        // Calculate dynamic position based on diagram's margin and padding
+        const diagramStyle = window.getComputedStyle(mermaidDiv);
+        const marginTop = parseFloat(diagramStyle.marginTop) || 0;
+        const marginRight = parseFloat(diagramStyle.marginRight) || 0;
+        const paddingTop = parseFloat(diagramStyle.paddingTop) || 0;
+        const paddingRight = parseFloat(diagramStyle.paddingRight) || 0;
+        fullscreenBtn.style.top = `${marginTop + paddingTop + 4}px`;
+        fullscreenBtn.style.right = `${marginRight + paddingRight + 4}px`;
+
+        fullscreenBtn.addEventListener('click', () => {
+            previousScrollOffset = [window.scrollX, window.scrollY];
+            const clone = mermaidDiv.cloneNode(true);
+            modalContent.innerHTML = '';
+            modalContent.appendChild(clone);
+
+            const svg = clone.querySelector('svg');
+            if (svg) {
+                svg.removeAttribute('width');
+                svg.removeAttribute('height');
+                svg.style.width = '100%';
+                svg.style.height = 'auto';
+                svg.style.maxWidth = '100%';
+                svg.style.display = 'block';
+
+                if (false) {
+                    setTimeout(() => {
+                        const g = svg.querySelector('g');
+                        if (g) {
+                            var svgD3 = d3.select(svg);
+                            svgD3.html("<g class='wrapper'>" + svgD3.html() + "</g>");
+                            var inner = svgD3.select("g");
+                            var zoom = d3.zoom().on("zoom", function(event) {
+                                inner.attr("transform", event.transform);
+                            });
+                            svgD3.call(zoom);
+                        }
+                    }, 100);
+                }
+            }
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+        container.appendChild(fullscreenBtn);
+    });
+};
+
+
+
+const load = async () => {
+    initStyles();
+
+
+    await runMermaid(true);
+
+    const reRunIfThemeChanges = async () => {
+        const newDarkTheme = isDarkTheme();
+        if (newDarkTheme !== darkTheme) {
+            darkTheme = newDarkTheme;
+            console.log("Theme change detected, re-running mermaid with", darkTheme ? "dark" : "default", "theme");
+            await mermaid.initialize(
+                {...{"startOnLoad": false},
+                ...{ darkMode: darkTheme, theme: darkTheme ? "dark" : "default" },
+                }
+            );
+            await runMermaid(true);
+        }
+    };
+
+    // Update theme classes when theme changes
+    const themeObserver = new MutationObserver(reRunIfThemeChanges);
+    themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme']
+    });
+    themeObserver.observe(document.body, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme']
+    });
+};
+
+
+
+
+
+console.log("Initializing mermaid with", darkTheme ? "dark" : "default", "theme");
+mermaid.initialize(
+    {...{"startOnLoad": false},
+    ...{ darkMode: darkTheme, theme: darkTheme ? "dark" : "default" },
+    }
+);
+
+window.addEventListener("load", load);
+window.runMermaid = runMermaid;</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/braidio/dialogue_lines';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.0.123" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation" aria-expanded="false" aria-controls="pst-primary-sidebar-modal">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">braidio</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../ai-agents.html">
+    For AI agents
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/thorwhalen/braidio" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal" tabindex="-1"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../ai-agents.html">
+    For AI agents
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/thorwhalen/braidio" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-house"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Module code</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="../braidio.html" class="nav-link">braidio</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">braidio.dialogue_lines</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for braidio.dialogue_lines</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Addressable dialogue lines (braidio#145): one take, every turn re-voiceable.</span>
+
+<span class="sd">:func:`render_dialogue_lines` is :func:`braidio.conversation.render_dialogue`'s</span>
+<span class="sd">one Text-to-Dialogue pass, timed: it returns a :class:`DialogueTake` whose</span>
+<span class="sd">:class:`DialogueLine`\\ s say where each turn sits in the take.</span>
+<span class="sd">:func:`rerender_line` re-synthesizes ONE turn and splices it in, leaving every</span>
+<span class="sd">other line's audio (and its cross-turn prosody) untouched and unbilled.</span>
+<span class="sd">:func:`line_cost` quotes a line before it is rendered.</span>
+
+<span class="sd">Three choices keep a take editable many times over:</span>
+
+<span class="sd">- **A lossless master.** Beside the deliverable (``take.path``, in the take's</span>
+<span class="sd">  ``output_format``) sits a FLAC master (``take.master``). Splices operate on</span>
+<span class="sd">  the master; the deliverable is re-encoded from it after each edit. So an</span>
+<span class="sd">  unedited line is always ONE lossy generation from the master, however many</span>
+<span class="sd">  edits came before, instead of one more generation per edit.</span>
+<span class="sd">- **Content-checked takes.** A take records the master's SHA-256. A take whose</span>
+<span class="sd">  master has since changed (another edit wrote over it in place) is refused</span>
+<span class="sd">  with :class:`StaleTakeError`, before any spend, rather than cut at offsets</span>
+<span class="sd">  that no longer describe the file.</span>
+<span class="sd">- **Cuts in the pauses, with fades.** A re-rendered line replaces the take from</span>
+<span class="sd">  the middle of the pause before it to the middle of the pause after it (the</span>
+<span class="sd">  file's edges for the first and last line), and brings the same amount of its</span>
+<span class="sd">  own lead-in and decay along, so neither the old line's tail nor the new</span>
+<span class="sd">  line's is lost. Each join gets mixing's join fade, out and in.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">replace</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Protocol</span><span class="p">,</span> <span class="n">Sequence</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">braidio.conversation</span><span class="w"> </span><span class="kn">import</span> <span class="n">DEFAULT_CAST</span><span class="p">,</span> <span class="n">ConversationCast</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">braidio.cost</span><span class="w"> </span><span class="kn">import</span> <span class="n">CostLine</span><span class="p">,</span> <span class="n">CostRollup</span><span class="p">,</span> <span class="n">billable_chars</span><span class="p">,</span> <span class="n">tts_cost_usd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">braidio.tts</span><span class="w"> </span><span class="kn">import</span> <span class="n">DialogueSegment</span><span class="p">,</span> <span class="n">text_to_dialogue_with_timestamps</span>
+
+<span class="n">DEFAULT_OUTPUT_FORMAT</span> <span class="o">=</span> <span class="s2">"mp3_44100_128"</span>
+
+<span class="c1">#: The lossless master's name beside the deliverable: ``take.mp3`` -&gt;</span>
+<span class="c1">#: ``take.mp3.master.flac``.</span>
+<span class="n">MASTER_SUFFIX</span> <span class="o">=</span> <span class="s2">".master.flac"</span>
+
+<span class="c1">#: Float slack when checking that lines do not overlap: offsets are sums of</span>
+<span class="c1">#: float durations, and a touching pair must not read as overlapping.</span>
+<span class="n">_TIME_EPS_S</span> <span class="o">=</span> <span class="mf">1e-6</span>
+
+<span class="c1">#: The output formats a take can be spliced in: ElevenLabs' format family -&gt;</span>
+<span class="c1">#: (ffmpeg encoder, ffmpeg muxer). Raw ``pcm_``/``ulaw_``/``alaw_`` output has</span>
+<span class="c1">#: no container ffmpeg could read back, so it is refused before any spend.</span>
+<span class="n">_SPLICE_CODECS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"mp3"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"libmp3lame"</span><span class="p">,</span> <span class="s2">"mp3"</span><span class="p">),</span>
+    <span class="s2">"wav"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"pcm_s16le"</span><span class="p">,</span> <span class="s2">"wav"</span><span class="p">),</span>
+    <span class="s2">"opus"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"libopus"</span><span class="p">,</span> <span class="s2">"ogg"</span><span class="p">),</span>
+<span class="p">}</span>
+
+
+<div class="viewcode-block" id="DialogueTimingError">
+<a class="viewcode-back" href="../../_autosummary/braidio.dialogue_lines.html#braidio.dialogue_lines.DialogueTimingError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DialogueTimingError</span><span class="p">(</span><span class="ne">RuntimeError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A timed take came back without the timings a line needs."""</span></div>
+
+
+
+<div class="viewcode-block" id="StaleTakeError">
+<a class="viewcode-back" href="../../_autosummary/braidio.dialogue_lines.html#braidio.dialogue_lines.StaleTakeError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">StaleTakeError</span><span class="p">(</span><span class="ne">RuntimeError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A take's master no longer holds the audio the take describes."""</span></div>
+
+
+
+<div class="viewcode-block" id="DialogueLine">
+<a class="viewcode-back" href="../../_autosummary/braidio.dialogue_lines.html#braidio.dialogue_lines.DialogueLine">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DialogueLine</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""One turn of a :class:`DialogueTake`: who says what, and where it sits.</span>
+
+<span class="sd">    ``offset_s``/``duration_s`` are seconds into the take. They span the</span>
+<span class="sd">    turn's voice segments (earliest start to latest end), so the pause</span>
+<span class="sd">    *between* two turns belongs to neither line.</span>
+<span class="sd">    """</span>
+
+    <span class="n">index</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">role</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">offset_s</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">duration_s</span><span class="p">:</span> <span class="nb">float</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">end_s</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Where the line ends in the take."""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset_s</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">duration_s</span></div>
+
+
+
+<div class="viewcode-block" id="DialogueTake">
+<a class="viewcode-back" href="../../_autosummary/braidio.dialogue_lines.html#braidio.dialogue_lines.DialogueTake">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DialogueTake</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A rendered exchange whose turns are addressable lines.</span>
+
+<span class="sd">    ``path`` is the deliverable (in ``output_format``); ``master`` the lossless</span>
+<span class="sd">    FLAC every splice operates on, and ``master_sha256`` its content hash, so</span>
+<span class="sd">    a take whose master has changed since is refused instead of mis-cut.</span>
+<span class="sd">    ``lines`` are the turns in order, timed (``turns`` is their ``(role, text)``</span>
+<span class="sd">    view); ``cast`` and ``output_format`` are what :func:`rerender_line` needs to</span>
+<span class="sd">    re-voice one.</span>
+
+<span class="sd">    A take is checked when built: one line per turn, indexed ``0..n-1`` in</span>
+<span class="sd">    order, each with its turn's role and text, every role in the cast, and the</span>
+<span class="sd">    lines in time order without overlap.</span>
+
+<span class="sd">    :meth:`to_dict`/:meth:`from_dict` round-trip it through JSON, so a host can</span>
+<span class="sd">    store a take and re-render a line of it in a later request. A stored dict</span>
+<span class="sd">    is data the host wrote: ``from_dict`` checks its consistency, NOT where</span>
+<span class="sd">    ``path`` and ``master`` point. A host that keeps takes for several users</span>
+<span class="sd">    must check both against its own root before trusting them, since</span>
+<span class="sd">    :func:`rerender_line` writes to them.</span>
+<span class="sd">    """</span>
+
+    <span class="n">path</span><span class="p">:</span> <span class="n">Path</span>
+    <span class="n">lines</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">DialogueLine</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">master</span><span class="p">:</span> <span class="n">Path</span>
+    <span class="n">master_sha256</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">cast</span><span class="p">:</span> <span class="n">ConversationCast</span> <span class="o">=</span> <span class="n">DEFAULT_CAST</span>
+    <span class="n">output_format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_OUTPUT_FORMAT</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">_check_take</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">turns</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""``(role, text)`` per line: what was sent to the dialogue endpoint."""</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">((</span><span class="n">ln</span><span class="o">.</span><span class="n">role</span><span class="p">,</span> <span class="n">ln</span><span class="o">.</span><span class="n">text</span><span class="p">)</span> <span class="k">for</span> <span class="n">ln</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lines</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DialogueTake.to_dict">
+<a class="viewcode-back" href="../../_autosummary/braidio.dialogue_lines.html#braidio.dialogue_lines.DialogueTake.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""A JSON-able record of the take (no secret ever lives on a take)."""</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">"path"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">),</span>
+            <span class="s2">"master"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">master</span><span class="p">),</span>
+            <span class="s2">"master_sha256"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_sha256</span><span class="p">,</span>
+            <span class="s2">"lines"</span><span class="p">:</span> <span class="p">[</span>
+                <span class="p">{</span>
+                    <span class="s2">"index"</span><span class="p">:</span> <span class="n">ln</span><span class="o">.</span><span class="n">index</span><span class="p">,</span>
+                    <span class="s2">"role"</span><span class="p">:</span> <span class="n">ln</span><span class="o">.</span><span class="n">role</span><span class="p">,</span>
+                    <span class="s2">"text"</span><span class="p">:</span> <span class="n">ln</span><span class="o">.</span><span class="n">text</span><span class="p">,</span>
+                    <span class="s2">"offset_s"</span><span class="p">:</span> <span class="n">ln</span><span class="o">.</span><span class="n">offset_s</span><span class="p">,</span>
+                    <span class="s2">"duration_s"</span><span class="p">:</span> <span class="n">ln</span><span class="o">.</span><span class="n">duration_s</span><span class="p">,</span>
+                    <span class="s2">"end_s"</span><span class="p">:</span> <span class="n">ln</span><span class="o">.</span><span class="n">end_s</span><span class="p">,</span>
+                <span class="p">}</span>
+                <span class="k">for</span> <span class="n">ln</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lines</span>
+            <span class="p">],</span>
+            <span class="s2">"cast"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">"roles"</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cast</span><span class="o">.</span><span class="n">roles</span><span class="p">),</span>
+                <span class="s2">"model_id"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">cast</span><span class="o">.</span><span class="n">model_id</span><span class="p">,</span>
+                <span class="s2">"settings"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">cast</span><span class="o">.</span><span class="n">settings</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="s2">"output_format"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_format</span><span class="p">,</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="DialogueTake.from_dict">
+<a class="viewcode-back" href="../../_autosummary/braidio.dialogue_lines.html#braidio.dialogue_lines.DialogueTake.from_dict">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">d</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DialogueTake</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The take :meth:`to_dict` recorded; raises ``ValueError`` if inconsistent."""</span>
+        <span class="n">cast</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s2">"cast"</span><span class="p">]</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s2">"path"</span><span class="p">]),</span>
+            <span class="n">master</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s2">"master"</span><span class="p">]),</span>
+            <span class="n">master_sha256</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s2">"master_sha256"</span><span class="p">],</span>
+            <span class="n">lines</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span>
+                <span class="n">DialogueLine</span><span class="p">(</span><span class="o">**</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">ln</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">_LINE_FIELDS</span><span class="p">})</span> <span class="k">for</span> <span class="n">ln</span> <span class="ow">in</span> <span class="n">d</span><span class="p">[</span><span class="s2">"lines"</span><span class="p">]</span>
+            <span class="p">),</span>
+            <span class="n">cast</span><span class="o">=</span><span class="n">ConversationCast</span><span class="p">(</span>
+                <span class="n">roles</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">cast</span><span class="p">[</span><span class="s2">"roles"</span><span class="p">]),</span>
+                <span class="n">model_id</span><span class="o">=</span><span class="n">cast</span><span class="p">[</span><span class="s2">"model_id"</span><span class="p">],</span>
+                <span class="n">settings</span><span class="o">=</span><span class="n">cast</span><span class="p">[</span><span class="s2">"settings"</span><span class="p">],</span>
+            <span class="p">),</span>
+            <span class="n">output_format</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s2">"output_format"</span><span class="p">],</span>
+        <span class="p">)</span></div>
+</div>
+
+
+
+<span class="c1">#: The stored fields of a line (``end_s`` is derived, so a stored one is ignored).</span>
+<span class="n">_LINE_FIELDS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"index"</span><span class="p">,</span> <span class="s2">"role"</span><span class="p">,</span> <span class="s2">"text"</span><span class="p">,</span> <span class="s2">"offset_s"</span><span class="p">,</span> <span class="s2">"duration_s"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_take</span><span class="p">(</span><span class="n">take</span><span class="p">:</span> <span class="n">DialogueTake</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">unknown</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">({</span><span class="n">ln</span><span class="o">.</span><span class="n">role</span> <span class="k">for</span> <span class="n">ln</span> <span class="ow">in</span> <span class="n">take</span><span class="o">.</span><span class="n">lines</span><span class="p">}</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">take</span><span class="o">.</span><span class="n">cast</span><span class="o">.</span><span class="n">roles</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">unknown</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"the take's cast has no voice for role(s) </span><span class="si">{</span><span class="n">unknown</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">prev_end</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ln</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">take</span><span class="o">.</span><span class="n">lines</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">ln</span><span class="o">.</span><span class="n">index</span> <span class="o">!=</span> <span class="n">i</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"line </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> must have index </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">; got index </span><span class="si">{</span><span class="n">ln</span><span class="o">.</span><span class="n">index</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ln</span><span class="o">.</span><span class="n">duration_s</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">ln</span><span class="o">.</span><span class="n">offset_s</span> <span class="o">&lt;</span> <span class="n">prev_end</span> <span class="o">-</span> <span class="n">_TIME_EPS_S</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"line </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">ln</span><span class="o">.</span><span class="n">offset_s</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">s + </span><span class="si">{</span><span class="n">ln</span><span class="o">.</span><span class="n">duration_s</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">s) is empty "</span>
+                <span class="sa">f</span><span class="s2">"or starts before line </span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2"> ends (</span><span class="si">{</span><span class="n">prev_end</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">s)"</span>
+            <span class="p">)</span>
+        <span class="n">prev_end</span> <span class="o">=</span> <span class="n">ln</span><span class="o">.</span><span class="n">end_s</span>
+
+
+<span class="c1"># --- small helpers -------------------------------------------------------------</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_require_ffmpeg</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="s2">"ffmpeg"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"ffmpeg not found on PATH (brew install ffmpeg)."</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_require_text</span><span class="p">(</span><span class="n">turns</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">empty</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">turns</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span>
+    <span class="k">if</span> <span class="n">empty</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"turn(s) </span><span class="si">{</span><span class="n">empty</span><span class="si">}</span><span class="s2"> have no text to speak"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_encode_args</span><span class="p">(</span><span class="n">output_format</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""ffmpeg output args reproducing ElevenLabs' ``{codec}_{rate}[_{kbps}]``."""</span>
+    <span class="n">family</span><span class="p">,</span> <span class="o">*</span><span class="n">rest</span> <span class="o">=</span> <span class="n">output_format</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">family</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_SPLICE_CODECS</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">rest</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"output_format </span><span class="si">{</span><span class="n">output_format</span><span class="si">!r}</span><span class="s2"> cannot be spliced line by line; "</span>
+            <span class="sa">f</span><span class="s2">"use one of the </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">_SPLICE_CODECS</span><span class="p">)</span><span class="si">}</span><span class="s2"> formats (e.g. 'mp3_44100_128')"</span>
+        <span class="p">)</span>
+    <span class="n">encoder</span><span class="p">,</span> <span class="n">muxer</span> <span class="o">=</span> <span class="n">_SPLICE_CODECS</span><span class="p">[</span><span class="n">family</span><span class="p">]</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"-c:a"</span><span class="p">,</span> <span class="n">encoder</span><span class="p">,</span> <span class="s2">"-ar"</span><span class="p">,</span> <span class="n">rest</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">rest</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"-b:a"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">rest</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">k"</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">args</span> <span class="o">+</span> <span class="p">[</span><span class="s2">"-f"</span><span class="p">,</span> <span class="n">muxer</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_cast_voices</span><span class="p">(</span><span class="n">turns</span><span class="p">,</span> <span class="n">cast</span><span class="p">:</span> <span class="n">ConversationCast</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""``(role, text)`` turns -&gt; ``(voice_id, text)``, naming an unknown role."""</span>
+    <span class="n">missing</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">({</span><span class="n">role</span> <span class="k">for</span> <span class="n">role</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">turns</span><span class="p">}</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">cast</span><span class="o">.</span><span class="n">roles</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"the cast has no voice for role(s) </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">; it has </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">cast</span><span class="o">.</span><span class="n">roles</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="p">[(</span><span class="n">cast</span><span class="o">.</span><span class="n">roles</span><span class="p">[</span><span class="n">role</span><span class="p">],</span> <span class="n">text</span><span class="p">)</span> <span class="k">for</span> <span class="n">role</span><span class="p">,</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">turns</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_probe</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""``(duration_s, sample_rate)`` of an audio file."""</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">mixing.probe</span><span class="w"> </span><span class="kn">import</span> <span class="n">probe</span>
+
+    <span class="n">info</span> <span class="o">=</span> <span class="n">probe</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">count_packets</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">info</span><span class="o">.</span><span class="n">has_audio</span> <span class="ow">or</span> <span class="n">info</span><span class="o">.</span><span class="n">duration</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">info</span><span class="o">.</span><span class="n">sample_rate</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> has no readable audio stream"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">info</span><span class="o">.</span><span class="n">duration</span><span class="p">,</span> <span class="n">info</span><span class="o">.</span><span class="n">sample_rate</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_sha256</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">()</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="nb">iter</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="mi">20</span><span class="p">),</span> <span class="sa">b</span><span class="s2">""</span><span class="p">):</span>
+            <span class="n">h</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">block</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_master_path</span><span class="p">(</span><span class="n">deliverable</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">deliverable</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">deliverable</span><span class="o">.</span><span class="n">name</span><span class="si">}{</span><span class="n">MASTER_SUFFIX</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_ffmpeg</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+        <span class="p">[</span><span class="s2">"ffmpeg"</span><span class="p">,</span> <span class="s2">"-y"</span><span class="p">,</span> <span class="s2">"-v"</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">],</span> <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_to_master</span><span class="p">(</span><span class="n">src</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">master</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Decode ``src`` once into the lossless master (its own sample rate)."""</span>
+    <span class="n">_ffmpeg</span><span class="p">(</span><span class="s2">"-i"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">src</span><span class="p">),</span> <span class="s2">"-map"</span><span class="p">,</span> <span class="s2">"0:a:0"</span><span class="p">,</span> <span class="s2">"-c:a"</span><span class="p">,</span> <span class="s2">"flac"</span><span class="p">,</span> <span class="s2">"-f"</span><span class="p">,</span> <span class="s2">"flac"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">master</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_encode</span><span class="p">(</span><span class="n">master</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">out</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_format</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The deliverable: ``master`` encoded once in ``output_format``."""</span>
+    <span class="n">_ffmpeg</span><span class="p">(</span><span class="s2">"-i"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">master</span><span class="p">),</span> <span class="o">*</span><span class="n">_encode_args</span><span class="p">(</span><span class="n">output_format</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">out</span><span class="p">))</span>
+
+
+<span class="c1"># --- timings -------------------------------------------------------------------</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_input_spans</span><span class="p">(</span><span class="n">segments</span><span class="p">,</span> <span class="n">n_inputs</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Each input's span over its segments: earliest start, latest end."""</span>
+    <span class="n">spans</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">seg</span> <span class="ow">in</span> <span class="n">segments</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">seg</span><span class="o">.</span><span class="n">input_index</span> <span class="o">&lt;</span> <span class="n">n_inputs</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DialogueTimingError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"a voice segment names input </span><span class="si">{</span><span class="n">seg</span><span class="o">.</span><span class="n">input_index</span><span class="si">}</span><span class="s2">, "</span>
+                <span class="sa">f</span><span class="s2">"but only </span><span class="si">{</span><span class="n">n_inputs</span><span class="si">}</span><span class="s2"> turn(s) were sent"</span>
+            <span class="p">)</span>
+        <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span> <span class="o">=</span> <span class="n">spans</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">seg</span><span class="o">.</span><span class="n">input_index</span><span class="p">,</span> <span class="p">(</span><span class="n">seg</span><span class="o">.</span><span class="n">start_s</span><span class="p">,</span> <span class="n">seg</span><span class="o">.</span><span class="n">end_s</span><span class="p">))</span>
+        <span class="n">spans</span><span class="p">[</span><span class="n">seg</span><span class="o">.</span><span class="n">input_index</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">lo</span><span class="p">,</span> <span class="n">seg</span><span class="o">.</span><span class="n">start_s</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">hi</span><span class="p">,</span> <span class="n">seg</span><span class="o">.</span><span class="n">end_s</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">spans</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_turn_spans</span><span class="p">(</span><span class="n">segments</span><span class="p">,</span> <span class="n">n_turns</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Every turn's ``[start, end]``, in order and without overlap.</span>
+
+<span class="sd">    Turns the API timed as overlapping (an interruption) are split at the</span>
+<span class="sd">    midpoint of the overlap, so each line owns half of it. A turn that starts</span>
+<span class="sd">    before the previous one, or lies wholly inside it (a backchannel spoken</span>
+<span class="sd">    over the other voice), cannot be cut out on its own and raises</span>
+<span class="sd">    :class:`DialogueTimingError`.</span>
+<span class="sd">    """</span>
+    <span class="n">spans</span> <span class="o">=</span> <span class="n">_input_spans</span><span class="p">(</span><span class="n">segments</span><span class="p">,</span> <span class="n">n_turns</span><span class="p">)</span>
+    <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_turns</span><span class="p">)</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">spans</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">DialogueTimingError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"the dialogue take has no voice_segments for turn(s) </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">, so "</span>
+            <span class="s2">"those lines cannot be located in it; re-roll the take with "</span>
+            <span class="s2">"refresh=True, or render those turns alone"</span>
+        <span class="p">)</span>
+    <span class="n">bounds</span> <span class="o">=</span> <span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">spans</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_turns</span><span class="p">)]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">bounds</span><span class="p">,</span> <span class="n">bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">:])):</span>
+        <span class="k">if</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">or</span> <span class="n">b</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="n">DialogueTimingError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"turn </span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2"> is timed inside or before turn </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> "</span>
+                <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">b</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">s vs </span><span class="si">{</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">s), so it "</span>
+                <span class="s2">"cannot be cut out as a line of its own"</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>  <span class="c1"># an overlap: each line gets half of it</span>
+            <span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="k">return</span> <span class="n">bounds</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_lines</span><span class="p">(</span><span class="n">turns</span><span class="p">,</span> <span class="n">bounds</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">total_s</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">DialogueLine</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The take's lines, each span clamped into ``[0, total_s]``."""</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">((</span><span class="n">role</span><span class="p">,</span> <span class="n">text</span><span class="p">),</span> <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">))</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">turns</span><span class="p">,</span> <span class="n">bounds</span><span class="p">)):</span>
+        <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">start</span><span class="p">),</span> <span class="nb">min</span><span class="p">(</span><span class="n">end</span><span class="p">,</span> <span class="n">total_s</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">end</span> <span class="o">&lt;=</span> <span class="n">start</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DialogueTimingError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"turn </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> is timed outside the take's </span><span class="si">{</span><span class="n">total_s</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">s of audio"</span>
+            <span class="p">)</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">DialogueLine</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">role</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
+
+
+<span class="c1"># --- the splice (mixing's replace_span_file does the cutting) --------------------------------------------</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_insert_window</span><span class="p">(</span>
+    <span class="n">insert</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">keep</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">rate</span><span class="p">:</span> <span class="nb">int</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"np.ndarray"</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""``insert[keep0:keep1]`` as float samples at ``rate``, exactly ``keep1 - keep0`` long.</span>
+
+<span class="sd">    The window may reach outside the insert: what falls outside is silence, so a</span>
+<span class="sd">    line that brings its lead-in or decay along from a pause it does not have</span>
+<span class="sd">    still fills the span it replaces.</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">mixing.decode</span><span class="w"> </span><span class="kn">import</span> <span class="n">decode_float_chunks</span>
+
+    <span class="n">k0</span><span class="p">,</span> <span class="n">k1</span> <span class="o">=</span> <span class="n">keep</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">k1</span> <span class="o">-</span> <span class="n">k0</span><span class="p">)</span> <span class="o">*</span> <span class="n">rate</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"nothing to insert: keep window </span><span class="si">{</span><span class="n">keep</span><span class="si">}</span><span class="s2"> is empty"</span><span class="p">)</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">chunks</span> <span class="o">=</span> <span class="n">decode_float_chunks</span><span class="p">(</span><span class="n">insert</span><span class="p">,</span> <span class="n">sample_rate</span><span class="o">=</span><span class="n">rate</span><span class="p">)</span>
+    <span class="n">audio</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">chunks</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">window</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="n">audio</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">audio</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">first</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">k0</span> <span class="o">*</span> <span class="n">rate</span><span class="p">)</span>  <span class="c1"># sample of ``audio`` at the window's start (may be &lt; 0)</span>
+    <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="nb">min</span><span class="p">(</span><span class="n">first</span> <span class="o">+</span> <span class="n">n</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">audio</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">hi</span> <span class="o">&gt;</span> <span class="n">lo</span><span class="p">:</span>
+        <span class="n">window</span><span class="p">[</span><span class="n">lo</span> <span class="o">-</span> <span class="n">first</span> <span class="p">:</span> <span class="n">hi</span> <span class="o">-</span> <span class="n">first</span><span class="p">]</span> <span class="o">=</span> <span class="n">audio</span><span class="p">[</span><span class="n">lo</span><span class="p">:</span><span class="n">hi</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">window</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_splice_line</span><span class="p">(</span>
+    <span class="n">base</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">insert</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">span</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
+    <span class="n">rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">keep</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
+    <span class="n">out</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Write ``base[:span0] + insert[keep0:keep1] + base[span1:]`` to ``out``.</span>
+
+<span class="sd">    ``rate`` is ``base``'s sample rate. The cutting, the faded joins (mixing's</span>
+<span class="sd">    own join fade) and the single lossless encode are</span>
+<span class="sd">    :func:`mixing.splice.replace_span_file`'s; what is braidio's is only which</span>
+<span class="sd">    window of the re-rendered line goes in.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">mixing.splice</span><span class="w"> </span><span class="kn">import</span> <span class="n">replace_span_file</span>
+
+    <span class="n">replace_span_file</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">span</span><span class="p">,</span> <span class="n">_insert_window</span><span class="p">(</span><span class="n">insert</span><span class="p">,</span> <span class="n">keep</span><span class="p">,</span> <span class="n">rate</span><span class="o">=</span><span class="n">rate</span><span class="p">),</span> <span class="n">output</span><span class="o">=</span><span class="n">out</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_scratch</span><span class="p">(</span><span class="n">near</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">suffix</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A fresh, unique, hidden scratch file beside ``near`` (empty, created)."""</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+
+    <span class="n">fd</span><span class="p">,</span> <span class="n">name</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkstemp</span><span class="p">(</span>
+        <span class="nb">dir</span><span class="o">=</span><span class="n">near</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="sa">f</span><span class="s2">".</span><span class="si">{</span><span class="n">near</span><span class="o">.</span><span class="n">stem</span><span class="si">}{</span><span class="n">tag</span><span class="si">}</span><span class="s2">-"</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="n">suffix</span>
+    <span class="p">)</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fd</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+
+<span class="c1"># --- the seam: how one line is voiced ------------------------------------------</span>
+
+
+<div class="viewcode-block" id="LineSynthesizer">
+<a class="viewcode-back" href="../../_autosummary/braidio.dialogue_lines.html#braidio.dialogue_lines.LineSynthesizer">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">LineSynthesizer</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Voices ONE line: ``(audio, segments, was_cached)``.</span>
+
+<span class="sd">    ``audio`` is in ``output_format``; ``segments`` must time input ``0`` (the</span>
+<span class="sd">    line) in it; ``was_cached`` says whether no paid call was made. A</span>
+<span class="sd">    synthesizer without native timings returns one segment spanning its</span>
+<span class="sd">    voiced audio.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">voice_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">model_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">settings</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output_format</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">cache</span><span class="p">,</span>
+        <span class="n">refresh</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">DialogueSegment</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]:</span> <span class="o">...</span></div>
+
+
+
+<div class="viewcode-block" id="synthesize_line">
+<a class="viewcode-back" href="../../_autosummary/braidio.dialogue_lines.html#braidio.dialogue_lines.synthesize_line">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">synthesize_line</span><span class="p">(</span>
+    <span class="n">voice_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">model_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">settings</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">output_format</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cache</span><span class="p">,</span>
+    <span class="n">refresh</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">DialogueSegment</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The default :class:`LineSynthesizer`: a single-input timed Text-to-Dialogue call.</span>
+
+<span class="sd">    Same voice, model and settings as the take, so the line matches it; billed</span>
+<span class="sd">    for this line's characters only, and cached like any dialogue call.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">text_to_dialogue_with_timestamps</span><span class="p">(</span>
+        <span class="p">[(</span><span class="n">voice_id</span><span class="p">,</span> <span class="n">text</span><span class="p">)],</span>
+        <span class="n">model_id</span><span class="o">=</span><span class="n">model_id</span><span class="p">,</span>
+        <span class="n">settings</span><span class="o">=</span><span class="n">settings</span><span class="p">,</span>
+        <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">,</span>
+        <span class="n">output_format</span><span class="o">=</span><span class="n">output_format</span><span class="p">,</span>
+        <span class="n">api_key</span><span class="o">=</span><span class="n">api_key</span><span class="p">,</span>
+        <span class="n">cache</span><span class="o">=</span><span class="n">cache</span><span class="p">,</span>
+        <span class="n">refresh</span><span class="o">=</span><span class="n">refresh</span><span class="p">,</span>
+        <span class="n">return_cache_status</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="c1"># --- the API -------------------------------------------------------------------</span>
+
+
+<div class="viewcode-block" id="render_dialogue_lines">
+<a class="viewcode-back" href="../../_autosummary/braidio.dialogue_lines.html#braidio.dialogue_lines.render_dialogue_lines">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">render_dialogue_lines</span><span class="p">(</span>
+    <span class="n">turns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]],</span>
+    <span class="n">cast</span><span class="p">:</span> <span class="n">ConversationCast</span> <span class="o">=</span> <span class="n">DEFAULT_CAST</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">out_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">output_format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_OUTPUT_FORMAT</span><span class="p">,</span>
+    <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">refresh</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">return_cache_status</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DialogueTake</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">DialogueTake</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">""":func:`~braidio.conversation.render_dialogue`, as addressable lines.</span>
+
+<span class="sd">    ONE Text-to-Dialogue pass (:func:`braidio.tts.text_to_dialogue_with_timestamps`),</span>
+<span class="sd">    so the cross-turn prosody of ``render_dialogue`` is kept, and each turn's</span>
+<span class="sd">    place in the take comes from the API's own voice segments (turns timed as</span>
+<span class="sd">    overlapping are split at the overlap's midpoint; see :class:`DialogueLine`).</span>
+<span class="sd">    Returns a :class:`DialogueTake`; :func:`rerender_line` re-voices one of its</span>
+<span class="sd">    lines.</span>
+
+<span class="sd">    ``out_path`` gets the API's audio as is; beside it, the lossless master</span>
+<span class="sd">    (``MASTER_SUFFIX``) later edits splice. Unlike ``render_dialogue`` there is</span>
+<span class="sd">    **no R-tight pass**: trimming the dead gaps would move every line after the</span>
+<span class="sd">    first trim away from the timings the API reported.</span>
+
+<span class="sd">    Billing, caching and the key are ``render_dialogue``'s: the whole</span>
+<span class="sd">    exchange's characters, once; a cache hit (audio *and* timings, stored</span>
+<span class="sd">    together) costs $0 and makes no API call, and ``return_cache_status=True``</span>
+<span class="sd">    returns ``(take, was_cached)`` to say which. ``api_key`` reaches the</span>
+<span class="sd">    ElevenLabs client only — not the cache key, not the take. An empty turn,</span>
+<span class="sd">    an unknown role or an unspliceable ``output_format`` is refused before any</span>
+<span class="sd">    spend; a response lacking some turn's timings raises</span>
+<span class="sd">    :class:`DialogueTimingError` naming them (re-roll with ``refresh=True``).</span>
+<span class="sd">    """</span>
+    <span class="n">turns</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">((</span><span class="n">role</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span> <span class="k">for</span> <span class="n">role</span><span class="p">,</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">turns</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">turns</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"a dialogue take needs at least one turn"</span><span class="p">)</span>
+    <span class="n">_require_text</span><span class="p">(</span><span class="n">turns</span><span class="p">)</span>
+    <span class="n">voices</span> <span class="o">=</span> <span class="n">_cast_voices</span><span class="p">(</span><span class="n">turns</span><span class="p">,</span> <span class="n">cast</span><span class="p">)</span>
+    <span class="n">_encode_args</span><span class="p">(</span><span class="n">output_format</span><span class="p">)</span>
+    <span class="n">_require_ffmpeg</span><span class="p">()</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">out_path</span><span class="p">)</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">audio</span><span class="p">,</span> <span class="n">segments</span><span class="p">,</span> <span class="n">was_cached</span> <span class="o">=</span> <span class="n">text_to_dialogue_with_timestamps</span><span class="p">(</span>
+        <span class="n">voices</span><span class="p">,</span>
+        <span class="n">model_id</span><span class="o">=</span><span class="n">cast</span><span class="o">.</span><span class="n">model_id</span><span class="p">,</span>
+        <span class="n">settings</span><span class="o">=</span><span class="n">cast</span><span class="o">.</span><span class="n">settings</span><span class="p">,</span>
+        <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">,</span>
+        <span class="n">output_format</span><span class="o">=</span><span class="n">output_format</span><span class="p">,</span>
+        <span class="n">api_key</span><span class="o">=</span><span class="n">api_key</span><span class="p">,</span>
+        <span class="n">cache</span><span class="o">=</span><span class="n">cache</span><span class="p">,</span>
+        <span class="n">refresh</span><span class="o">=</span><span class="n">refresh</span><span class="p">,</span>
+        <span class="n">return_cache_status</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">bounds</span> <span class="o">=</span> <span class="n">_turn_spans</span><span class="p">(</span><span class="n">segments</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">turns</span><span class="p">))</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span>
+    <span class="n">master</span> <span class="o">=</span> <span class="n">_master_path</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+    <span class="n">_to_master</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">master</span><span class="p">)</span>
+    <span class="n">total_s</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_probe</span><span class="p">(</span><span class="n">master</span><span class="p">)</span>
+    <span class="n">take</span> <span class="o">=</span> <span class="n">DialogueTake</span><span class="p">(</span>
+        <span class="n">path</span><span class="o">=</span><span class="n">out</span><span class="p">,</span>
+        <span class="n">lines</span><span class="o">=</span><span class="n">_lines</span><span class="p">(</span><span class="n">turns</span><span class="p">,</span> <span class="n">bounds</span><span class="p">,</span> <span class="n">total_s</span><span class="o">=</span><span class="n">total_s</span><span class="p">),</span>
+        <span class="n">master</span><span class="o">=</span><span class="n">master</span><span class="p">,</span>
+        <span class="n">master_sha256</span><span class="o">=</span><span class="n">_sha256</span><span class="p">(</span><span class="n">master</span><span class="p">),</span>
+        <span class="n">cast</span><span class="o">=</span><span class="n">cast</span><span class="p">,</span>
+        <span class="n">output_format</span><span class="o">=</span><span class="n">output_format</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">take</span><span class="p">,</span> <span class="n">was_cached</span><span class="p">)</span> <span class="k">if</span> <span class="n">return_cache_status</span> <span class="k">else</span> <span class="n">take</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_line</span><span class="p">(</span><span class="n">take</span><span class="p">:</span> <span class="n">DialogueTake</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DialogueLine</span><span class="p">:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">index</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">take</span><span class="o">.</span><span class="n">lines</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"line </span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2"> is not in the take (it has lines 0..</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">take</span><span class="o">.</span><span class="n">lines</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">)"</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">take</span><span class="o">.</span><span class="n">lines</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_master</span><span class="p">(</span><span class="n">take</span><span class="p">:</span> <span class="n">DialogueTake</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">take</span><span class="o">.</span><span class="n">master</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="n">StaleTakeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"the take's master </span><span class="si">{</span><span class="n">take</span><span class="o">.</span><span class="n">master</span><span class="si">}</span><span class="s2"> is missing"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">_sha256</span><span class="p">(</span><span class="n">take</span><span class="o">.</span><span class="n">master</span><span class="p">)</span> <span class="o">!=</span> <span class="n">take</span><span class="o">.</span><span class="n">master_sha256</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">StaleTakeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"the take's master </span><span class="si">{</span><span class="n">take</span><span class="o">.</span><span class="n">master</span><span class="si">}</span><span class="s2"> has changed since this take was "</span>
+            <span class="s2">"made (a later edit wrote over it?); re-render from the take that "</span>
+            <span class="s2">"edit returned"</span>
+        <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_cut_points</span><span class="p">(</span><span class="n">take</span><span class="p">:</span> <span class="n">DialogueTake</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">total_s</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Where line ``index`` is cut out of the take: mid-pause on each side.</span>
+
+<span class="sd">    Returns ``((c0, c1), pre, post)``: ``c1`` is ``None`` for the last line</span>
+<span class="sd">    (to the end of the take), and ``pre``/``post`` are how much room around</span>
+<span class="sd">    the line's voice the cut removes, which the new line brings back.</span>
+<span class="sd">    """</span>
+    <span class="n">line</span><span class="p">,</span> <span class="n">lines</span> <span class="o">=</span> <span class="n">take</span><span class="o">.</span><span class="n">lines</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">take</span><span class="o">.</span><span class="n">lines</span>
+    <span class="n">c0</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="p">(</span><span class="n">lines</span><span class="p">[</span><span class="n">index</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">end_s</span> <span class="o">+</span> <span class="n">line</span><span class="o">.</span><span class="n">offset_s</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="n">last</span> <span class="o">=</span> <span class="n">index</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="n">c1</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">last</span> <span class="k">else</span> <span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">end_s</span> <span class="o">+</span> <span class="n">lines</span><span class="p">[</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">offset_s</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="n">post</span> <span class="o">=</span> <span class="p">(</span><span class="n">total_s</span> <span class="k">if</span> <span class="n">last</span> <span class="k">else</span> <span class="n">c1</span><span class="p">)</span> <span class="o">-</span> <span class="n">line</span><span class="o">.</span><span class="n">end_s</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">c0</span><span class="p">,</span> <span class="n">c1</span><span class="p">),</span> <span class="n">line</span><span class="o">.</span><span class="n">offset_s</span> <span class="o">-</span> <span class="n">c0</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">post</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="line_cost">
+<a class="viewcode-back" href="../../_autosummary/braidio.dialogue_lines.html#braidio.dialogue_lines.line_cost">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">line_cost</span><span class="p">(</span><span class="n">take</span><span class="p">:</span> <span class="n">DialogueTake</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CostRollup</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What re-rendering line ``index`` (as ``text``, default its own) would cost.</span>
+
+<span class="sd">    Free and offline: a :func:`rerender_line` submits that one line's text and</span>
+<span class="sd">    nothing else, priced at the cast's model like any other estimate</span>
+<span class="sd">    (:func:`braidio.cost.tts_cost_usd`; ``usd`` is ``None`` when unpriced).</span>
+<span class="sd">    """</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="n">_line</span><span class="p">(</span><span class="n">take</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">text</span> <span class="k">if</span> <span class="n">text</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">text</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">take</span><span class="o">.</span><span class="n">cast</span><span class="o">.</span><span class="n">model_id</span>
+    <span class="k">return</span> <span class="n">CostRollup</span><span class="o">.</span><span class="n">from_lines</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">CostLine</span><span class="p">(</span>
+                <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">"line[</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">line</span><span class="o">.</span><span class="n">role</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+                <span class="n">kind</span><span class="o">=</span><span class="s2">"dialogue"</span><span class="p">,</span>
+                <span class="n">characters</span><span class="o">=</span><span class="n">billable_chars</span><span class="p">(</span><span class="n">text</span><span class="p">),</span>
+                <span class="n">usd</span><span class="o">=</span><span class="n">tts_cost_usd</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">model_id</span><span class="o">=</span><span class="n">model</span><span class="p">),</span>
+                <span class="n">model_id</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">]</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="rerender_line">
+<a class="viewcode-back" href="../../_autosummary/braidio.dialogue_lines.html#braidio.dialogue_lines.rerender_line">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">rerender_line</span><span class="p">(</span>
+    <span class="n">take</span><span class="p">:</span> <span class="n">DialogueTake</span><span class="p">,</span>
+    <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">out_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">refresh</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">return_cache_status</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">synthesize</span><span class="p">:</span> <span class="n">LineSynthesizer</span> <span class="o">=</span> <span class="n">synthesize_line</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DialogueTake</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">DialogueTake</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Re-voice line ``index`` of ``take`` and splice it in; the others stay.</span>
+
+<span class="sd">    The line (``text``, default its current text — put eleven_v3 ``[audio</span>
+<span class="sd">    tags]`` in it to change the delivery) is voiced ALONE by ``synthesize``</span>
+<span class="sd">    (default :func:`synthesize_line`: a single-input timed Text-to-Dialogue</span>
+<span class="sd">    call with its role's voice and the cast's model and settings). Only its</span>
+<span class="sd">    characters are billed (:func:`line_cost` quotes them first).</span>
+
+<span class="sd">    The take is cut from the middle of the pause before the line to the</span>
+<span class="sd">    middle of the pause after it (the file's edges for the first and last</span>
+<span class="sd">    line), and the new voice goes in with as much of its own lead-in and</span>
+<span class="sd">    decay as the cut removed, so the pauses keep their length and every later</span>
+<span class="sd">    line moves by the change in the line's duration. Joins are faded</span>
+<span class="sd">    (mixing's join fade). The splice runs on the lossless master; the</span>
+<span class="sd">    deliverable is then encoded once from it in the take's ``output_format``.</span>
+
+<span class="sd">    Refused before any spend: empty text, a role the cast lacks, an</span>
+<span class="sd">    unspliceable format, and a stale take (:class:`StaleTakeError`: its master</span>
+<span class="sd">    has changed since, typically because an in-place edit returned a newer</span>
+<span class="sd">    take — use that one). A response without timings for the line raises</span>
+<span class="sd">    :class:`DialogueTimingError`; it is cached, so re-roll with</span>
+<span class="sd">    ``refresh=True``.</span>
+
+<span class="sd">    Cached like any dialogue call: re-rendering the same text with the same</span>
+<span class="sd">    ``seed`` is a $0 cache hit, so pass ``refresh=True`` (or a new ``seed``)</span>
+<span class="sd">    to re-roll a line. ``return_cache_status=True`` returns</span>
+<span class="sd">    ``(take, was_cached)``.</span>
+
+<span class="sd">    Written to ``out_path`` (default: over ``take.path``, in place) with its</span>
+<span class="sd">    master beside it. Returns the new :class:`DialogueTake`; ``take`` itself</span>
+<span class="sd">    is a value and is not changed, but after an in-place edit it is stale.</span>
+<span class="sd">    """</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="n">_line</span><span class="p">(</span><span class="n">take</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">text</span> <span class="k">if</span> <span class="n">text</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">text</span>
+    <span class="n">_require_text</span><span class="p">([(</span><span class="n">line</span><span class="o">.</span><span class="n">role</span><span class="p">,</span> <span class="n">text</span><span class="p">)])</span>
+    <span class="p">((</span><span class="n">voice_id</span><span class="p">,</span> <span class="n">_</span><span class="p">),)</span> <span class="o">=</span> <span class="n">_cast_voices</span><span class="p">([(</span><span class="n">line</span><span class="o">.</span><span class="n">role</span><span class="p">,</span> <span class="n">text</span><span class="p">)],</span> <span class="n">take</span><span class="o">.</span><span class="n">cast</span><span class="p">)</span>
+    <span class="n">_encode_args</span><span class="p">(</span><span class="n">take</span><span class="o">.</span><span class="n">output_format</span><span class="p">)</span>
+    <span class="n">_require_ffmpeg</span><span class="p">()</span>
+    <span class="n">_check_master</span><span class="p">(</span><span class="n">take</span><span class="p">)</span>
+    <span class="n">total_s</span><span class="p">,</span> <span class="n">rate</span> <span class="o">=</span> <span class="n">_probe</span><span class="p">(</span><span class="n">take</span><span class="o">.</span><span class="n">master</span><span class="p">)</span>
+    <span class="n">cut</span><span class="p">,</span> <span class="n">pre</span><span class="p">,</span> <span class="n">post</span> <span class="o">=</span> <span class="n">_cut_points</span><span class="p">(</span><span class="n">take</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">total_s</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">out_path</span><span class="p">)</span> <span class="k">if</span> <span class="n">out_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">take</span><span class="o">.</span><span class="n">path</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">audio</span><span class="p">,</span> <span class="n">segments</span><span class="p">,</span> <span class="n">was_cached</span> <span class="o">=</span> <span class="n">synthesize</span><span class="p">(</span>
+        <span class="n">voice_id</span><span class="p">,</span>
+        <span class="n">text</span><span class="p">,</span>
+        <span class="n">model_id</span><span class="o">=</span><span class="n">take</span><span class="o">.</span><span class="n">cast</span><span class="o">.</span><span class="n">model_id</span><span class="p">,</span>
+        <span class="n">settings</span><span class="o">=</span><span class="n">take</span><span class="o">.</span><span class="n">cast</span><span class="o">.</span><span class="n">settings</span><span class="p">,</span>
+        <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">,</span>
+        <span class="n">output_format</span><span class="o">=</span><span class="n">take</span><span class="o">.</span><span class="n">output_format</span><span class="p">,</span>
+        <span class="n">api_key</span><span class="o">=</span><span class="n">api_key</span><span class="p">,</span>
+        <span class="n">cache</span><span class="o">=</span><span class="n">cache</span><span class="p">,</span>
+        <span class="n">refresh</span><span class="o">=</span><span class="n">refresh</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">master</span> <span class="o">=</span> <span class="n">_master_path</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+    <span class="c1"># Unique per call, so two edits of one take cannot unlink each other's files.</span>
+    <span class="n">solo</span> <span class="o">=</span> <span class="n">_scratch</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"-line</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">take</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">suffix</span><span class="p">)</span>
+    <span class="n">new_master</span> <span class="o">=</span> <span class="n">_scratch</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="s2">"-master"</span><span class="p">,</span> <span class="s2">".flac"</span><span class="p">)</span>
+    <span class="n">new_out</span> <span class="o">=</span> <span class="n">_scratch</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="s2">"-encoded"</span><span class="p">,</span> <span class="n">out</span><span class="o">.</span><span class="n">suffix</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">solo</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span>
+        <span class="n">solo_total</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_probe</span><span class="p">(</span><span class="n">solo</span><span class="p">)</span>
+        <span class="n">span</span> <span class="o">=</span> <span class="n">_input_spans</span><span class="p">(</span><span class="n">segments</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">span</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DialogueTimingError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"the re-render of line </span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2"> came back without a voice segment "</span>
+                <span class="s2">"for it, so its voice cannot be located; re-roll with refresh=True"</span>
+            <span class="p">)</span>
+        <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">span</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">min</span><span class="p">(</span><span class="n">span</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">solo_total</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">end</span> <span class="o">&lt;=</span> <span class="n">start</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DialogueTimingError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"the re-render of line </span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2"> is timed outside its "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">solo_total</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">s of audio"</span>
+            <span class="p">)</span>
+        <span class="n">_splice_line</span><span class="p">(</span>
+            <span class="n">take</span><span class="o">.</span><span class="n">master</span><span class="p">,</span>
+            <span class="n">solo</span><span class="p">,</span>
+            <span class="n">span</span><span class="o">=</span><span class="p">(</span><span class="n">cut</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">total_s</span> <span class="k">if</span> <span class="n">cut</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">cut</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+            <span class="n">rate</span><span class="o">=</span><span class="n">rate</span><span class="p">,</span>
+            <span class="n">keep</span><span class="o">=</span><span class="p">(</span><span class="n">start</span> <span class="o">-</span> <span class="n">pre</span><span class="p">,</span> <span class="n">end</span> <span class="o">+</span> <span class="n">post</span><span class="p">),</span>
+            <span class="n">out</span><span class="o">=</span><span class="n">new_master</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">_encode</span><span class="p">(</span><span class="n">new_master</span><span class="p">,</span> <span class="n">new_out</span><span class="p">,</span> <span class="n">take</span><span class="o">.</span><span class="n">output_format</span><span class="p">)</span>
+        <span class="n">digest</span> <span class="o">=</span> <span class="n">_sha256</span><span class="p">(</span><span class="n">new_master</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">new_master</span><span class="p">,</span> <span class="n">master</span><span class="p">)</span>  <span class="c1"># the master first: a crash between the</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">new_out</span><span class="p">,</span> <span class="n">out</span><span class="p">)</span>  <span class="c1"># two leaves a take that is refused, not wrong</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="p">(</span><span class="n">solo</span><span class="p">,</span> <span class="n">new_master</span><span class="p">,</span> <span class="n">new_out</span><span class="p">):</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">missing_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">duration</span> <span class="o">=</span> <span class="n">end</span> <span class="o">-</span> <span class="n">start</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="n">duration</span> <span class="o">-</span> <span class="n">line</span><span class="o">.</span><span class="n">duration_s</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+        <span class="n">replace</span><span class="p">(</span><span class="n">ln</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span> <span class="n">duration_s</span><span class="o">=</span><span class="n">duration</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ln</span><span class="o">.</span><span class="n">index</span> <span class="o">==</span> <span class="n">index</span>
+        <span class="k">else</span> <span class="p">(</span><span class="n">replace</span><span class="p">(</span><span class="n">ln</span><span class="p">,</span> <span class="n">offset_s</span><span class="o">=</span><span class="n">ln</span><span class="o">.</span><span class="n">offset_s</span> <span class="o">+</span> <span class="n">delta</span><span class="p">)</span> <span class="k">if</span> <span class="n">ln</span><span class="o">.</span><span class="n">index</span> <span class="o">&gt;</span> <span class="n">index</span> <span class="k">else</span> <span class="n">ln</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">ln</span> <span class="ow">in</span> <span class="n">take</span><span class="o">.</span><span class="n">lines</span>
+    <span class="p">)</span>
+    <span class="n">new</span> <span class="o">=</span> <span class="n">replace</span><span class="p">(</span><span class="n">take</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">out</span><span class="p">,</span> <span class="n">master</span><span class="o">=</span><span class="n">master</span><span class="p">,</span> <span class="n">master_sha256</span><span class="o">=</span><span class="n">digest</span><span class="p">,</span> <span class="n">lines</span><span class="o">=</span><span class="n">lines</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">new</span><span class="p">,</span> <span class="n">was_cached</span><span class="p">)</span> <span class="k">if</span> <span class="n">return_cache_status</span> <span class="k">else</span> <span class="n">new</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.24.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

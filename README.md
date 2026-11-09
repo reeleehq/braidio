@@ -145,6 +145,10 @@ ElevenLabs TTS is braidio's only spend (everything else is local ffmpeg). `braid
 | `BRAIDIO_TTS_VOICE` | Default ElevenLabs voice id for narration. |
 | `ELEVENLABS_API_KEY` | The key synthesis bills when a render is given no `api_key=`. |
 
+### A conversation as addressable lines
+
+`braidio.render_dialogue_lines(turns, cast, out_path=...)` voices a multi-speaker exchange in one Text-to-Dialogue pass (so the cross-turn prosody is kept) and returns a `DialogueTake`: the deliverable, a lossless FLAC master, and one timed `DialogueLine` per turn. `braidio.rerender_line(take, index, text=...)` re-voices one turn alone and splices it into the master (`mixing.splice`), so only that line's characters are billed and the other lines do not degrade; `braidio.line_cost(take, index)` quotes it first. A take round-trips through `to_dict` / `from_dict`. Edits of one take must be serialized by the caller (last writer wins). The voicing is a seam: `synthesize=` takes any `LineSynthesizer`.
+
 Every render entry point — `narrate`, `render_dialogue`, `render_production`, `render_format` and the graph driver `weave_project` — takes an explicit `api_key=` for a caller's own ElevenLabs key; `None` (the default) resolves from the environment. On the graph path the key reaches the two synthesis transforms through nw's `execute(secrets=)` seam and is never persisted: not in a node, provenance, a cache key or a usage ledger (thorwhalen/braidio#58). The MCP server reads it from the `X-Elevenlabs-Key` request header, never from a tool argument.
 
 ### Any voice backend (`speak=`)

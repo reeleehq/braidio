@@ -57,6 +57,20 @@ def _mmss(s: float) -> str:
 
 
 @dataclass(frozen=True)
+class TurnSpan:
+    """When one spoken turn of a narration beat is heard, relative to the beat's start.
+
+    Recorded by a render that synthesizes the beat turn by turn
+    (``WeaveConfig.segmentation_unit != "beat"``), where the time is *measured*
+    from each synthesized file rather than estimated (braidio#232).
+    """
+
+    text: str
+    start: float  # seconds from the beat's start
+    end: float
+
+
+@dataclass(frozen=True)
 class BeatSpan:
     """One beat's place on the timeline."""
 
@@ -73,6 +87,10 @@ class BeatSpan:
     # before it was recorded. An "under" beat overlays what follows it, so where
     # it is heard cannot be read off the order of the starts alone.
     placement: str | None = None
+    # Narration only, and only when the render paced the beat turn by turn: when
+    # each turn is spoken, from the beat's start. () = not recorded (an unpaced
+    # beat is one synthesis call, so there is nothing finer to measure).
+    turns: tuple[TurnSpan, ...] = ()
 
     @property
     def end(self) -> float:
@@ -142,6 +160,16 @@ class TimelineBreakdown:
                     # only when recorded, so an older breakdown round-trips to
                     # the same bytes and stales nothing
                     **({"placement": b.placement} if b.placement is not None else {}),
+                    **(
+                        {
+                            "turns": [
+                                {"text": t.text, "start": t.start, "end": t.end}
+                                for t in b.turns
+                            ]
+                        }
+                        if b.turns
+                        else {}
+                    ),
                 }
                 for b in self.beats
             ],
@@ -173,6 +201,10 @@ class TimelineBreakdown:
                     if b.get("placement") in ("sequential", "under")
                     else None
                 ),
+                turns=tuple(
+                    TurnSpan(str(t["text"]), float(t["start"]), float(t["end"]))
+                    for t in b.get("turns", ())
+                ),
             )
             for b in d.get("beats", ())
         )
@@ -203,6 +235,7 @@ def build_timeline(
     settings: Mapping[str, Any] | None = None,
     speakers: list[str | None] | None = None,
     overlap: TurnOverlap | None = None,
+    turns: list[tuple[TurnSpan, ...]] | None = None,
 ) -> TimelineBreakdown:
     """Assemble a :class:`TimelineBreakdown` from per-beat render data (pure).
 
@@ -213,6 +246,8 @@ def build_timeline(
 
     ``speakers`` (one voice id per beat, ``None`` for a clip/sting) and ``overlap``
     place a change of speaker as an interruption — pass what the render passed.
+
+    ``turns`` (one tuple per beat) carries each beat's measured :class:`TurnSpan`s.
 
     ``settings`` is the optional render record (:func:`render_settings`) — what
     produced these durations. It stays optional so building a timeline by hand
@@ -243,6 +278,7 @@ def build_timeline(
             duration=round(float(durations[i]), 3),
             start=round(float(starts[i]), 3),
             placement=placements[i],
+            turns=tuple(turns[i]) if turns else (),
         )
         for i in range(n)
     )

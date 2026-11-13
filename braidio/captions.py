@@ -111,6 +111,18 @@ def cues_for(script, timeline, *, max_chars: int = 0) -> list[Cue]:
         if not text:
             continue
 
+        if span.turns and not is_quote:
+            # measured: the render knows when each turn is spoken (braidio#232)
+            for turn in span.turns:
+                _timed(
+                    raw,
+                    turn.text,
+                    span.start + turn.start,
+                    span.start + turn.end,
+                    max_chars,
+                )
+            continue
+
         pieces = [text] if is_quote else _sentences(text)
         if max_chars > 0:
             pieces = [p for piece in pieces for p in _wrap(piece, max_chars)]
@@ -131,6 +143,17 @@ def cues_for(script, timeline, *, max_chars: int = 0) -> list[Cue]:
         if cue.end_s > start:
             out.append(Cue(start, cue.end_s, cue.text))
     return out
+
+
+def _timed(raw: list, text: str, start: float, end: float, max_chars: int) -> None:
+    """Append cues for ``text`` spoken over ``[start, end]``, wrapped like the rest."""
+    pieces = _wrap(text, max_chars) if max_chars > 0 else [text]
+    total = sum(len(p) for p in pieces) or 1
+    t = start
+    for piece in pieces:
+        share = (end - start) * len(piece) / total
+        raw.append(Cue(t, t + share, piece))
+        t += share
 
 
 def _wrap(text: str, max_chars: int) -> list[str]:

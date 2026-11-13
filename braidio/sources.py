@@ -6,14 +6,16 @@ concrete ``[start, end]`` span of a source asset is pluggable via the
 :class:`SegmentSource` protocol — the weave engine never needs to know it is
 lyrics.
 
-This module ships two generic implementations. :class:`TimedLineSegmentSource`,
+This module ships three generic implementations. :class:`TimedLineSegmentSource`,
 a token-F1 matcher over time-aligned lines (:class:`TimedLine`). It answers a
 reference by the best contiguous run of lines — handling exact, sub-line, and
 multi-line references. Consumers bind it to their own timed lines + asset (e.g.
 Hamilton binds LRCLIB line timings + owned song audio). And
 :class:`NamespacedSegmentSource` routes a *prefixed* reference to one of several
 sub-sources, which is how a production that cuts between two recordings of the
-same work says which recording a given quote should come from.
+same work says which recording a given quote should come from. And
+:class:`SpanSource`, for a caller that already knows each excerpt's file and
+times: the reference itself is ``"<asset>@<start>-<end>"``.
 
 Also provides the lower-level resolver (:func:`find_segment`, :func:`load_timing`)
 and the resolve-and-cut convenience (:func:`cut_quote`) used directly by the
@@ -29,6 +31,7 @@ import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from collections.abc import Mapping
 from typing import Protocol, runtime_checkable
 
 _WS_RE = re.compile(r"\s+")
@@ -196,6 +199,43 @@ class TimedLineSegmentSource:
             score=seg.score,
             matched_text=seg.matched_text,
         )
+
+
+class SpanSource:
+    """A :class:`SegmentSource` for explicit spans: ``"<asset>@<start>-<end>"``.
+
+    For a caller that already knows which file and which seconds to cut (times
+    checked beforehand, say) and so needs no matcher::
+
+        source = SpanSource({"ep1": "ep1.mp3", "ep2": "ep2.mp3"})
+        SegmentBeat("ep1@412.5-448.0")
+
+    The reference is a string, not an id into a mapping, on purpose: references
+    are persisted in a weave project, and a self-describing one still means the
+    same cut when the project is reloaded by a process that built its
+    ``SpanSource`` differently. Only the asset *name* is looked up.
+
+    An unknown asset, or a span that is malformed or empty (``end <= start``,
+    negative or non-numeric times), resolves to ``None`` — the caller's
+    unresolved-reference handling reports it.
+    """
+
+    def __init__(self, assets: Mapping[str, str | Path]) -> None:
+        self._assets = {name: Path(path) for name, path in assets.items()}
+
+    def resolve(self, reference: str) -> ResolvedSegment | None:
+        asset, at, span = reference.strip().rpartition("@")
+        path = self._assets.get(asset) if at else None
+        start, dash, end = span.partition("-")
+        if path is None or not dash:
+            return None
+        try:
+            start_s, end_s = float(start), float(end)
+        except ValueError:
+            return None
+        if not 0 <= start_s < end_s or end_s == float("inf"):
+            return None
+        return ResolvedSegment(asset_path=path, start_s=start_s, end_s=end_s)
 
 
 def _require_ffmpeg() -> None:

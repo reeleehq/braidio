@@ -46,7 +46,13 @@ from braidio.sound_design import (
     score_mix,
     talk_spans,
 )
-from braidio.weave import TimelineItem, extract_padded, weave_timeline
+from braidio.timeline import TurnSpan
+from braidio.weave import (
+    TimelineItem,
+    duration_s,
+    extract_padded,
+    weave_timeline,
+)
 from braidio.weave_config import WeaveConfig, speaker_key
 
 
@@ -186,6 +192,7 @@ def narrate_turns(
     model_id: str,
     voice_settings: dict,
     narrate_fn=None,
+    spans_out: list | None = None,
     **synth_kwargs,
 ) -> Path:
     """Synthesize a paced narration beat: one TTS call per turn, real silence between.
@@ -202,10 +209,15 @@ def narrate_turns(
     ``narrate_fn`` is the synthesis call (default: the ElevenLabs voice,
     :func:`braidio.tts.voice_for`); a caller that wants the cache status, or
     another voice, passes its own.
+
+    ``spans_out``, when given, is extended with one ``TurnSpan`` per spoken turn:
+    where its words sit in the returned file, measured from the synthesized
+    audio (the planned silences are added, not guessed at).
     """
     synthesize = narrate_fn or voice_for().narrate
     parts: list[Path] = []
     lead_s = 0.0  # silence owed to the next spoken turn
+    at_s = 0.0  # where the next part starts in the concatenated file
     for j, turn in enumerate(turns):
         if not turn.text:
             lead_s += turn.gap_after_s
@@ -222,6 +234,13 @@ def narrate_turns(
             voice_settings=settings,
             **synth_kwargs,
         )
+        lead_before_s = lead_s
+        if spans_out is not None:
+            spoken_s = duration_s(part)
+            began_s = at_s + lead_before_s
+            spans_out.append(
+                TurnSpan(turn.text, round(began_s, 3), round(began_s + spoken_s, 3))
+            )
         if lead_s > 0:
             part = _lead_gap(
                 part, stem.with_name(f"{stem.name}-turn{j:02d}-lead.mp3"), gap_s=lead_s
@@ -234,6 +253,8 @@ def narrate_turns(
                 gap_s=turn.gap_after_s,
             )
         parts.append(part)
+        if spans_out is not None:
+            at_s = began_s + spoken_s + turn.gap_after_s
     if not parts:  # nothing but silence
         return prepare_pause(lead_s, stem.with_name(f"{stem.name}-silence.mp3"))
     if len(parts) == 1:
@@ -252,8 +273,6 @@ def _end_tail(path: Path, *, fade_s: float, silence_s: float) -> None:
     file in tests), it's skipped rather than failing the whole render.
     """
     _require_ffmpeg()
-    from braidio.weave import duration_s
-
     try:
         dur = duration_s(path)
         fo_start = max(0.0, dur - fade_s)
@@ -410,6 +429,7 @@ def render_production(
     spotlights: list[bool] = []  # per part: the bed drops out over it
     speakers: list[str | None] = []  # per part: voice id talking (None: clip/sting)
     spoken: list[str] = []  # per part: what is said in it ("" for a clip/sting)
+    turn_spans: list[tuple[TurnSpan, ...]] = []  # per part: measured turns (paced)
     for i, pb in enumerate(plan.beats):
         orig = script.beats[pb.from_index]
         clip_span: tuple[float, float] | None = None
@@ -430,6 +450,7 @@ def render_production(
             roles.append("sting" if structure.plays_sting(orig) else "scene-break")
             labels.append(orig.label)
             spans.append(None)
+            turn_spans.append(())
             spotlights.append(False)
             speakers.append(None)
             spoken.append("")
@@ -461,6 +482,7 @@ def render_production(
                 if delivery.language_code
                 else {}
             )
+            beat_turns: list[TurnSpan] = []
             if turns:
                 raw = narrate_turns(
                     turns,
@@ -470,6 +492,7 @@ def render_production(
                     model_id=delivery.model_id,
                     voice_settings=beat_settings,
                     narrate_fn=synthesize,
+                    spans_out=beat_turns,
                     **lang,
                 )
             else:
@@ -488,6 +511,10 @@ def render_production(
                 raw = _lead_gap(
                     raw, Path(tts_dir) / f"{script.id_slug}-lead{i:02d}.mp3", gap_s=gap
                 )
+                beat_turns = [
+                    TurnSpan(t.text, round(t.start + gap, 3), round(t.end + gap, 3))
+                    for t in beat_turns
+                ]
         elif pb.kind == "dialogue":
             dlg_path = (
                 Path(tts_dir) / f"{script.id_slug}-{profile.value}-dlg{i:02d}.mp3"
@@ -542,6 +569,7 @@ def render_production(
                 (getattr(orig, "text", "") or "")[:48]
             )  # text snippet, not the style
         spans.append(clip_span)
+        turn_spans.append(tuple(beat_turns) if pb.kind == "narration" else ())
         spoken.append(_spoken(pb))
 
     has_under = "under" in placements
@@ -592,7 +620,6 @@ def render_production(
 
     if return_timeline or sound_design is not None:
         from braidio.timeline import build_timeline, render_settings
-        from braidio.weave import duration_s
 
         durs = [duration_s(p) for p in parts]
         tl = build_timeline(
@@ -605,6 +632,7 @@ def render_production(
             narration_crossfade_s=crossfade,
             speakers=speakers,
             overlap=turn_overlap,
+            turns=turn_spans,
             title=script.title,
             # The settings that produced these timings, not the ones asked for:
             # `crossfade`/`edge_overlap`/`target_lufs`/`duck_db` are the values

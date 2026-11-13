@@ -87,6 +87,7 @@
       Segment
       TimedLine
       NamespacedSegmentSource
+      SpanSource
       TimedLineSegmentSource
       CostRollup
       CostLine

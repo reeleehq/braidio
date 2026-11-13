@@ -1,34 +1,34 @@
 {
   "schema_version": 1,
-  "built_at": "2026-11-09T01:38:24Z",
+  "built_at": "2026-11-13T12:54:37Z",
   "package": {
     "name": "braidio",
-    "version": "0.0.124",
+    "version": "0.0.125",
     "display_name": "braidio",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "9b48f593e3af03427b4e0b6d6bb805f837bf04b2",
-    "short_commit": "9b48f59",
+    "commit": "f6ac93c36ae3ab7371f8bac884eee34f1c358463",
+    "short_commit": "f6ac93c",
     "branch": "main",
     "tags": [
-      "0.0.124"
+      "0.0.125"
     ],
     "dirty": false,
     "remote_url": "https://github.com/reeleehq/braidio",
-    "commit_url": "https://github.com/reeleehq/braidio/commit/9b48f593e3af03427b4e0b6d6bb805f837bf04b2",
+    "commit_url": "https://github.com/reeleehq/braidio/commit/f6ac93c36ae3ab7371f8bac884eee34f1c358463",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "reeleehq/braidio",
-    "sha": "fa49684da028ff3e29b3eaa2f5d2517547c2c061",
+    "sha": "6213256fb96c46b87958a9366ec51fb081d8820b",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "42545982447",
-    "run_url": "https://github.com/reeleehq/braidio/actions/runs/42545982447",
+    "run_id": "43428048030",
+    "run_url": "https://github.com/reeleehq/braidio/actions/runs/43428048030",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -58,15 +58,15 @@
   },
   "site": {
     "modules_documented": 31,
-    "objects_documented": 356
+    "objects_documented": 359
   },
   "pypi": {
     "checked": true,
-    "latest": "0.0.124",
+    "latest": "0.0.125",
     "relation": "same",
     "error": null
   },
-  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout 9b48f593e3af03427b4e0b6d6bb805f837bf04b2\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout f6ac93c36ae3ab7371f8bac884eee34f1c358463\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
     "aligned": true,

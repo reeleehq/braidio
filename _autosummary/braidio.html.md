@@ -98,6 +98,7 @@ in the *Hamilton* repo — braidio has its own #18 about something else.
 | [`Segment`](#braidio.Segment)(start_s, end_s, score, line_start, ...)   | A resolved window for a reference, with the matched line span.                                                     |
 | [`TimedLine`](#braidio.TimedLine)(index, start_s, end_s, text)            | A source line with a `[start_s, end_s)` window (end may be None = tail).                                           |
 | [`NamespacedSegmentSource`](#braidio.NamespacedSegmentSource)(sources, \*[, sep, ...])  | A [`SegmentSource`](#braidio.SegmentSource) that routes prefixed references to sub-sources.   |
+| [`SpanSource`](#braidio.SpanSource)(assets)                                | A [`SegmentSource`](#braidio.SegmentSource) for explicit spans: `"<asset>@<start>-<end>"`.    |
 | [`TimedLineSegmentSource`](#braidio.TimedLineSegmentSource)(\*, lines, asset_path)     | A [`SegmentSource`](#braidio.SegmentSource) over time-aligned lines + one source asset.       |
 | [`CostRollup`](#braidio.CostRollup)(characters, usd, unpriced[, lines])    | A production's estimated TTS spend, exact on characters, honest on dollars.                                        |
 | [`CostLine`](#braidio.CostLine)(label, kind, characters, usd, model_id)  | One billable line of an estimate (a narration beat or a dialogue beat).                                            |
@@ -131,7 +132,7 @@ whose times were interpolated. `matched` / `total`: authored tokens a
 heard word matched, over all of them: gate on `matched / total` before
 trusting the times of audio you are unsure belongs to this text.
 
-### *class* braidio.BeatSpan(index, kind, label='', source_start=None, source_end=None, duration=0.0, start=0.0, placement=None)
+### *class* braidio.BeatSpan(index, kind, label='', source_start=None, source_end=None, duration=0.0, start=0.0, placement=None, turns=())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -569,6 +570,29 @@ Plain JSON, for a render’s settings record.
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
+### *class* braidio.SpanSource(assets)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+A [`SegmentSource`](#braidio.SegmentSource) for explicit spans: `"<asset>@<start>-<end>"`.
+
+For a caller that already knows which file and which seconds to cut (times
+checked beforehand, say) and so needs no matcher:
+
+```default
+source = SpanSource({"ep1": "ep1.mp3", "ep2": "ep2.mp3"})
+SegmentBeat("ep1@412.5-448.0")
+```
+
+The reference is a string, not an id into a mapping, on purpose: references
+are persisted in a weave project, and a self-describing one still means the
+same cut when the project is reloaded by a process that built its
+`SpanSource` differently. Only the asset *name* is looked up.
+
+An unknown asset, or a span that is malformed or empty (`end <= start`,
+negative or non-numeric times), resolves to `None` — the caller’s
+unresolved-reference handling reports it.
+
 ### *class* braidio.Sting(asset_path, gain_db=-6.0, max_len_s=3.0, fade_out_s=0.5, gap_after_s=0.3)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
@@ -871,7 +895,7 @@ billing definition in one place if it ever needs to change.
 * **Return type:**
   [`int`](https://docs.python.org/3/builtins/functions.html#int)
 
-### braidio.build_timeline(, kinds, durations, placements=None, labels=None, source_spans=None, clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, title='', settings=None, speakers=None, overlap=None)
+### braidio.build_timeline(, kinds, durations, placements=None, labels=None, source_spans=None, clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, title='', settings=None, speakers=None, overlap=None, turns=None)
 
 Assemble a [`TimelineBreakdown`](#braidio.TimelineBreakdown) from per-beat render data (pure).
 
@@ -882,6 +906,14 @@ computed with the same [`layout_placed()`](braidio.weave.html.md#braidio.weave.l
 
 `speakers` (one voice id per beat, `None` for a clip/sting) and `overlap`
 place a change of speaker as an interruption — pass what the render passed.
+
+`turns` (one tuple per beat) carries each beat’s measured :class:
+
+```
+`
+```
+
+TurnSpan\`s.
 
 `settings` is the optional render record ([`render_settings()`](#braidio.render_settings)) — what
 produced these durations. It stays optional so building a timeline by hand

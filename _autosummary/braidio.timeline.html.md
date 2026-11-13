@@ -31,11 +31,12 @@ output after the fact.
 
 ### Classes
 
-| [`BeatSpan`](#braidio.timeline.BeatSpan)(index, kind[, label, source_start, ...])   | One beat's place on the timeline.                                         |
-|------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------|
-| [`TimelineBreakdown`](#braidio.timeline.TimelineBreakdown)([beats, title, settings])         | The ordered beats of a production, with per-kind totals and an HTML view. |
+| [`BeatSpan`](#braidio.timeline.BeatSpan)(index, kind[, label, source_start, ...])   | One beat's place on the timeline.                                                |
+|------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| [`TimelineBreakdown`](#braidio.timeline.TimelineBreakdown)([beats, title, settings])         | The ordered beats of a production, with per-kind totals and an HTML view.        |
+| [`TurnSpan`](#braidio.timeline.TurnSpan)(text, start, end)                          | When one spoken turn of a narration beat is heard, relative to the beat's start. |
 
-### *class* braidio.timeline.BeatSpan(index, kind, label='', source_start=None, source_end=None, duration=0.0, start=0.0, placement=None)
+### *class* braidio.timeline.BeatSpan(index, kind, label='', source_start=None, source_end=None, duration=0.0, start=0.0, placement=None, turns=())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -103,7 +104,17 @@ Seconds spent per `kind` (insertion-ordered by first appearance).
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`float`](https://docs.python.org/3/builtins/functions.html#float)]
 
-### braidio.timeline.build_timeline(, kinds, durations, placements=None, labels=None, source_spans=None, clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, title='', settings=None, speakers=None, overlap=None)
+### *class* braidio.timeline.TurnSpan(text, start, end)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+When one spoken turn of a narration beat is heard, relative to the beat’s start.
+
+Recorded by a render that synthesizes the beat turn by turn
+(`WeaveConfig.segmentation_unit != "beat"`), where the time is *measured*
+from each synthesized file rather than estimated (braidio#232).
+
+### braidio.timeline.build_timeline(, kinds, durations, placements=None, labels=None, source_spans=None, clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, title='', settings=None, speakers=None, overlap=None, turns=None)
 
 Assemble a [`TimelineBreakdown`](#braidio.timeline.TimelineBreakdown) from per-beat render data (pure).
 
@@ -114,6 +125,14 @@ computed with the same [`layout_placed()`](braidio.weave.html.md#braidio.weave.l
 
 `speakers` (one voice id per beat, `None` for a clip/sting) and `overlap`
 place a change of speaker as an interruption — pass what the render passed.
+
+`turns` (one tuple per beat) carries each beat’s measured :class:
+
+```
+`
+```
+
+TurnSpan\`s.
 
 `settings` is the optional render record ([`render_settings()`](#braidio.timeline.render_settings)) — what
 produced these durations. It stays optional so building a timeline by hand

@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../_static/documentation_options.js?v=95c30746"></script>
+    <script src="../_static/documentation_options.js?v=31bb835f"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.124" />
+  <meta name="docsearch:version" content="0.0.125" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -446,7 +446,7 @@ transforms (which add provenance + partial re-render).</p>
 </div>
 <dl class="py function">
 <dt class="sig sig-object py" id="braidio.render.narrate_turns">
-<span class="sig-prename descclassname"><span class="pre">braidio.render.</span></span><span class="sig-name descname"><span class="pre">narrate_turns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">turns</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">stem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api_key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_settings</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">narrate_fn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">synth_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/render.html#narrate_turns"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.render.narrate_turns" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">braidio.render.</span></span><span class="sig-name descname"><span class="pre">narrate_turns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">turns</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">stem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api_key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_settings</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">narrate_fn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spans_out</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">synth_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/render.html#narrate_turns"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.render.narrate_turns" title="Link to this definition">#</a></dt>
 <dd><p>Synthesize a paced narration beat: one TTS call per turn, real silence between.</p>
 <p>A turn with no text is silence only (a beat that opens on an SSML break):
 it is prepended to the next spoken turn. <code class="docutils literal notranslate"><span class="pre">synth_kwargs</span></code> (e.g.
@@ -458,6 +458,9 @@ boundary closes, instead of one flat arc with nothing inside it.</p>
 <p><code class="docutils literal notranslate"><span class="pre">narrate_fn</span></code> is the synthesis call (default: the ElevenLabs voice,
 <a class="reference internal" href="braidio.tts.html#braidio.tts.voice_for" title="braidio.tts.voice_for"><code class="xref py py-func docutils literal notranslate"><span class="pre">braidio.tts.voice_for()</span></code></a>); a caller that wants the cache status, or
 another voice, passes its own.</p>
+<p><code class="docutils literal notranslate"><span class="pre">spans_out</span></code>, when given, is extended with one <code class="docutils literal notranslate"><span class="pre">TurnSpan</span></code> per spoken turn:
+where its words sit in the returned file, measured from the synthesized
+audio (the planned silences are added, not guessed at).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span></p>

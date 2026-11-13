@@ -1,4 +1,4 @@
-> built 2026-11-09 01:38 UTC from 9b48f59 (main) · braidio 0.0.124. Details: build_info.json
+> built 2026-11-13 12:54 UTC from f6ac93c (main) · braidio 0.0.125. Details: build_info.json
 
 # index.html.md
 
@@ -1591,6 +1591,7 @@ in the *Hamilton* repo — braidio has its own #18 about something else.
 | [`Segment`](_autosummary/braidio.html.md#braidio.Segment)(start_s, end_s, score, line_start, ...)   | A resolved window for a reference, with the matched line span.                                                     |
 | [`TimedLine`](_autosummary/braidio.html.md#braidio.TimedLine)(index, start_s, end_s, text)            | A source line with a `[start_s, end_s)` window (end may be None = tail).                                           |
 | [`NamespacedSegmentSource`](_autosummary/braidio.html.md#braidio.NamespacedSegmentSource)(sources, \*[, sep, ...])  | A [`SegmentSource`](_autosummary/braidio.html.md#braidio.SegmentSource) that routes prefixed references to sub-sources.   |
+| [`SpanSource`](_autosummary/braidio.html.md#braidio.SpanSource)(assets)                                | A [`SegmentSource`](_autosummary/braidio.html.md#braidio.SegmentSource) for explicit spans: `"<asset>@<start>-<end>"`.    |
 | [`TimedLineSegmentSource`](_autosummary/braidio.html.md#braidio.TimedLineSegmentSource)(\*, lines, asset_path)     | A [`SegmentSource`](_autosummary/braidio.html.md#braidio.SegmentSource) over time-aligned lines + one source asset.       |
 | [`CostRollup`](_autosummary/braidio.html.md#braidio.CostRollup)(characters, usd, unpriced[, lines])    | A production's estimated TTS spend, exact on characters, honest on dollars.                                        |
 | [`CostLine`](_autosummary/braidio.html.md#braidio.CostLine)(label, kind, characters, usd, model_id)  | One billable line of an estimate (a narration beat or a dialogue beat).                                            |
@@ -1624,7 +1625,7 @@ whose times were interpolated. `matched` / `total`: authored tokens a
 heard word matched, over all of them: gate on `matched / total` before
 trusting the times of audio you are unsure belongs to this text.
 
-### *class* braidio.BeatSpan(index, kind, label='', source_start=None, source_end=None, duration=0.0, start=0.0, placement=None)
+### *class* braidio.BeatSpan(index, kind, label='', source_start=None, source_end=None, duration=0.0, start=0.0, placement=None, turns=())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -2062,6 +2063,29 @@ Plain JSON, for a render’s settings record.
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
+### *class* braidio.SpanSource(assets)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+A [`SegmentSource`](_autosummary/braidio.html.md#braidio.SegmentSource) for explicit spans: `"<asset>@<start>-<end>"`.
+
+For a caller that already knows which file and which seconds to cut (times
+checked beforehand, say) and so needs no matcher:
+
+```default
+source = SpanSource({"ep1": "ep1.mp3", "ep2": "ep2.mp3"})
+SegmentBeat("ep1@412.5-448.0")
+```
+
+The reference is a string, not an id into a mapping, on purpose: references
+are persisted in a weave project, and a self-describing one still means the
+same cut when the project is reloaded by a process that built its
+`SpanSource` differently. Only the asset *name* is looked up.
+
+An unknown asset, or a span that is malformed or empty (`end <= start`,
+negative or non-numeric times), resolves to `None` — the caller’s
+unresolved-reference handling reports it.
+
 ### *class* braidio.Sting(asset_path, gain_db=-6.0, max_len_s=3.0, fade_out_s=0.5, gap_after_s=0.3)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
@@ -2364,7 +2388,7 @@ billing definition in one place if it ever needs to change.
 * **Return type:**
   [`int`](https://docs.python.org/3/builtins/functions.html#int)
 
-### braidio.build_timeline(, kinds, durations, placements=None, labels=None, source_spans=None, clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, title='', settings=None, speakers=None, overlap=None)
+### braidio.build_timeline(, kinds, durations, placements=None, labels=None, source_spans=None, clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, title='', settings=None, speakers=None, overlap=None, turns=None)
 
 Assemble a [`TimelineBreakdown`](_autosummary/braidio.html.md#braidio.TimelineBreakdown) from per-beat render data (pure).
 
@@ -2375,6 +2399,14 @@ computed with the same [`layout_placed()`](_autosummary/braidio.weave.html.md#br
 
 `speakers` (one voice id per beat, `None` for a clip/sting) and `overlap`
 place a change of speaker as an interruption — pass what the render passed.
+
+`turns` (one tuple per beat) carries each beat’s measured :class:
+
+```
+`
+```
+
+TurnSpan\`s.
 
 `settings` is the optional render record ([`render_settings()`](_autosummary/braidio.html.md#braidio.render_settings)) — what
 produced these durations. It stays optional so building a timeline by hand
@@ -3816,7 +3848,7 @@ transforms (which add provenance + partial re-render).
 | [`plan_beat_turns`](_autosummary/braidio.render.html.md#braidio.render.plan_beat_turns)(text, \*, config, ...[, ...])  | Plan one narration beat's turns, or `[]` for the unpaced single call.             |
 | [`render_production`](_autosummary/braidio.render.html.md#braidio.render.render_production)(script, \*, source[, ...])   | Render `script` under `profile` → a single audio file.                            |
 
-### braidio.render.narrate_turns(turns, , stem, api_key, voice_id, model_id, voice_settings, narrate_fn=None, \*\*synth_kwargs)
+### braidio.render.narrate_turns(turns, , stem, api_key, voice_id, model_id, voice_settings, narrate_fn=None, spans_out=None, \*\*synth_kwargs)
 
 Synthesize a paced narration beat: one TTS call per turn, real silence between.
 
@@ -3832,6 +3864,10 @@ boundary closes, instead of one flat arc with nothing inside it.
 `narrate_fn` is the synthesis call (default: the ElevenLabs voice,
 [`braidio.tts.voice_for()`](_autosummary/braidio.tts.html.md#braidio.tts.voice_for)); a caller that wants the cache status, or
 another voice, passes its own.
+
+`spans_out`, when given, is extended with one `TurnSpan` per spoken turn:
+where its words sit in the returned file, measured from the synthesized
+audio (the planned silences are added, not guessed at).
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
@@ -4493,14 +4529,16 @@ concrete `[start, end]` span of a source asset is pluggable via the
 [`SegmentSource`](_autosummary/braidio.sources.html.md#braidio.sources.SegmentSource) protocol — the weave engine never needs to know it is
 lyrics.
 
-This module ships two generic implementations. [`TimedLineSegmentSource`](_autosummary/braidio.sources.html.md#braidio.sources.TimedLineSegmentSource),
+This module ships three generic implementations. [`TimedLineSegmentSource`](_autosummary/braidio.sources.html.md#braidio.sources.TimedLineSegmentSource),
 a token-F1 matcher over time-aligned lines ([`TimedLine`](_autosummary/braidio.sources.html.md#braidio.sources.TimedLine)). It answers a
 reference by the best contiguous run of lines — handling exact, sub-line, and
 multi-line references. Consumers bind it to their own timed lines + asset (e.g.
 Hamilton binds LRCLIB line timings + owned song audio). And
 [`NamespacedSegmentSource`](_autosummary/braidio.sources.html.md#braidio.sources.NamespacedSegmentSource) routes a *prefixed* reference to one of several
 sub-sources, which is how a production that cuts between two recordings of the
-same work says which recording a given quote should come from.
+same work says which recording a given quote should come from. And
+[`SpanSource`](_autosummary/braidio.sources.html.md#braidio.sources.SpanSource), for a caller that already knows each excerpt’s file and
+times: the reference itself is `"<asset>@<start>-<end>"`.
 
 Also provides the lower-level resolver ([`find_segment()`](_autosummary/braidio.sources.html.md#braidio.sources.find_segment), [`load_timing()`](_autosummary/braidio.sources.html.md#braidio.sources.load_timing))
 and the resolve-and-cut convenience ([`cut_quote()`](_autosummary/braidio.sources.html.md#braidio.sources.cut_quote)) used directly by the
@@ -4521,6 +4559,7 @@ Hamilton pilot; new code should prefer the [`SegmentSource`](_autosummary/braidi
 | [`ResolvedSegment`](_autosummary/braidio.sources.html.md#braidio.sources.ResolvedSegment)(asset_path, start_s, end_s)        | A cuttable span of a source asset — what a [`SegmentSource`](_autosummary/braidio.sources.html.md#braidio.sources.SegmentSource) returns. |
 | [`Segment`](_autosummary/braidio.sources.html.md#braidio.sources.Segment)(start_s, end_s, score, line_start, ...)    | A resolved window for a reference, with the matched line span.                                                     |
 | [`SegmentSource`](_autosummary/braidio.sources.html.md#braidio.sources.SegmentSource)(\*args, \*\*kwargs)                  | Resolve an opaque `reference` to a [`ResolvedSegment`](_autosummary/braidio.sources.html.md#braidio.sources.ResolvedSegment) (or None).     |
+| [`SpanSource`](_autosummary/braidio.sources.html.md#braidio.sources.SpanSource)(assets)                                 | A [`SegmentSource`](_autosummary/braidio.sources.html.md#braidio.sources.SegmentSource) for explicit spans: `"<asset>@<start>-<end>"`.    |
 | [`TimedLine`](_autosummary/braidio.sources.html.md#braidio.sources.TimedLine)(index, start_s, end_s, text)             | A source line with a `[start_s, end_s)` window (end may be None = tail).                                           |
 | [`TimedLineSegmentSource`](_autosummary/braidio.sources.html.md#braidio.sources.TimedLineSegmentSource)(\*, lines, asset_path)      | A [`SegmentSource`](_autosummary/braidio.sources.html.md#braidio.sources.SegmentSource) over time-aligned lines + one source asset.       |
 
@@ -4591,6 +4630,29 @@ A resolved window for a reference, with the matched line span.
 Bases: [`Protocol`](https://docs.python.org/3/library/typing.html#typing.Protocol)
 
 Resolve an opaque `reference` to a [`ResolvedSegment`](_autosummary/braidio.sources.html.md#braidio.sources.ResolvedSegment) (or None).
+
+### *class* braidio.sources.SpanSource(assets)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+A [`SegmentSource`](_autosummary/braidio.sources.html.md#braidio.sources.SegmentSource) for explicit spans: `"<asset>@<start>-<end>"`.
+
+For a caller that already knows which file and which seconds to cut (times
+checked beforehand, say) and so needs no matcher:
+
+```default
+source = SpanSource({"ep1": "ep1.mp3", "ep2": "ep2.mp3"})
+SegmentBeat("ep1@412.5-448.0")
+```
+
+The reference is a string, not an id into a mapping, on purpose: references
+are persisted in a weave project, and a self-describing one still means the
+same cut when the project is reloaded by a process that built its
+`SpanSource` differently. Only the asset *name* is looked up.
+
+An unknown asset, or a span that is malformed or empty (`end <= start`,
+negative or non-numeric times), resolves to `None` — the caller’s
+unresolved-reference handling reports it.
 
 ### *class* braidio.sources.TimedLine(index, start_s, end_s, text)
 
@@ -4969,11 +5031,12 @@ output after the fact.
 
 ### Classes
 
-| [`BeatSpan`](_autosummary/braidio.timeline.html.md#braidio.timeline.BeatSpan)(index, kind[, label, source_start, ...])   | One beat's place on the timeline.                                         |
-|------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------|
-| [`TimelineBreakdown`](_autosummary/braidio.timeline.html.md#braidio.timeline.TimelineBreakdown)([beats, title, settings])         | The ordered beats of a production, with per-kind totals and an HTML view. |
+| [`BeatSpan`](_autosummary/braidio.timeline.html.md#braidio.timeline.BeatSpan)(index, kind[, label, source_start, ...])   | One beat's place on the timeline.                                                |
+|------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| [`TimelineBreakdown`](_autosummary/braidio.timeline.html.md#braidio.timeline.TimelineBreakdown)([beats, title, settings])         | The ordered beats of a production, with per-kind totals and an HTML view.        |
+| [`TurnSpan`](_autosummary/braidio.timeline.html.md#braidio.timeline.TurnSpan)(text, start, end)                          | When one spoken turn of a narration beat is heard, relative to the beat's start. |
 
-### *class* braidio.timeline.BeatSpan(index, kind, label='', source_start=None, source_end=None, duration=0.0, start=0.0, placement=None)
+### *class* braidio.timeline.BeatSpan(index, kind, label='', source_start=None, source_end=None, duration=0.0, start=0.0, placement=None, turns=())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -5041,7 +5104,17 @@ Seconds spent per `kind` (insertion-ordered by first appearance).
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`float`](https://docs.python.org/3/builtins/functions.html#float)]
 
-### braidio.timeline.build_timeline(, kinds, durations, placements=None, labels=None, source_spans=None, clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, title='', settings=None, speakers=None, overlap=None)
+### *class* braidio.timeline.TurnSpan(text, start, end)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+When one spoken turn of a narration beat is heard, relative to the beat’s start.
+
+Recorded by a render that synthesizes the beat turn by turn
+(`WeaveConfig.segmentation_unit != "beat"`), where the time is *measured*
+from each synthesized file rather than estimated (braidio#232).
+
+### braidio.timeline.build_timeline(, kinds, durations, placements=None, labels=None, source_spans=None, clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, title='', settings=None, speakers=None, overlap=None, turns=None)
 
 Assemble a [`TimelineBreakdown`](_autosummary/braidio.timeline.html.md#braidio.timeline.TimelineBreakdown) from per-beat render data (pure).
 
@@ -5052,6 +5125,14 @@ computed with the same [`layout_placed()`](_autosummary/braidio.weave.html.md#br
 
 `speakers` (one voice id per beat, `None` for a clip/sting) and `overlap`
 place a change of speaker as an interruption — pass what the render passed.
+
+`turns` (one tuple per beat) carries each beat’s measured :class:
+
+```
+`
+```
+
+TurnSpan\`s.
 
 `settings` is the optional render record ([`render_settings()`](_autosummary/braidio.timeline.html.md#braidio.timeline.render_settings)) — what
 produced these durations. It stays optional so building a timeline by hand
@@ -6246,7 +6327,7 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-09 01:38 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/9b48f593e3af03427b4e0b6d6bb805f837bf04b2"><code>9b48f59</code></a> on branch <code>main</code>, for **braidio 0.0.124** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-13 12:54 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/f6ac93c36ae3ab7371f8bac884eee34f1c358463"><code>f6ac93c</code></a> on branch <code>main</code>, for **braidio 0.0.125** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -6255,9 +6336,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/9b48f593e3af03427b4e0b6d6bb805f837bf04b2"><code>9b48f593e3af03427b4e0b6d6bb805f837bf04b2</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/f6ac93c36ae3ab7371f8bac884eee34f1c358463"><code>f6ac93c36ae3ab7371f8bac884eee34f1c358463</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | <code>0.0.124</code>                                                                                                                                    |
+| Tags at this commit | <code>0.0.125</code>                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -6266,9 +6347,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/42545982447">42545982447</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/43428048030">43428048030</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>fa49684da028ff3e29b3eaa2f5d2517547c2c061</code> (in the history of the built commit) |
+| Event commit | <code>6213256fb96c46b87958a9366ec51fb081d8820b</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6293,13 +6374,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.124/">0.0.124</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/braidio/0.0.125/">0.0.125</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 9b48f593e3af03427b4e0b6d6bb805f837bf04b2
+git checkout f6ac93c36ae3ab7371f8bac884eee34f1c358463
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

@@ -22,7 +22,7 @@ transforms (which add provenance + partial re-render).
 | [`plan_beat_turns`](#braidio.render.plan_beat_turns)(text, \*, config, ...[, ...])  | Plan one narration beat's turns, or `[]` for the unpaced single call.             |
 | [`render_production`](#braidio.render.render_production)(script, \*, source[, ...])   | Render `script` under `profile` → a single audio file.                            |
 
-### braidio.render.narrate_turns(turns, , stem, api_key, voice_id, model_id, voice_settings, narrate_fn=None, \*\*synth_kwargs)
+### braidio.render.narrate_turns(turns, , stem, api_key, voice_id, model_id, voice_settings, narrate_fn=None, spans_out=None, \*\*synth_kwargs)
 
 Synthesize a paced narration beat: one TTS call per turn, real silence between.
 
@@ -38,6 +38,10 @@ boundary closes, instead of one flat arc with nothing inside it.
 `narrate_fn` is the synthesis call (default: the ElevenLabs voice,
 [`braidio.tts.voice_for()`](braidio.tts.html.md#braidio.tts.voice_for)); a caller that wants the cache status, or
 another voice, passes its own.
+
+`spans_out`, when given, is extended with one `TurnSpan` per spoken turn:
+where its words sit in the returned file, measured from the synthesized
+audio (the planned silences are added, not guessed at).
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)

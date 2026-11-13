@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../../_static/documentation_options.js?v=95c30746"></script>
+    <script src="../../_static/documentation_options.js?v=31bb835f"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.124" />
+  <meta name="docsearch:version" content="0.0.125" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -723,14 +723,16 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">:class:`SegmentSource` protocol — the weave engine never needs to know it is</span>
 <span class="sd">lyrics.</span>
 
-<span class="sd">This module ships two generic implementations. :class:`TimedLineSegmentSource`,</span>
+<span class="sd">This module ships three generic implementations. :class:`TimedLineSegmentSource`,</span>
 <span class="sd">a token-F1 matcher over time-aligned lines (:class:`TimedLine`). It answers a</span>
 <span class="sd">reference by the best contiguous run of lines — handling exact, sub-line, and</span>
 <span class="sd">multi-line references. Consumers bind it to their own timed lines + asset (e.g.</span>
 <span class="sd">Hamilton binds LRCLIB line timings + owned song audio). And</span>
 <span class="sd">:class:`NamespacedSegmentSource` routes a *prefixed* reference to one of several</span>
 <span class="sd">sub-sources, which is how a production that cuts between two recordings of the</span>
-<span class="sd">same work says which recording a given quote should come from.</span>
+<span class="sd">same work says which recording a given quote should come from. And</span>
+<span class="sd">:class:`SpanSource`, for a caller that already knows each excerpt's file and</span>
+<span class="sd">times: the reference itself is ``"&lt;asset&gt;@&lt;start&gt;-&lt;end&gt;"``.</span>
 
 <span class="sd">Also provides the lower-level resolver (:func:`find_segment`, :func:`load_timing`)</span>
 <span class="sd">and the resolve-and-cut convenience (:func:`cut_quote`) used directly by the</span>
@@ -746,6 +748,7 @@ window.runMermaid = runMermaid;</script>
 <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mapping</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Protocol</span><span class="p">,</span> <span class="n">runtime_checkable</span>
 
 <span class="n">_WS_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\s+"</span><span class="p">)</span>
@@ -933,6 +936,46 @@ window.runMermaid = runMermaid;</script>
             <span class="n">score</span><span class="o">=</span><span class="n">seg</span><span class="o">.</span><span class="n">score</span><span class="p">,</span>
             <span class="n">matched_text</span><span class="o">=</span><span class="n">seg</span><span class="o">.</span><span class="n">matched_text</span><span class="p">,</span>
         <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="SpanSource">
+<a class="viewcode-back" href="../../_autosummary/braidio.sources.html#braidio.SpanSource">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SpanSource</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A :class:`SegmentSource` for explicit spans: ``"&lt;asset&gt;@&lt;start&gt;-&lt;end&gt;"``.</span>
+
+<span class="sd">    For a caller that already knows which file and which seconds to cut (times</span>
+<span class="sd">    checked beforehand, say) and so needs no matcher::</span>
+
+<span class="sd">        source = SpanSource({"ep1": "ep1.mp3", "ep2": "ep2.mp3"})</span>
+<span class="sd">        SegmentBeat("ep1@412.5-448.0")</span>
+
+<span class="sd">    The reference is a string, not an id into a mapping, on purpose: references</span>
+<span class="sd">    are persisted in a weave project, and a self-describing one still means the</span>
+<span class="sd">    same cut when the project is reloaded by a process that built its</span>
+<span class="sd">    ``SpanSource`` differently. Only the asset *name* is looked up.</span>
+
+<span class="sd">    An unknown asset, or a span that is malformed or empty (``end &lt;= start``,</span>
+<span class="sd">    negative or non-numeric times), resolves to ``None`` — the caller's</span>
+<span class="sd">    unresolved-reference handling reports it.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">assets</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_assets</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">assets</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reference</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ResolvedSegment</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">asset</span><span class="p">,</span> <span class="n">at</span><span class="p">,</span> <span class="n">span</span> <span class="o">=</span> <span class="n">reference</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">rpartition</span><span class="p">(</span><span class="s2">"@"</span><span class="p">)</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assets</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">asset</span><span class="p">)</span> <span class="k">if</span> <span class="n">at</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">start</span><span class="p">,</span> <span class="n">dash</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">span</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">dash</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">start_s</span><span class="p">,</span> <span class="n">end_s</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">start</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">end</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">start_s</span> <span class="o">&lt;</span> <span class="n">end_s</span> <span class="ow">or</span> <span class="n">end_s</span> <span class="o">==</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"inf"</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">ResolvedSegment</span><span class="p">(</span><span class="n">asset_path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">start_s</span><span class="o">=</span><span class="n">start_s</span><span class="p">,</span> <span class="n">end_s</span><span class="o">=</span><span class="n">end_s</span><span class="p">)</span></div>
 
 
 

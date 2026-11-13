@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../../_static/documentation_options.js?v=95c30746"></script>
+    <script src="../../_static/documentation_options.js?v=31bb835f"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.124" />
+  <meta name="docsearch:version" content="0.0.125" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -833,6 +833,18 @@ window.runMermaid = runMermaid;</script>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="p">:</span>
             <span class="k">continue</span>
 
+        <span class="k">if</span> <span class="n">span</span><span class="o">.</span><span class="n">turns</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_quote</span><span class="p">:</span>
+            <span class="c1"># measured: the render knows when each turn is spoken (braidio#232)</span>
+            <span class="k">for</span> <span class="n">turn</span> <span class="ow">in</span> <span class="n">span</span><span class="o">.</span><span class="n">turns</span><span class="p">:</span>
+                <span class="n">_timed</span><span class="p">(</span>
+                    <span class="n">raw</span><span class="p">,</span>
+                    <span class="n">turn</span><span class="o">.</span><span class="n">text</span><span class="p">,</span>
+                    <span class="n">span</span><span class="o">.</span><span class="n">start</span> <span class="o">+</span> <span class="n">turn</span><span class="o">.</span><span class="n">start</span><span class="p">,</span>
+                    <span class="n">span</span><span class="o">.</span><span class="n">start</span> <span class="o">+</span> <span class="n">turn</span><span class="o">.</span><span class="n">end</span><span class="p">,</span>
+                    <span class="n">max_chars</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="k">continue</span>
+
         <span class="n">pieces</span> <span class="o">=</span> <span class="p">[</span><span class="n">text</span><span class="p">]</span> <span class="k">if</span> <span class="n">is_quote</span> <span class="k">else</span> <span class="n">_sentences</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">max_chars</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">pieces</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">piece</span> <span class="ow">in</span> <span class="n">pieces</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">_wrap</span><span class="p">(</span><span class="n">piece</span><span class="p">,</span> <span class="n">max_chars</span><span class="p">)]</span>
@@ -854,6 +866,17 @@ window.runMermaid = runMermaid;</script>
             <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Cue</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">cue</span><span class="o">.</span><span class="n">end_s</span><span class="p">,</span> <span class="n">cue</span><span class="o">.</span><span class="n">text</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">out</span></div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_timed</span><span class="p">(</span><span class="n">raw</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">end</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">max_chars</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Append cues for ``text`` spoken over ``[start, end]``, wrapped like the rest."""</span>
+    <span class="n">pieces</span> <span class="o">=</span> <span class="n">_wrap</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">max_chars</span><span class="p">)</span> <span class="k">if</span> <span class="n">max_chars</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="p">[</span><span class="n">text</span><span class="p">]</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pieces</span><span class="p">)</span> <span class="ow">or</span> <span class="mi">1</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">start</span>
+    <span class="k">for</span> <span class="n">piece</span> <span class="ow">in</span> <span class="n">pieces</span><span class="p">:</span>
+        <span class="n">share</span> <span class="o">=</span> <span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">piece</span><span class="p">)</span> <span class="o">/</span> <span class="n">total</span>
+        <span class="n">raw</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Cue</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">t</span> <span class="o">+</span> <span class="n">share</span><span class="p">,</span> <span class="n">piece</span><span class="p">))</span>
+        <span class="n">t</span> <span class="o">+=</span> <span class="n">share</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_wrap</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">max_chars</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>

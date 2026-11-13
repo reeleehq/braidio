@@ -17,4 +17,5 @@ braidio.timeline
    
       BeatSpan
       TimelineBreakdown
+      TurnSpan
    

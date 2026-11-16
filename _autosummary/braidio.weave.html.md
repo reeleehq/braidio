@@ -23,8 +23,9 @@ This is the audio counterpart of a video timeline; it consumes plain file paths
 
 ### Module Attributes
 
-| [`MAX_OVERLAP_TURN_S`](#braidio.weave.MAX_OVERLAP_TURN_S)   | past it two voices talking over each other stop being understood (Hamilton#22).   |
-|-----------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| [`MAX_OVERLAP_TURN_S`](#braidio.weave.MAX_OVERLAP_TURN_S)   | past it two voices talking over each other stop being understood (Hamilton#22).                    |
+|-----------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
+| [`MIN_CUT_SHARE`](#braidio.weave.MIN_CUT_SHARE)        | A cut shorter than this share of what was asked, from a source that had more to give, is an error. |
 
 ### Functions
 
@@ -50,6 +51,10 @@ voices talking over each other stop being understood (Hamilton#22).
 
 * **Type:**
   Upper bound of the intelligible range for a speaker interruption
+
+### braidio.weave.MIN_CUT_SHARE *= 0.5*
+
+A cut shorter than this share of what was asked, from a source that had more to give, is an error.
 
 ### *class* braidio.weave.TimelineItem(kind, path, placement='sequential', duck_db=0.0, spotlight=False, speaker=None)
 

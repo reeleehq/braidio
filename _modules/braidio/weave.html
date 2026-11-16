@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../../_static/documentation_options.js?v=31bb835f"></script>
+    <script src="../../_static/documentation_options.js?v=06430935"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.125" />
+  <meta name="docsearch:version" content="0.0.126" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -876,6 +876,11 @@ window.runMermaid = runMermaid;</script>
             <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">start</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
             <span class="s2">"-i"</span><span class="p">,</span>
             <span class="nb">str</span><span class="p">(</span><span class="n">asset_path</span><span class="p">),</span>
+            <span class="c1"># audio only: a podcast file often carries its cover as an attached</span>
+            <span class="c1"># picture, which ffmpeg would map into the output; after a seek no</span>
+            <span class="c1"># picture packet arrives, the output ends after a quarter of a second,</span>
+            <span class="c1"># and ffmpeg still exits 0 (seen on ffmpeg 9.0)</span>
+            <span class="s2">"-vn"</span><span class="p">,</span>
             <span class="s2">"-t"</span><span class="p">,</span>
             <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">dur</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
             <span class="s2">"-af"</span><span class="p">,</span>
@@ -885,8 +890,36 @@ window.runMermaid = runMermaid;</script>
         <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span>
+    <span class="n">_refuse_short_cut</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">asked_s</span><span class="o">=</span><span class="n">dur</span><span class="p">,</span> <span class="n">asset_path</span><span class="o">=</span><span class="n">asset_path</span><span class="p">,</span> <span class="n">start_s</span><span class="o">=</span><span class="n">start</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">out</span></div>
 
+
+
+<span class="c1">#: A cut shorter than this share of what was asked, from a source that had more to give, is an error.</span>
+<span class="n">MIN_CUT_SHARE</span> <span class="o">=</span> <span class="mf">0.5</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_refuse_short_cut</span><span class="p">(</span>
+    <span class="n">out</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">asked_s</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">asset_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span> <span class="n">start_s</span><span class="p">:</span> <span class="nb">float</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Raise when ffmpeg exited 0 but the cut is far shorter than asked and the source did not end.</span>
+
+<span class="sd">    ffmpeg can end an output early and still report success (the cover-picture case in</span>
+<span class="sd">    ``extract_padded``); a production would then silently lose the passage. A file that</span>
+<span class="sd">    cannot be probed (a stand-in in a test) is left alone.</span>
+<span class="sd">    """</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">got</span> <span class="o">=</span> <span class="n">duration_s</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">got</span> <span class="o">&gt;=</span> <span class="n">asked_s</span> <span class="o">*</span> <span class="n">MIN_CUT_SHARE</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">left</span> <span class="o">=</span> <span class="n">duration_s</span><span class="p">(</span><span class="n">asset_path</span><span class="p">)</span> <span class="o">-</span> <span class="n">start_s</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">):</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="n">left</span> <span class="o">&gt;</span> <span class="n">got</span> <span class="o">+</span> <span class="mf">1.0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"the cut of </span><span class="si">{</span><span class="n">Path</span><span class="p">(</span><span class="n">asset_path</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> from </span><span class="si">{</span><span class="n">start_s</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> s came out </span><span class="si">{</span><span class="n">got</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> s long; "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">asked_s</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> s were asked for and the file has </span><span class="si">{</span><span class="n">left</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> s left there"</span>
+        <span class="p">)</span>
 
 
 <div class="viewcode-block" id="TimelineItem">

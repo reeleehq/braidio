@@ -9,6 +9,7 @@ braidio.weave
    .. autosummary::
    
       MAX_OVERLAP_TURN_S
+      MIN_CUT_SHARE
    
    .. rubric:: Functions
 

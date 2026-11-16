@@ -176,7 +176,9 @@ def extract_padded(
 MIN_CUT_SHARE = 0.5
 
 
-def _refuse_short_cut(out: Path, *, asked_s: float, asset_path: str | Path, start_s: float) -> None:
+def _refuse_short_cut(
+    out: Path, *, asked_s: float, asset_path: str | Path, start_s: float
+) -> None:
     """Raise when ffmpeg exited 0 but the cut is far shorter than asked and the source did not end.
 
     ffmpeg can end an output early and still report success (the cover-picture case in

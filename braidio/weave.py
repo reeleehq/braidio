@@ -154,6 +154,11 @@ def extract_padded(
             f"{start:.3f}",
             "-i",
             str(asset_path),
+            # audio only: a podcast file often carries its cover as an attached
+            # picture, which ffmpeg would map into the output; after a seek no
+            # picture packet arrives, the output ends after a quarter of a second,
+            # and ffmpeg still exits 0 (seen on ffmpeg 9.0)
+            "-vn",
             "-t",
             f"{dur:.3f}",
             "-af",
@@ -163,7 +168,33 @@ def extract_padded(
         check=True,
         capture_output=True,
     )
+    _refuse_short_cut(out, asked_s=dur, asset_path=asset_path, start_s=start)
     return out
+
+
+#: A cut shorter than this share of what was asked, from a source that had more to give, is an error.
+MIN_CUT_SHARE = 0.5
+
+
+def _refuse_short_cut(out: Path, *, asked_s: float, asset_path: str | Path, start_s: float) -> None:
+    """Raise when ffmpeg exited 0 but the cut is far shorter than asked and the source did not end.
+
+    ffmpeg can end an output early and still report success (the cover-picture case in
+    ``extract_padded``); a production would then silently lose the passage. A file that
+    cannot be probed (a stand-in in a test) is left alone.
+    """
+    try:
+        got = duration_s(out)
+        if got >= asked_s * MIN_CUT_SHARE:
+            return
+        left = duration_s(asset_path) - start_s
+    except (subprocess.CalledProcessError, ValueError, KeyError, OSError):
+        return
+    if left > got + 1.0:
+        raise RuntimeError(
+            f"the cut of {Path(asset_path).name} from {start_s:.1f} s came out {got:.2f} s long; "
+            f"{asked_s:.2f} s were asked for and the file has {left:.0f} s left there"
+        )
 
 
 @dataclass(frozen=True)

@@ -378,7 +378,12 @@ class VoxyVoice:
     ):
         # no one-pass dialogue: turn by turn, exactly as SpeakVoice does
         return SpeakVoice.render_dialogue(
-            self, turns, cast, out_path=out_path, return_cache_status=return_cache_status, **kw
+            self,
+            turns,
+            cast,
+            out_path=out_path,
+            return_cache_status=return_cache_status,
+            **kw,
         )
 
 
@@ -390,7 +395,11 @@ def register_voxy_voice(
     ``usd_per_1k_chars`` is the engine's rate (``None``: unpriced, which cost
     reports show as such, never as free). The rest goes to :class:`VoxyVoice`.
     """
-    return register_tts(name, voice=VoxyVoice(name=name, **voice_kwargs), usd_per_1k_chars=usd_per_1k_chars)
+    return register_tts(
+        name,
+        voice=VoxyVoice(name=name, **voice_kwargs),
+        usd_per_1k_chars=usd_per_1k_chars,
+    )
 
 
 def voice_native_break_s(voice, model_id: str) -> float:

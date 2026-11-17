@@ -38,6 +38,20 @@ import re
 from dataclasses import dataclass
 
 from braidio.script import Dialogue, Narration, SegmentBeat
+from braidio.style import strip_audio_tags
+
+_SSML = re.compile(r"<[^>]*>")
+
+
+def on_screen(text: str) -> str:
+    """``text`` as a viewer should read it: no ``[audio tags]``, no SSML, tidy spacing.
+
+    Narration carries performance markup (``[dryly]``, ``<break time="1s"/>``) that
+    the voice acts on and nobody should see in a subtitle.
+    """
+    text = _SSML.sub(" ", strip_audio_tags(text))
+    text = re.sub(r"\s+", " ", text)
+    return re.sub(r"\s+([,.;:!?])", r"\1", text).strip()
 
 __all__ = ["Cue", "captions_for", "captions_from_cues", "cues_for", "format_srt"]
 
@@ -71,10 +85,10 @@ def _beat_text(beat) -> tuple[str, bool]:
     if isinstance(beat, SegmentBeat):
         return beat.reference.strip(), True
     if isinstance(beat, Narration):
-        return beat.text, False
+        return on_screen(beat.text), False
     if isinstance(beat, Dialogue):
         # One cue stream; the speaker labels are the useful part on screen.
-        return " ".join(f"{role}: {text}" for role, text in beat.turns), False
+        return " ".join(f"{role}: {on_screen(text)}" for role, text in beat.turns), False
     return "", False
 
 
@@ -147,6 +161,9 @@ def cues_for(script, timeline, *, max_chars: int = 0) -> list[Cue]:
 
 def _timed(raw: list, text: str, start: float, end: float, max_chars: int) -> None:
     """Append cues for ``text`` spoken over ``[start, end]``, wrapped like the rest."""
+    text = on_screen(text)
+    if not text:  # a turn that was only performance markup ("[pause]")
+        return
     pieces = _wrap(text, max_chars) if max_chars > 0 else [text]
     total = sum(len(p) for p in pieces) or 1
     t = start

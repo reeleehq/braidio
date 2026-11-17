@@ -15,7 +15,7 @@ import pytest
 
 from braidio import captions_for, cues_for
 from braidio.script import Narration, Script, SegmentBeat
-from braidio.timeline import build_timeline
+from braidio.timeline import BeatSpan, TimelineBreakdown, TurnSpan, build_timeline
 from braidio.video import (
     MAX_PANEL_S,
     MIN_PANEL_S,
@@ -143,6 +143,25 @@ def test_segment_beats_are_marked_as_quotes():
     (cue,) = cues_for(script, tl)
     assert "a lyric line" in cue.text
     assert cue.text.startswith("♪")
+
+
+def test_captions_never_show_audio_tags_or_ssml():
+    """Performance markup is for the voice; a subtitle shows only the words."""
+    text = '[dryly] One thing. <break time="1s"/> [beat] Two things.'
+    script = Script(title="t", id_slug="01", beats=[Narration(text)])
+    estimated = cues_for(script, build_timeline(kinds=["narration"], durations=[4.0]))
+    assert [c.text for c in estimated] == ["One thing.", "Two things."]
+    measured = TimelineBreakdown(
+        title="t",
+        beats=(
+            BeatSpan(
+                index=0, kind="narration", label="", duration=4.0, start=0.0,
+                turns=(TurnSpan("[dryly] One thing.", 0.0, 1.5), TurnSpan("[pause]", 1.5, 2.0),
+                       TurnSpan("[beat] Two things.", 2.0, 4.0)),
+            ),
+        ),
+    )
+    assert [c.text for c in cues_for(script, measured)] == ["One thing.", "Two things."]
 
 
 def test_srt_format_is_well_formed():

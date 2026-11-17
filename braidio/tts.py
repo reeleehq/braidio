@@ -330,7 +330,10 @@ class VoxyVoice:
     another engine, so an unmapped line voice is never sent. ElevenLabs-only
     arguments (``model_id`` of the delivery, ``voice_settings``, ``api_key``,
     ``output_format``) are accepted and ignored; ``options`` are this
-    engine's own (``{"language": "en"}``, ``{"speed": 1.05}``).
+    engine's own (``{"language": "en"}``, ``{"speed": 1.05}``). Set the
+    engine's language there: Seed Speech detects it per request and once read
+    an English sentence full of numbers in Tagalog. New takes are validated
+    before caching (``validate``).
 
     Register it under its own name and select it by that name::
 
@@ -348,6 +351,10 @@ class VoxyVoice:
     voice_map: Mapping[str, str] = field(default_factory=dict)
     options: Mapping[str, Any] = field(default_factory=dict)
     cache: Any = True
+    #: run on every new take before it is cached; ``"rate"`` (default) is
+    #: ``voxy.speaking_rate_check`` (a hosted engine once returned 29 s of breath
+    #: for a sentence), ``None`` disables, a callable ``(speech, text) -> problem | None``
+    validate: Any = "rate"
 
     def _voice(self, voice_id: str | None) -> str | None:
         return self.voice_map.get(voice_id, self.voice) if voice_id else self.voice
@@ -360,12 +367,14 @@ class VoxyVoice:
         options = dict(self.options)
         if self.model_id:
             options["model_id"] = self.model_id
+        validate = voxy.speaking_rate_check if self.validate == "rate" else self.validate
         speech = voxy.text_to_speech(
             text,
             self._voice(voice_id),
             backend=self.backend,
             instruction=self.instruction,
             cache=self.cache,
+            validate=validate,
             **options,
         )
         out = Path(out_path).with_suffix("." + speech.format)

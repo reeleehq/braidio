@@ -57,7 +57,7 @@ dependencies = [
     "mixing[media]>=0.0.111",
     "elevenlabs",
     # voxy.pauses (SSML breaks), voxy.direction (the tag grammar + per-engine dialects), VoxyVoice
-    "voxy>=0.0.74",
+    "voxy>=0.0.75",
 ]
 
 [project.urls]

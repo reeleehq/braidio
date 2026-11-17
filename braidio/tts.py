@@ -22,8 +22,8 @@ import math
 import os
 import re
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
-from typing import ClassVar, Protocol, runtime_checkable
+from dataclasses import dataclass, field
+from typing import Any, ClassVar, Protocol, runtime_checkable
 from types import MappingProxyType
 from pathlib import Path
 
@@ -309,6 +309,88 @@ class SpeakVoice:
         finally:
             shutil.rmtree(work, ignore_errors=True)
         return (path, False) if return_cache_status else path
+
+
+@dataclass(frozen=True)
+class VoxyVoice:
+    """Any voxy backend as a render's voice: Seed Speech or OpenAI through fal/aix,
+    a local model, ElevenLabs on another account.
+
+    Inline ``[audio tags]`` are not stripped here: voxy renders them in the
+    engine's dialect (performed by eleven_v3/v4, turned into a natural-language
+    instruction per part on Seed Speech or gpt-4o-mini-tts, removed elsewhere,
+    pause tags becoming silence; ``voxy.direction``). ``instruction`` is a
+    standing delivery note for instruction engines. Synthesis is cached in
+    voxy's speech cache (``cache``; ``True`` = the default folder), so an
+    unchanged line re-renders free and reports ``was_cached``.
+
+    Which voice speaks a line: ``voice_map[line voice]`` when the line's voice
+    (a beat's ``voice=``, a cast role's id) is mapped, else ``voice``. The
+    shipped formats resolve lines to ElevenLabs ids, which mean nothing to
+    another engine, so an unmapped line voice is never sent. ElevenLabs-only
+    arguments (``model_id`` of the delivery, ``voice_settings``, ``api_key``,
+    ``output_format``) are accepted and ignored; ``options`` are this
+    engine's own (``{"language": "en"}``, ``{"speed": 1.05}``).
+
+    Register it under its own name and select it by that name::
+
+        register_voxy_voice("seed-tim", backend="fal", voice="tim_en",
+                            model_id="fal-ai/bytedance/seed-speech/tts/v2",
+                            usd_per_1k_chars=0.03)
+        render_format(fmt, script, source=None, config=fmt.weave.with_(tts="seed-tim"))
+    """
+
+    name: str
+    backend: str
+    voice: str | None = None
+    model_id: str | None = None
+    instruction: str | None = None
+    voice_map: Mapping[str, str] = field(default_factory=dict)
+    options: Mapping[str, Any] = field(default_factory=dict)
+    cache: Any = True
+
+    def _voice(self, voice_id: str | None) -> str | None:
+        return self.voice_map.get(voice_id, self.voice) if voice_id else self.voice
+
+    def narrate(
+        self, text, out_path, *, voice_id=None, return_cache_status: bool = False, **_
+    ):
+        import voxy
+
+        options = dict(self.options)
+        if self.model_id:
+            options["model_id"] = self.model_id
+        speech = voxy.text_to_speech(
+            text,
+            self._voice(voice_id),
+            backend=self.backend,
+            instruction=self.instruction,
+            cache=self.cache,
+            **options,
+        )
+        out = Path(out_path).with_suffix("." + speech.format)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(speech.audio)
+        return (out, speech.cached) if return_cache_status else out
+
+    def render_dialogue(
+        self, turns, cast, *, out_path, return_cache_status: bool = False, **kw
+    ):
+        # no one-pass dialogue: turn by turn, exactly as SpeakVoice does
+        return SpeakVoice.render_dialogue(
+            self, turns, cast, out_path=out_path, return_cache_status=return_cache_status, **kw
+        )
+
+
+def register_voxy_voice(
+    name: str, *, usd_per_1k_chars: float | None = None, **voice_kwargs
+) -> "TTSBackend":
+    """Register a :class:`VoxyVoice` as the voice backend ``name``.
+
+    ``usd_per_1k_chars`` is the engine's rate (``None``: unpriced, which cost
+    reports show as such, never as free). The rest goes to :class:`VoxyVoice`.
+    """
+    return register_tts(name, voice=VoxyVoice(name=name, **voice_kwargs), usd_per_1k_chars=usd_per_1k_chars)
 
 
 def voice_native_break_s(voice, model_id: str) -> float:

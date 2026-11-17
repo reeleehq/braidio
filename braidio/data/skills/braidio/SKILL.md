@@ -232,8 +232,12 @@ So:
 1. **Write the performance into the text.** Target **2–5 inline `[audio tags]`
    per 100 words** and vary which one: `[laughs]` `[sighs]` `[dryly]`
    `[incredulous]` `[excited]` `[quietly]` `[rushed]` `[slowly]` `[pause]`
-   `[beat]`. Tags only fire on a v3 delivery — on `eleven_multilingual_v2` they
-   are read out as literal text.
+   `[beat]`. The tags are braidio's **authoring notation**, not an ElevenLabs
+   feature: a v3/v4 ElevenLabs delivery performs them; any other engine, reached
+   through `VoxyVoice` (below), gets them translated by voxy into what it takes
+   (a natural-language instruction per part on Seed Speech or gpt-4o-mini-tts,
+   real silence for pause tags, removal elsewhere). Only the raw
+   `eleven_multilingual_v2` path still cannot use them.
 2. **Gate it.** `braidio.audit_expressiveness(prose)` returns `[]` when you are
    in the band, and tells you which way you are out otherwise;
    `braidio.audio_tag_rate(prose)` is the bare number.
@@ -251,6 +255,36 @@ not over-writing; it cannot be the only gate.
 
 The two failures pull in opposite directions and you need both gates:
 under-tagged and over-written is the classic AI read.
+
+## Any voice, any engine: `VoxyVoice`
+
+ElevenLabs is the default, not the only voice. Register any voxy engine under a
+name and select it by that name; both render paths (one-shot and graph) use it:
+
+```python
+braidio.register_voxy_voice(
+    "seed-tim",
+    backend="fal",
+    voice="tim_en",
+    model_id="fal-ai/bytedance/seed-speech/tts/v2",
+    usd_per_1k_chars=0.03,  # None = unpriced (never shown as free)
+)
+config = fmt.weave.with_(tts="seed-tim")  # keep the format's pacing, swap the voice
+braidio.render_format(fmt, script, source=None, config=config, out_path="ep.mp3")
+```
+
+- **Directions travel.** `[dryly]`, `[beat]`, `[laughs]` reach the engine in its
+  dialect (`voxy.dialect_for(backend, model_id)`); write them exactly as for
+  eleven_v3. `instruction=` adds a standing note on instruction engines; keep it
+  short and never about tempo (a calm persona measurably flattens Seed's read).
+- **Voices are the engine's own.** Lines resolve to ElevenLabs ids under the
+  shipped formats; those are never sent to another engine. The configured
+  `voice=` speaks every line unless `voice_map={line_voice: engine_voice}` maps
+  it (the two-voice pattern: map the record voice).
+- **Cached.** voxy's speech cache makes an unchanged line free on re-render and
+  `was_cached` honest (`cache=` to move or disable it).
+- **Listen first.** Render one tagged paragraph and run the two-recogniser check
+  (voxy skill, 3b) before the whole episode.
 
 ## Getting the words — lyrics, annotations, transcripts
 

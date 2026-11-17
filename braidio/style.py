@@ -76,7 +76,9 @@ def platitude_rate(text: str, *, per: int = 1000) -> float:
 # every sentence reads as kitsch, and it is the RELENTLESSNESS that gives it
 # away, not any single tag. Hence a target band rather than a maximum.
 
-_AUDIO_TAG_RE = re.compile(r"\[[a-z][a-z \-]{1,24}\]")
+# The tag grammar is voxy's (voxy.direction: one definition for the fleet, with
+# the per-engine dialects that say what each engine does with a tag).
+from voxy.direction import DIRECTION_RE as _AUDIO_TAG_RE  # noqa: E402
 
 #: Tags per 100 words. Below the floor a v3 read goes flat; above the ceiling it
 #: starts performing every clause and reads as camp. Derived from the measured
@@ -92,7 +94,7 @@ def strip_audio_tags(text: str) -> str:
 
 def audio_tags(text: str) -> list[str]:
     """Every inline ``[audio tag]`` in ``text``, in order."""
-    return _AUDIO_TAG_RE.findall(text)
+    return [m.group(0) for m in _AUDIO_TAG_RE.finditer(text)]
 
 
 def audio_tag_rate(text: str, *, per: int = 100) -> float:

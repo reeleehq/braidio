@@ -53,6 +53,7 @@ def on_screen(text: str) -> str:
     text = re.sub(r"\s+", " ", text)
     return re.sub(r"\s+([,.;:!?])", r"\1", text).strip()
 
+
 __all__ = ["Cue", "captions_for", "captions_from_cues", "cues_for", "format_srt"]
 
 #: Sentence boundary: end punctuation followed by whitespace. The text is ours
@@ -88,7 +89,9 @@ def _beat_text(beat) -> tuple[str, bool]:
         return on_screen(beat.text), False
     if isinstance(beat, Dialogue):
         # One cue stream; the speaker labels are the useful part on screen.
-        return " ".join(f"{role}: {on_screen(text)}" for role, text in beat.turns), False
+        return " ".join(
+            f"{role}: {on_screen(text)}" for role, text in beat.turns
+        ), False
     return "", False
 
 

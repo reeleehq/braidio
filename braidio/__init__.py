@@ -83,6 +83,8 @@ from braidio.tts import (  # noqa: F401
     DEFAULT_MODEL_ID,
     DEFAULT_VOICE_SETTINGS,
     VOICE_ENV_VAR,
+    VoxyVoice,
+    register_voxy_voice,
 )
 
 # --- cost model (ElevenLabs TTS spend) ---

@@ -272,6 +272,23 @@ the line from the parts and assert that every finished line names a licence.
 itself to reach 16:9, so portraits are not cover-cropped and no dead black bars
 appear. `render_video` calls it for you.
 
+## Show the evidence: the source on screen, the quoted words highlighted as they are read
+
+For anything that rests on sources (history, science, engineering, an essay that cites research), the strongest picture for a claim is **the source itself**: the page, the paper's title and abstract, the report's chart, with the exact sentence highlighted while the narration says it. Viewers trust what they can read, and it carries its own attribution. A stock photo of "a scientist" over "a 2026 study found 3–13% of URLs were invented" is decoration; the abstract with that clause lighting up is evidence.
+
+```python
+from walkthru import capture_passage, render_highlight_clip  # walkthru's `evidence` extra (+ `ocr` for scans)
+
+cap = capture_passage(url_or_pdf, quote="the exact words the narration quotes", out="shots/x.png")
+render_highlight_clip(cap, "clips/x.mp4", duration=panel_s, sweep=(said_at - panel_start, said_end - panel_start))
+Panel(start, end, cap.png, footage=Footage("clips/x.mp4"))  # a straight-cut footage panel
+```
+
+- **Only highlight what verification passed** (`cap.found`): walkthru proves the boxes are the quote and are visible (DOM caret hit tests on web pages; whole-word text boxes on born-digital PDFs; OCR re-boxing on scans, whose text layer can sit 50–80 px off the glyphs). Otherwise show the page without a highlight, and say so in your report.
+- **Sync the sweep to the words, not the beat**: get word times for the finished narration (`mlx_whisper` word timestamps; Whisper writes numbers as digits, so match phrases with digits) and fuzzy-align each quote's spoken phrase; start the panel ~1 s before it so the page is seen before it lights up.
+- **What to capture**: every cited source's quoted sentence; for papers, the title and the abstract sentence carrying the number; the paper's own figure or table where the narration gives its result (crop by caption; i2mint/pdfdol#12 tracks a helper); the essay's own images where the text refers to them. One essay: 63 highlighted passages out of 56 sources, 7 figures.
+- **When the source refuses** (Cloudflare walls, a newswire answering headless browsers with protocol errors): find a reputable page quoting the same figure and highlight it there, or chart the figures yourself with the source on the chart, and record which you did.
+
 ## Panels that don't look like a slideshow
 
 - 5–9 s per still (`MIN_PANEL_S` / `MAX_PANEL_S`); `plan_spans` enforces both.
@@ -508,6 +525,16 @@ Rules that fall out of the shape, each of which cost a real production:
   `video_cut.render` and `video_cut.finish` plan time, against the episode's
   profile as it stands now; a personal cut renders it and only a credits
   roll refuses.
+
+## Field notes from a 24-minute essay readout (each one cost a re-render)
+
+- **Listen-check with two recognisers before the long render, and again after.** ElevenLabs Scribe and Whisper agreeing on a wrong word means the voice said it: a title read as "Agile, Refault", a skipped acronym, "self-reports" as "soft reports", and, on Seed Speech, "I wrote design docs" as "How about design docs?" and one sentence read **in Tagalog**. Diff the transcript against the script *including* lines with numbers (a filter that skipped them hid the Tagalog one). Re-roll a line by changing its text; caches are keyed on it.
+- **Any voice is a registration away** (`braidio.register_voxy_voice`, the braidio skill): set the engine's language option on every request (Seed: `language="en"`), and keep take validation on (a take of breath instead of speech is otherwise cached forever).
+- **Never hard-code the narration's end.** Re-rendered lines change its length; read it from the file. A 5 s overshoot put the last sentence over the credits of a published cut.
+- **Place pictures by phrase, not by beat.** Each pick names the words it belongs under; resolve them to times; enforce a ~3 s minimum per panel by pushing the later one, and drop a decorative still that would miss its sentence. Anchor phrases that recur (a footnote repeating a quote) after a landmark, never at absolute times.
+- **Fix a few panels without re-rendering the film**: overlay the corrected clips onto the motion cut at their exact panel times (ffmpeg `overlay` with `enable='between(t,a,b)'`), then re-run only the text pass.
+- **The YouTube description is 5000 characters, and its tail is the credits**: yb raises instead of cutting (see yb-publish for the compact form).
+- **Stills from Wikimedia: standard thumbnail widths only** (`illustration.providers.wikimedia.thumbnail_at_width`), and check pixel dimensions after download.
 
 ## Where this stops
 

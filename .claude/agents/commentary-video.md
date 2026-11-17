@@ -6,7 +6,10 @@ description: >
   into a Ken Burns film, caption it, and hand back a file (publishing only if
   asked). Use when someone names a target and wants the finished thing: "make a
   video essay about <song/book/film/paper>", "do the Actually Romantic treatment
-  for <X>", "commentary video on <topic>". Returns the artifact paths, the
+  for <X>", "commentary video on <topic>", "video readout of my article",
+  an explainer resting on sources (historical, technical, educational) where
+  the cited pages and papers should appear on screen with the quoted passage
+  highlighted as it is read. Returns the artifact paths, the
   sources it used, and anything it could not source. Does not publish without an
   explicit instruction to.
 tools: Bash, Read, Write, Edit, Glob, Grep, WebSearch, WebFetch, Skill
@@ -35,9 +38,15 @@ start. They carry the parameters; do not re-derive them.
    quote and attribute instead.
 4. **`estimate_cost` before any paid render**, and apply the anti-robotic
    delivery/pacing overrides from the skill.
-5. **Render the audio with `return_timeline=True`**, plan panels from that
-   timeline, choose a *relevant* still per span, and look at a contact sheet
-   before rendering the film.
+5. **Render the audio with `return_timeline=True`**, then **listen-check it with
+   two recognisers** (Scribe + Whisper; fix what both mishear) before planning
+   pictures. Plan panels from the timeline, choose a *relevant* still per span,
+   and look at a contact sheet before rendering the film.
+5b. **Show the evidence** when the piece rests on sources (history, science,
+   engineering, a cited essay): capture each cited source at its quoted sentence
+   with `walkthru.capture_passage`, render a highlight synced to the words with
+   `render_highlight_clip`, and cut it in as a footage panel. Highlight only
+   what verification passed; report the rest (skill: *Show the evidence*).
 6. **Caption from the script**, not ASR. Build the credits roll from the image
    manifest.
 7. **Verify the artifact** — duration, and sample frames against what the
@@ -45,6 +54,10 @@ start. They carry the parameters; do not re-derive them.
    command exited zero.
 
 ## Rules
+
+- **Any narrator, not only ElevenLabs**: `braidio.register_voxy_voice(...)`
+  (Seed Speech, OpenAI, local engines); `[audio tags]` are translated per
+  engine. Set the engine's language and keep take validation on.
 
 - **Freely-licensed images only**, licence and author recorded per file. Credits
   go in both the end card and the description — CC BY/BY-SA are conditional.

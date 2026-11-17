@@ -30,7 +30,7 @@ class _Instructed(SpeechModel):
 
     def synthesize(self, text, voice=None, **kw):
         _CALLS.append((text, voice, kw))
-        tone = 0.1 * np.sin(2 * np.pi * 220 * np.arange(int(_RATE * 0.25 * max(1, len(text.split())))) / _RATE)
+        tone = 0.1 * np.sin(2 * np.pi * 220 * np.arange(int(_RATE * len(text) / 14)) / _RATE)
         buf = io.BytesIO()
         wavfile.write(buf, _RATE, tone.astype(np.float32))
         return Speech(buf.getvalue(), format="wav", backend=self.name, voice=voice, text=text)
@@ -105,3 +105,24 @@ def test_narrate_reports_cache_status_and_writes_the_engine_format(engine, tmp_p
 
 def test_the_registered_rate_prices_it(engine):
     assert braidio.tts.tts_backend("vx").cost_usd("x" * 1000) == pytest.approx(0.03)
+
+
+def test_a_broken_take_is_rejected_by_default(engine, tmp_path, monkeypatch):
+    """A take far too long for its text (breath, noise) is re-asked, never cached."""
+    long = "You aren't gonna need it is good advice about features, and never meant for seams."
+    real = _Instructed.synthesize
+    calls = []
+
+    def flaky(self, text, voice=None, **kw):
+        calls.append(text)
+        speech = real(self, text, voice, **kw)
+        if len(calls) == 1:  # first take: 30 s of tone
+            buf = io.BytesIO()
+            wavfile.write(buf, _RATE, np.zeros(_RATE * 30, np.float32))
+            speech = Speech(buf.getvalue(), format="wav", backend=self.name, voice=voice, text=text)
+        return speech
+
+    monkeypatch.setattr(_Instructed, "synthesize", flaky)
+    v = VoxyVoice(name="direct", backend="fake-instructed", voice="anna", cache=tmp_path / "c")
+    v.narrate(long, tmp_path / "x.wav")
+    assert len(calls) == 2

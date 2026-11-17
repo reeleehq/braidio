@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../_static/documentation_options.js?v=a23b8d2c"></script>
+    <script src="../_static/documentation_options.js?v=4a212eee"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.127" />
+  <meta name="docsearch:version" content="0.0.128" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -459,28 +459,31 @@ what the renderers call.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#braidio.tts.register_tts" title="braidio.tts.register_tts"><code class="xref py py-obj docutils literal notranslate"><span class="pre">register_tts</span></code></a>(name[, speak, voice, ...])</p></td>
 <td><p>Register <code class="docutils literal notranslate"><span class="pre">speak</span></code> as the voice backend <code class="docutils literal notranslate"><span class="pre">name</span></code> (replacing any before).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.tts.resolve_voice_id" title="braidio.tts.resolve_voice_id"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_voice_id</span></code></a>([voice_id])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.tts.register_voxy_voice" title="braidio.tts.register_voxy_voice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">register_voxy_voice</span></code></a>(name, *[, usd_per_1k_chars])</p></td>
+<td><p>Register a <a class="reference internal" href="#braidio.tts.VoxyVoice" title="braidio.tts.VoxyVoice"><code class="xref py py-class docutils literal notranslate"><span class="pre">VoxyVoice</span></code></a> as the voice backend <code class="docutils literal notranslate"><span class="pre">name</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.tts.resolve_voice_id" title="braidio.tts.resolve_voice_id"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_voice_id</span></code></a>([voice_id])</p></td>
 <td><p>Voice id from arg → <code class="xref py py-data docutils literal notranslate"><span class="pre">VOICE_ENV_VAR</span></code> env → default.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.tts.text_to_dialogue" title="braidio.tts.text_to_dialogue"><code class="xref py py-obj docutils literal notranslate"><span class="pre">text_to_dialogue</span></code></a>(turns, *[, model_id, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.tts.text_to_dialogue" title="braidio.tts.text_to_dialogue"><code class="xref py py-obj docutils literal notranslate"><span class="pre">text_to_dialogue</span></code></a>(turns, *[, model_id, ...])</p></td>
 <td><p>Synthesize a multi-speaker exchange in ONE pass (ElevenLabs Text-to-Dialogue).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.tts.text_to_dialogue_with_timestamps" title="braidio.tts.text_to_dialogue_with_timestamps"><code class="xref py py-obj docutils literal notranslate"><span class="pre">text_to_dialogue_with_timestamps</span></code></a>(turns, *[, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.tts.text_to_dialogue_with_timestamps" title="braidio.tts.text_to_dialogue_with_timestamps"><code class="xref py py-obj docutils literal notranslate"><span class="pre">text_to_dialogue_with_timestamps</span></code></a>(turns, *[, ...])</p></td>
 <td><p><a class="reference internal" href="#braidio.tts.text_to_dialogue" title="braidio.tts.text_to_dialogue"><code class="xref py py-func docutils literal notranslate"><span class="pre">text_to_dialogue()</span></code></a>, plus <em>when</em> each input is spoken in the take.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.tts.tts_backend" title="braidio.tts.tts_backend"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tts_backend</span></code></a>(name)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.tts.tts_backend" title="braidio.tts.tts_backend"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tts_backend</span></code></a>(name)</p></td>
 <td><p>The backend registered as <code class="docutils literal notranslate"><span class="pre">name</span></code>; <code class="docutils literal notranslate"><span class="pre">KeyError</span></code> naming the registered ones.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.tts.tts_name" title="braidio.tts.tts_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tts_name</span></code></a>(speak)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.tts.tts_name" title="braidio.tts.tts_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tts_name</span></code></a>(speak)</p></td>
 <td><p>The voice backend a render used, as its settings record names it.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.tts.unregister_tts" title="braidio.tts.unregister_tts"><code class="xref py py-obj docutils literal notranslate"><span class="pre">unregister_tts</span></code></a>(name)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.tts.unregister_tts" title="braidio.tts.unregister_tts"><code class="xref py py-obj docutils literal notranslate"><span class="pre">unregister_tts</span></code></a>(name)</p></td>
 <td><p>Remove the backend registered as <code class="docutils literal notranslate"><span class="pre">name</span></code>; returns it, or <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#braidio.tts.voice_for" title="braidio.tts.voice_for"><code class="xref py py-obj docutils literal notranslate"><span class="pre">voice_for</span></code></a>([tts, speak, voice])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.tts.voice_for" title="braidio.tts.voice_for"><code class="xref py py-obj docutils literal notranslate"><span class="pre">voice_for</span></code></a>([tts, speak, voice])</p></td>
 <td><p>The voice a render speaks with: a ready <code class="docutils literal notranslate"><span class="pre">voice</span></code> wins, then an explicit <code class="docutils literal notranslate"><span class="pre">speak</span></code>, then the registered backend <code class="docutils literal notranslate"><span class="pre">tts</span></code> names, then ElevenLabs.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.tts.voice_native_break_s" title="braidio.tts.voice_native_break_s"><code class="xref py py-obj docutils literal notranslate"><span class="pre">voice_native_break_s</span></code></a>(voice, model_id)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.tts.voice_native_break_s" title="braidio.tts.voice_native_break_s"><code class="xref py py-obj docutils literal notranslate"><span class="pre">voice_native_break_s</span></code></a>(voice, model_id)</p></td>
 <td><p>The longest SSML <code class="docutils literal notranslate"><span class="pre">&lt;break&gt;</span></code> <code class="docutils literal notranslate"><span class="pre">voice</span></code> renders itself on <code class="docutils literal notranslate"><span class="pre">model_id</span></code>.</p></td>
 </tr>
 </tbody>
@@ -503,6 +506,9 @@ what the renderers call.</p>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#braidio.tts.VoiceBackend" title="braidio.tts.VoiceBackend"><code class="xref py py-obj docutils literal notranslate"><span class="pre">VoiceBackend</span></code></a>(*args, **kwargs)</p></td>
 <td><p>What a render speaks through (braidio#137, #199): a <code class="docutils literal notranslate"><span class="pre">name</span></code> for the render record and cache keys, and the two calls, both with <a class="reference internal" href="#braidio.tts.narrate" title="braidio.tts.narrate"><code class="xref py py-func docutils literal notranslate"><span class="pre">narrate()</span></code></a>'s <code class="docutils literal notranslate"><span class="pre">return_cache_status</span></code> convention.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.tts.VoxyVoice" title="braidio.tts.VoxyVoice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">VoxyVoice</span></code></a>(name, backend[, voice, model_id, ...])</p></td>
+<td><p>Any voxy backend as a render's voice: Seed Speech or OpenAI through fal/aix, a local model, ElevenLabs on another account.</p></td>
 </tr>
 </tbody>
 </table>
@@ -627,6 +633,37 @@ one-pass dialogue renders it turn by turn through its own <code class="docutils 
 voice of a narration pool, an ElevenLabs id and name.)</p>
 </dd></dl>
 
+<dl class="py class">
+<dt class="sig sig-object py" id="braidio.tts.VoxyVoice">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">braidio.tts.</span></span><span class="sig-name descname"><span class="pre">VoxyVoice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backend</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">instruction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_map</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">dict()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">dict()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/tts.html#VoxyVoice"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.tts.VoxyVoice" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Any voxy backend as a render’s voice: Seed Speech or OpenAI through fal/aix,
+a local model, ElevenLabs on another account.</p>
+<p>Inline <code class="docutils literal notranslate"><span class="pre">[audio</span> <span class="pre">tags]</span></code> are not stripped here: voxy renders them in the
+engine’s dialect (performed by eleven_v3/v4, turned into a natural-language
+instruction per part on Seed Speech or gpt-4o-mini-tts, removed elsewhere,
+pause tags becoming silence; <code class="docutils literal notranslate"><span class="pre">voxy.direction</span></code>). <code class="docutils literal notranslate"><span class="pre">instruction</span></code> is a
+standing delivery note for instruction engines. Synthesis is cached in
+voxy’s speech cache (<code class="docutils literal notranslate"><span class="pre">cache</span></code>; <code class="docutils literal notranslate"><span class="pre">True</span></code> = the default folder), so an
+unchanged line re-renders free and reports <code class="docutils literal notranslate"><span class="pre">was_cached</span></code>.</p>
+<p>Which voice speaks a line: <code class="docutils literal notranslate"><span class="pre">voice_map[line</span> <span class="pre">voice]</span></code> when the line’s voice
+(a beat’s <code class="docutils literal notranslate"><span class="pre">voice=</span></code>, a cast role’s id) is mapped, else <code class="docutils literal notranslate"><span class="pre">voice</span></code>. The
+shipped formats resolve lines to ElevenLabs ids, which mean nothing to
+another engine, so an unmapped line voice is never sent. ElevenLabs-only
+arguments (<code class="docutils literal notranslate"><span class="pre">model_id</span></code> of the delivery, <code class="docutils literal notranslate"><span class="pre">voice_settings</span></code>, <code class="docutils literal notranslate"><span class="pre">api_key</span></code>,
+<code class="docutils literal notranslate"><span class="pre">output_format</span></code>) are accepted and ignored; <code class="docutils literal notranslate"><span class="pre">options</span></code> are this
+engine’s own (<code class="docutils literal notranslate"><span class="pre">{&quot;language&quot;:</span> <span class="pre">&quot;en&quot;}</span></code>, <code class="docutils literal notranslate"><span class="pre">{&quot;speed&quot;:</span> <span class="pre">1.05}</span></code>).</p>
+<p>Register it under its own name and select it by that name:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">register_voxy_voice</span><span class="p">(</span><span class="s2">"seed-tim"</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"fal"</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="s2">"tim_en"</span><span class="p">,</span>
+                    <span class="n">model_id</span><span class="o">=</span><span class="s2">"fal-ai/bytedance/seed-speech/tts/v2"</span><span class="p">,</span>
+                    <span class="n">usd_per_1k_chars</span><span class="o">=</span><span class="mf">0.03</span><span class="p">)</span>
+<span class="n">render_format</span><span class="p">(</span><span class="n">fmt</span><span class="p">,</span> <span class="n">script</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">fmt</span><span class="o">.</span><span class="n">weave</span><span class="o">.</span><span class="n">with_</span><span class="p">(</span><span class="n">tts</span><span class="o">=</span><span class="s2">"seed-tim"</span><span class="p">))</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="braidio.tts.narrate">
 <span class="sig-prename descclassname"><span class="pre">braidio.tts.</span></span><span class="sig-name descname"><span class="pre">narrate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_path</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">api_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'eleven_v3'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_settings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mp3_44100_128'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">refresh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_cache_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">language_code</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/tts.html#narrate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.tts.narrate" title="Link to this definition">#</a></dt>
@@ -697,6 +734,19 @@ under its own <code class="docutils literal notranslate"><span class="pre">name<
 <span class="go">True</span>
 </pre></div>
 </div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#braidio.tts.TTSBackend" title="braidio.tts.TTSBackend"><code class="xref py py-class docutils literal notranslate"><span class="pre">TTSBackend</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="braidio.tts.register_voxy_voice">
+<span class="sig-prename descclassname"><span class="pre">braidio.tts.</span></span><span class="sig-name descname"><span class="pre">register_voxy_voice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">usd_per_1k_chars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">voice_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/tts.html#register_voxy_voice"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.tts.register_voxy_voice" title="Link to this definition">#</a></dt>
+<dd><p>Register a <a class="reference internal" href="#braidio.tts.VoxyVoice" title="braidio.tts.VoxyVoice"><code class="xref py py-class docutils literal notranslate"><span class="pre">VoxyVoice</span></code></a> as the voice backend <code class="docutils literal notranslate"><span class="pre">name</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">usd_per_1k_chars</span></code> is the engine’s rate (<code class="docutils literal notranslate"><span class="pre">None</span></code>: unpriced, which cost
+reports show as such, never as free). The rest goes to <a class="reference internal" href="#braidio.tts.VoxyVoice" title="braidio.tts.VoxyVoice"><code class="xref py py-class docutils literal notranslate"><span class="pre">VoxyVoice</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#braidio.tts.TTSBackend" title="braidio.tts.TTSBackend"><code class="xref py py-class docutils literal notranslate"><span class="pre">TTSBackend</span></code></a></span></p>
@@ -914,9 +964,11 @@ Any other voice: none, so every break becomes real silence between turns.</p>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.TTS_BACKENDS"><code class="docutils literal notranslate"><span class="pre">TTS_BACKENDS</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.VoiceBackend"><code class="docutils literal notranslate"><span class="pre">VoiceBackend</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.VoxyVoice"><code class="docutils literal notranslate"><span class="pre">VoxyVoice</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.narrate"><code class="docutils literal notranslate"><span class="pre">narrate()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.narrator_from_speak"><code class="docutils literal notranslate"><span class="pre">narrator_from_speak()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.register_tts"><code class="docutils literal notranslate"><span class="pre">register_tts()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.register_voxy_voice"><code class="docutils literal notranslate"><span class="pre">register_voxy_voice()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.resolve_voice_id"><code class="docutils literal notranslate"><span class="pre">resolve_voice_id()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.text_to_dialogue"><code class="docutils literal notranslate"><span class="pre">text_to_dialogue()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.text_to_dialogue_with_timestamps"><code class="docutils literal notranslate"><span class="pre">text_to_dialogue_with_timestamps()</span></code></a></li>

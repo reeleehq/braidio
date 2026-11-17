@@ -20,6 +20,7 @@ braidio.tts
       narrate
       narrator_from_speak
       register_tts
+      register_voxy_voice
       resolve_voice_id
       text_to_dialogue
       text_to_dialogue_with_timestamps
@@ -38,4 +39,5 @@ braidio.tts
       SpeakVoice
       TTSBackend
       VoiceBackend
+      VoxyVoice
    

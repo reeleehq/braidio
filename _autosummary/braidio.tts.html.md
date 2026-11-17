@@ -30,6 +30,7 @@ what the renderers call.
 |-----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
 | [`narrator_from_speak`](#braidio.tts.narrator_from_speak)(speak, \*[, strip_tags])       | A [`narrate()`](#braidio.tts.narrate)-shaped synthesizer that speaks through `speak`.                              |
 | [`register_tts`](#braidio.tts.register_tts)(name[, speak, voice, ...])            | Register `speak` as the voice backend `name` (replacing any before).                                                                      |
+| [`register_voxy_voice`](#braidio.tts.register_voxy_voice)(name, \*[, usd_per_1k_chars])  | Register a [`VoxyVoice`](#braidio.tts.VoxyVoice) as the voice backend `name`.                                        |
 | [`resolve_voice_id`](#braidio.tts.resolve_voice_id)([voice_id])                       | Voice id from arg → `VOICE_ENV_VAR` env → default.                                                                                        |
 | [`text_to_dialogue`](#braidio.tts.text_to_dialogue)(turns, \*[, model_id, ...])       | Synthesize a multi-speaker exchange in ONE pass (ElevenLabs Text-to-Dialogue).                                                            |
 | [`text_to_dialogue_with_timestamps`](#braidio.tts.text_to_dialogue_with_timestamps)(turns, \*[, ...]) | [`text_to_dialogue()`](#braidio.tts.text_to_dialogue), plus *when* each input is spoken in the take.                        |
@@ -41,12 +42,13 @@ what the renderers call.
 
 ### Classes
 
-| [`DialogueSegment`](#braidio.tts.DialogueSegment)(input_index, voice_id, ...)   | One span of a timed dialogue take: who spoke which input, and when.                                                                                                                                                          |
-|------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`ElevenLabsVoice`](#braidio.tts.ElevenLabsVoice)()                             | The default voice: ElevenLabs, with its on-disk cache and its one-pass Text-to-Dialogue (braidio#137).                                                                                                                       |
-| [`SpeakVoice`](#braidio.tts.SpeakVoice)(speak, name)                       | Any other voice: a [`Speak`](#braidio.tts.Speak) callable (a registered backend, a local model, a test).                                                                                            |
-| [`TTSBackend`](#braidio.tts.TTSBackend)([speak, usd_per_1k_chars, voice])  | A named voice backend: its `speak` (or a whole `voice`) and what it costs.                                                                                                                                                   |
-| [`VoiceBackend`](#braidio.tts.VoiceBackend)(\*args, \*\*kwargs)              | What a render speaks through (braidio#137, #199): a `name` for the render record and cache keys, and the two calls, both with [`narrate()`](#braidio.tts.narrate)'s `return_cache_status` convention. |
+| [`DialogueSegment`](#braidio.tts.DialogueSegment)(input_index, voice_id, ...)      | One span of a timed dialogue take: who spoke which input, and when.                                                                                                                                                          |
+|---------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`ElevenLabsVoice`](#braidio.tts.ElevenLabsVoice)()                                | The default voice: ElevenLabs, with its on-disk cache and its one-pass Text-to-Dialogue (braidio#137).                                                                                                                       |
+| [`SpeakVoice`](#braidio.tts.SpeakVoice)(speak, name)                          | Any other voice: a [`Speak`](#braidio.tts.Speak) callable (a registered backend, a local model, a test).                                                                                            |
+| [`TTSBackend`](#braidio.tts.TTSBackend)([speak, usd_per_1k_chars, voice])     | A named voice backend: its `speak` (or a whole `voice`) and what it costs.                                                                                                                                                   |
+| [`VoiceBackend`](#braidio.tts.VoiceBackend)(\*args, \*\*kwargs)                 | What a render speaks through (braidio#137, #199): a `name` for the render record and cache keys, and the two calls, both with [`narrate()`](#braidio.tts.narrate)'s `return_cache_status` convention. |
+| [`VoxyVoice`](#braidio.tts.VoxyVoice)(name, backend[, voice, model_id, ...]) | Any voxy backend as a render's voice: Seed Speech or OpenAI through fal/aix, a local model, ElevenLabs on another account.                                                                                                   |
 
 ### braidio.tts.DEFAULT_MODEL_ID *= 'eleven_v3'*
 
@@ -145,6 +147,38 @@ one-pass dialogue renders it turn by turn through its own `narrate`
 (Not [`braidio.multivoice.Voice`](braidio.multivoice.html.md#braidio.multivoice.Voice), `braidio.Voice`: that is one
 voice of a narration pool, an ElevenLabs id and name.)
 
+### *class* braidio.tts.VoxyVoice(name, backend, voice=None, model_id=None, instruction=None, voice_map=dict(), options=dict(), cache=True)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+Any voxy backend as a render’s voice: Seed Speech or OpenAI through fal/aix,
+a local model, ElevenLabs on another account.
+
+Inline `[audio tags]` are not stripped here: voxy renders them in the
+engine’s dialect (performed by eleven_v3/v4, turned into a natural-language
+instruction per part on Seed Speech or gpt-4o-mini-tts, removed elsewhere,
+pause tags becoming silence; `voxy.direction`). `instruction` is a
+standing delivery note for instruction engines. Synthesis is cached in
+voxy’s speech cache (`cache`; `True` = the default folder), so an
+unchanged line re-renders free and reports `was_cached`.
+
+Which voice speaks a line: `voice_map[line voice]` when the line’s voice
+(a beat’s `voice=`, a cast role’s id) is mapped, else `voice`. The
+shipped formats resolve lines to ElevenLabs ids, which mean nothing to
+another engine, so an unmapped line voice is never sent. ElevenLabs-only
+arguments (`model_id` of the delivery, `voice_settings`, `api_key`,
+`output_format`) are accepted and ignored; `options` are this
+engine’s own (`{"language": "en"}`, `{"speed": 1.05}`).
+
+Register it under its own name and select it by that name:
+
+```default
+register_voxy_voice("seed-tim", backend="fal", voice="tim_en",
+                    model_id="fal-ai/bytedance/seed-speech/tts/v2",
+                    usd_per_1k_chars=0.03)
+render_format(fmt, script, source=None, config=fmt.weave.with_(tts="seed-tim"))
+```
+
 ### braidio.tts.narrate(text, out_path, , api_key=None, voice_id=None, model_id='eleven_v3', voice_settings=None, output_format='mp3_44100_128', refresh=False, return_cache_status=False, language_code=None)
 
 Synthesize `text` to `out_path` (mp3). Returns the path.
@@ -214,6 +248,16 @@ under its own `name`, so a render’s record and its config agree.
 >>> unregister_tts("doc-tone") is b
 True
 ```
+
+* **Return type:**
+  [`TTSBackend`](#braidio.tts.TTSBackend)
+
+### braidio.tts.register_voxy_voice(name, , usd_per_1k_chars=None, \*\*voice_kwargs)
+
+Register a [`VoxyVoice`](#braidio.tts.VoxyVoice) as the voice backend `name`.
+
+`usd_per_1k_chars` is the engine’s rate (`None`: unpriced, which cost
+reports show as such, never as free). The rest goes to [`VoxyVoice`](#braidio.tts.VoxyVoice).
 
 * **Return type:**
   [`TTSBackend`](#braidio.tts.TTSBackend)

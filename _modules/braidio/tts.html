@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../../_static/documentation_options.js?v=a23b8d2c"></script>
+    <script src="../../_static/documentation_options.js?v=4a212eee"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.127" />
+  <meta name="docsearch:version" content="0.0.128" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -739,8 +739,8 @@ window.runMermaid = runMermaid;</script>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Mapping</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClassVar</span><span class="p">,</span> <span class="n">Protocol</span><span class="p">,</span> <span class="n">runtime_checkable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span><span class="p">,</span> <span class="n">Protocol</span><span class="p">,</span> <span class="n">runtime_checkable</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">types</span><span class="w"> </span><span class="kn">import</span> <span class="n">MappingProxyType</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
@@ -1052,6 +1052,103 @@ window.runMermaid = runMermaid;</script>
         <span class="k">finally</span><span class="p">:</span>
             <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">work</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="k">if</span> <span class="n">return_cache_status</span> <span class="k">else</span> <span class="n">path</span></div>
+
+
+
+<div class="viewcode-block" id="VoxyVoice">
+<a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.VoxyVoice">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">VoxyVoice</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Any voxy backend as a render's voice: Seed Speech or OpenAI through fal/aix,</span>
+<span class="sd">    a local model, ElevenLabs on another account.</span>
+
+<span class="sd">    Inline ``[audio tags]`` are not stripped here: voxy renders them in the</span>
+<span class="sd">    engine's dialect (performed by eleven_v3/v4, turned into a natural-language</span>
+<span class="sd">    instruction per part on Seed Speech or gpt-4o-mini-tts, removed elsewhere,</span>
+<span class="sd">    pause tags becoming silence; ``voxy.direction``). ``instruction`` is a</span>
+<span class="sd">    standing delivery note for instruction engines. Synthesis is cached in</span>
+<span class="sd">    voxy's speech cache (``cache``; ``True`` = the default folder), so an</span>
+<span class="sd">    unchanged line re-renders free and reports ``was_cached``.</span>
+
+<span class="sd">    Which voice speaks a line: ``voice_map[line voice]`` when the line's voice</span>
+<span class="sd">    (a beat's ``voice=``, a cast role's id) is mapped, else ``voice``. The</span>
+<span class="sd">    shipped formats resolve lines to ElevenLabs ids, which mean nothing to</span>
+<span class="sd">    another engine, so an unmapped line voice is never sent. ElevenLabs-only</span>
+<span class="sd">    arguments (``model_id`` of the delivery, ``voice_settings``, ``api_key``,</span>
+<span class="sd">    ``output_format``) are accepted and ignored; ``options`` are this</span>
+<span class="sd">    engine's own (``{"language": "en"}``, ``{"speed": 1.05}``).</span>
+
+<span class="sd">    Register it under its own name and select it by that name::</span>
+
+<span class="sd">        register_voxy_voice("seed-tim", backend="fal", voice="tim_en",</span>
+<span class="sd">                            model_id="fal-ai/bytedance/seed-speech/tts/v2",</span>
+<span class="sd">                            usd_per_1k_chars=0.03)</span>
+<span class="sd">        render_format(fmt, script, source=None, config=fmt.weave.with_(tts="seed-tim"))</span>
+<span class="sd">    """</span>
+
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">voice</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">model_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">instruction</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">voice_map</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="n">options</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="n">cache</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_voice</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">voice_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">voice_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">voice_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">voice</span><span class="p">)</span> <span class="k">if</span> <span class="n">voice_id</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">voice</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">narrate</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">voice_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">return_cache_status</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">_</span>
+    <span class="p">):</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">voxy</span>
+
+        <span class="n">options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_id</span><span class="p">:</span>
+            <span class="n">options</span><span class="p">[</span><span class="s2">"model_id"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_id</span>
+        <span class="n">speech</span> <span class="o">=</span> <span class="n">voxy</span><span class="o">.</span><span class="n">text_to_speech</span><span class="p">(</span>
+            <span class="n">text</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_voice</span><span class="p">(</span><span class="n">voice_id</span><span class="p">),</span>
+            <span class="n">backend</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="p">,</span>
+            <span class="n">instruction</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">instruction</span><span class="p">,</span>
+            <span class="n">cache</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">options</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">out_path</span><span class="p">)</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">"."</span> <span class="o">+</span> <span class="n">speech</span><span class="o">.</span><span class="n">format</span><span class="p">)</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">speech</span><span class="o">.</span><span class="n">audio</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">speech</span><span class="o">.</span><span class="n">cached</span><span class="p">)</span> <span class="k">if</span> <span class="n">return_cache_status</span> <span class="k">else</span> <span class="n">out</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">render_dialogue</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">turns</span><span class="p">,</span> <span class="n">cast</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="n">return_cache_status</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span>
+    <span class="p">):</span>
+        <span class="c1"># no one-pass dialogue: turn by turn, exactly as SpeakVoice does</span>
+        <span class="k">return</span> <span class="n">SpeakVoice</span><span class="o">.</span><span class="n">render_dialogue</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">turns</span><span class="p">,</span>
+            <span class="n">cast</span><span class="p">,</span>
+            <span class="n">out_path</span><span class="o">=</span><span class="n">out_path</span><span class="p">,</span>
+            <span class="n">return_cache_status</span><span class="o">=</span><span class="n">return_cache_status</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kw</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="register_voxy_voice">
+<a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.register_voxy_voice">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">register_voxy_voice</span><span class="p">(</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">usd_per_1k_chars</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">voice_kwargs</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"TTSBackend"</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Register a :class:`VoxyVoice` as the voice backend ``name``.</span>
+
+<span class="sd">    ``usd_per_1k_chars`` is the engine's rate (``None``: unpriced, which cost</span>
+<span class="sd">    reports show as such, never as free). The rest goes to :class:`VoxyVoice`.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">register_tts</span><span class="p">(</span>
+        <span class="n">name</span><span class="p">,</span>
+        <span class="n">voice</span><span class="o">=</span><span class="n">VoxyVoice</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">voice_kwargs</span><span class="p">),</span>
+        <span class="n">usd_per_1k_chars</span><span class="o">=</span><span class="n">usd_per_1k_chars</span><span class="p">,</span>
+    <span class="p">)</span></div>
 
 
 

@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../../_static/documentation_options.js?v=4a212eee"></script>
+    <script src="../../_static/documentation_options.js?v=ee59aaf7"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.128" />
+  <meta name="docsearch:version" content="0.0.129" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -1076,7 +1076,10 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">    another engine, so an unmapped line voice is never sent. ElevenLabs-only</span>
 <span class="sd">    arguments (``model_id`` of the delivery, ``voice_settings``, ``api_key``,</span>
 <span class="sd">    ``output_format``) are accepted and ignored; ``options`` are this</span>
-<span class="sd">    engine's own (``{"language": "en"}``, ``{"speed": 1.05}``).</span>
+<span class="sd">    engine's own (``{"language": "en"}``, ``{"speed": 1.05}``). Set the</span>
+<span class="sd">    engine's language there: Seed Speech detects it per request and once read</span>
+<span class="sd">    an English sentence full of numbers in Tagalog. New takes are validated</span>
+<span class="sd">    before caching (``validate``).</span>
 
 <span class="sd">    Register it under its own name and select it by that name::</span>
 
@@ -1094,6 +1097,10 @@ window.runMermaid = runMermaid;</script>
     <span class="n">voice_map</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
     <span class="n">options</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
     <span class="n">cache</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="c1">#: run on every new take before it is cached; ``"rate"`` (default) is</span>
+    <span class="c1">#: ``voxy.speaking_rate_check`` (a hosted engine once returned 29 s of breath</span>
+    <span class="c1">#: for a sentence), ``None`` disables, a callable ``(speech, text) -&gt; problem | None``</span>
+    <span class="n">validate</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="s2">"rate"</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_voice</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">voice_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">voice_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">voice_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">voice</span><span class="p">)</span> <span class="k">if</span> <span class="n">voice_id</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">voice</span>
@@ -1106,12 +1113,16 @@ window.runMermaid = runMermaid;</script>
         <span class="n">options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_id</span><span class="p">:</span>
             <span class="n">options</span><span class="p">[</span><span class="s2">"model_id"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_id</span>
+        <span class="n">validate</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">voxy</span><span class="o">.</span><span class="n">speaking_rate_check</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">validate</span> <span class="o">==</span> <span class="s2">"rate"</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">validate</span>
+        <span class="p">)</span>
         <span class="n">speech</span> <span class="o">=</span> <span class="n">voxy</span><span class="o">.</span><span class="n">text_to_speech</span><span class="p">(</span>
             <span class="n">text</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_voice</span><span class="p">(</span><span class="n">voice_id</span><span class="p">),</span>
             <span class="n">backend</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="p">,</span>
             <span class="n">instruction</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">instruction</span><span class="p">,</span>
             <span class="n">cache</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">,</span>
+            <span class="n">validate</span><span class="o">=</span><span class="n">validate</span><span class="p">,</span>
             <span class="o">**</span><span class="n">options</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">out</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">out_path</span><span class="p">)</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">"."</span> <span class="o">+</span> <span class="n">speech</span><span class="o">.</span><span class="n">format</span><span class="p">)</span>

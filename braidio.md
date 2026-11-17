@@ -1,4 +1,4 @@
-> built 2026-11-17 13:23 UTC from 5ac5782 (main) · braidio 0.0.128. Details: build_info.json
+> built 2026-11-17 14:18 UTC from ad01444 (main) · braidio 0.0.129. Details: build_info.json
 
 # index.html.md
 
@@ -5332,7 +5332,7 @@ one-pass dialogue renders it turn by turn through its own `narrate`
 (Not [`braidio.multivoice.Voice`](_autosummary/braidio.multivoice.html.md#braidio.multivoice.Voice), `braidio.Voice`: that is one
 voice of a narration pool, an ElevenLabs id and name.)
 
-### *class* braidio.tts.VoxyVoice(name, backend, voice=None, model_id=None, instruction=None, voice_map=dict(), options=dict(), cache=True)
+### *class* braidio.tts.VoxyVoice(name, backend, voice=None, model_id=None, instruction=None, voice_map=dict(), options=dict(), cache=True, validate='rate')
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -5353,7 +5353,10 @@ shipped formats resolve lines to ElevenLabs ids, which mean nothing to
 another engine, so an unmapped line voice is never sent. ElevenLabs-only
 arguments (`model_id` of the delivery, `voice_settings`, `api_key`,
 `output_format`) are accepted and ignored; `options` are this
-engine’s own (`{"language": "en"}`, `{"speed": 1.05}`).
+engine’s own (`{"language": "en"}`, `{"speed": 1.05}`). Set the
+engine’s language there: Seed Speech detects it per request and once read
+an English sentence full of numbers in Tagalog. New takes are validated
+before caching (`validate`).
 
 Register it under its own name and select it by that name:
 
@@ -5363,6 +5366,12 @@ register_voxy_voice("seed-tim", backend="fal", voice="tim_en",
                     usd_per_1k_chars=0.03)
 render_format(fmt, script, source=None, config=fmt.weave.with_(tts="seed-tim"))
 ```
+
+#### validate *: [Any](https://docs.python.org/3/library/typing.html#typing.Any)* *= 'rate'*
+
+run on every new take before it is cached; `"rate"` (default) is
+`voxy.speaking_rate_check` (a hosted engine once returned 29 s of breath
+for a sentence), `None` disables, a callable `(speech, text) -> problem | None`
 
 ### braidio.tts.narrate(text, out_path, , api_key=None, voice_id=None, model_id='eleven_v3', voice_settings=None, output_format='mp3_44100_128', refresh=False, return_cache_status=False, language_code=None)
 
@@ -6376,7 +6385,7 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-17 13:23 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/5ac57829c7dff20a2347230ff37ad58208a5d499"><code>5ac5782</code></a> on branch <code>main</code>, for **braidio 0.0.128** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-17 14:18 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/ad01444e72e457e4c672e7f240923396d0a6e249"><code>ad01444</code></a> on branch <code>main</code>, for **braidio 0.0.129** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -6385,9 +6394,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/5ac57829c7dff20a2347230ff37ad58208a5d499"><code>5ac57829c7dff20a2347230ff37ad58208a5d499</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/ad01444e72e457e4c672e7f240923396d0a6e249"><code>ad01444e72e457e4c672e7f240923396d0a6e249</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | <code>0.0.128</code>                                                                                                                                    |
+| Tags at this commit | <code>0.0.129</code>                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -6396,9 +6405,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/44091144114">44091144114</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/44100666324">44100666324</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>cf497c0c03be0d35de473719e4b2cbc217625aa7</code> (in the history of the built commit) |
+| Event commit | <code>fe4d157396924983716f299a7b809249e6021786</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6423,13 +6432,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.128/">0.0.128</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/braidio/0.0.129/">0.0.129</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 5ac57829c7dff20a2347230ff37ad58208a5d499
+git checkout ad01444e72e457e4c672e7f240923396d0a6e249
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
@@ -6479,7 +6488,7 @@ Subagents are Markdown files with a frontmatter (`name`, `description`, `tools`)
 
 ### `commentary-video`
 
-Build a commentary video end to end from a subject — research it, author the script, render the audio with braidio, source freely-licensed stills, cut them into a Ken Burns film, caption it, and hand back a file (publishing only if asked). Use when someone names a target and wants the finished thing: “make a video essay about <song/book/film/paper>”, “do the Actually Romantic treatment for <X>”, “commentary video on <topic>”. Returns the artifact paths, the sources it used, and anything it could not source. Does not publish without an explicit instruction to.
+Build a commentary video end to end from a subject — research it, author the script, render the audio with braidio, source freely-licensed stills, cut them into a Ken Burns film, caption it, and hand back a file (publishing only if asked). Use when someone names a target and wants the finished thing: “make a video essay about <song/book/film/paper>”, “do the Actually Romantic treatment for <X>”, “commentary video on <topic>”, “video readout of my article”, an explainer resting on sources (historical, technical, educational) where the cited pages and papers should appear on screen with the quoted passage highlighted as it is read. Returns the artifact paths, the sources it used, and anything it could not source. Does not publish without an explicit instruction to.
 
 Source: [`.claude/agents/commentary-video.md`](https://github.com/thorwhalen/braidio/tree/HEAD/.claude/agents/commentary-video.md); tools: `Bash, Read, Write, Edit, Glob, Grep, WebSearch, WebFetch, Skill`.
 

@@ -147,7 +147,7 @@ one-pass dialogue renders it turn by turn through its own `narrate`
 (Not [`braidio.multivoice.Voice`](braidio.multivoice.html.md#braidio.multivoice.Voice), `braidio.Voice`: that is one
 voice of a narration pool, an ElevenLabs id and name.)
 
-### *class* braidio.tts.VoxyVoice(name, backend, voice=None, model_id=None, instruction=None, voice_map=dict(), options=dict(), cache=True)
+### *class* braidio.tts.VoxyVoice(name, backend, voice=None, model_id=None, instruction=None, voice_map=dict(), options=dict(), cache=True, validate='rate')
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -168,7 +168,10 @@ shipped formats resolve lines to ElevenLabs ids, which mean nothing to
 another engine, so an unmapped line voice is never sent. ElevenLabs-only
 arguments (`model_id` of the delivery, `voice_settings`, `api_key`,
 `output_format`) are accepted and ignored; `options` are this
-engine’s own (`{"language": "en"}`, `{"speed": 1.05}`).
+engine’s own (`{"language": "en"}`, `{"speed": 1.05}`). Set the
+engine’s language there: Seed Speech detects it per request and once read
+an English sentence full of numbers in Tagalog. New takes are validated
+before caching (`validate`).
 
 Register it under its own name and select it by that name:
 
@@ -178,6 +181,12 @@ register_voxy_voice("seed-tim", backend="fal", voice="tim_en",
                     usd_per_1k_chars=0.03)
 render_format(fmt, script, source=None, config=fmt.weave.with_(tts="seed-tim"))
 ```
+
+#### validate *: [Any](https://docs.python.org/3/library/typing.html#typing.Any)* *= 'rate'*
+
+run on every new take before it is cached; `"rate"` (default) is
+`voxy.speaking_rate_check` (a hosted engine once returned 29 s of breath
+for a sentence), `None` disables, a callable `(speech, text) -> problem | None`
 
 ### braidio.tts.narrate(text, out_path, , api_key=None, voice_id=None, model_id='eleven_v3', voice_settings=None, output_format='mp3_44100_128', refresh=False, return_cache_status=False, language_code=None)
 

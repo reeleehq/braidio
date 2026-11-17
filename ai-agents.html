@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="_static/documentation_options.js?v=4a212eee"></script>
+    <script src="_static/documentation_options.js?v=ee59aaf7"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -57,7 +57,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.128" />
+  <meta name="docsearch:version" content="0.0.129" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -405,7 +405,7 @@ machine-readable copies of this documentation.</p>
 <p>Subagents are Markdown files with a frontmatter (<code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">description</span></code>, <code class="docutils literal notranslate"><span class="pre">tools</span></code>) and a system prompt as the body. Copy one into your project’s <code class="docutils literal notranslate"><span class="pre">.claude/agents/</span></code> (or your agent host’s equivalent) to delegate the task it describes.</p>
 <section id="commentary-video">
 <h3><code class="docutils literal notranslate"><span class="pre">commentary-video</span></code><a class="headerlink" href="#commentary-video" title="Link to this heading">#</a></h3>
-<p>Build a commentary video end to end from a subject — research it, author the script, render the audio with braidio, source freely-licensed stills, cut them into a Ken Burns film, caption it, and hand back a file (publishing only if asked). Use when someone names a target and wants the finished thing: “make a video essay about &lt;song/book/film/paper&gt;”, “do the Actually Romantic treatment for <X>”, “commentary video on <topic>”. Returns the artifact paths, the sources it used, and anything it could not source. Does not publish without an explicit instruction to.</p>
+<p>Build a commentary video end to end from a subject — research it, author the script, render the audio with braidio, source freely-licensed stills, cut them into a Ken Burns film, caption it, and hand back a file (publishing only if asked). Use when someone names a target and wants the finished thing: “make a video essay about &lt;song/book/film/paper&gt;”, “do the Actually Romantic treatment for <X>”, “commentary video on <topic>”, “video readout of my article”, an explainer resting on sources (historical, technical, educational) where the cited pages and papers should appear on screen with the quoted passage highlighted as it is read. Returns the artifact paths, the sources it used, and anything it could not source. Does not publish without an explicit instruction to.</p>
 <p>Source: <a class="reference external" href="https://github.com/thorwhalen/braidio/tree/HEAD/.claude/agents/commentary-video.md"><code class="docutils literal notranslate"><span class="pre">.claude/agents/commentary-video.md</span></code></a>; tools: <code class="docutils literal notranslate"><span class="pre">Bash,</span> <span class="pre">Read,</span> <span class="pre">Write,</span> <span class="pre">Edit,</span> <span class="pre">Glob,</span> <span class="pre">Grep,</span> <span class="pre">WebSearch,</span> <span class="pre">WebFetch,</span> <span class="pre">Skill</span></code>.</p>
 </section>
 </section>

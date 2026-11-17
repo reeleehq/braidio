@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../_static/documentation_options.js?v=4a212eee"></script>
+    <script src="../_static/documentation_options.js?v=ee59aaf7"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.128" />
+  <meta name="docsearch:version" content="0.0.129" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -635,7 +635,7 @@ voice of a narration pool, an ElevenLabs id and name.)</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="braidio.tts.VoxyVoice">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">braidio.tts.</span></span><span class="sig-name descname"><span class="pre">VoxyVoice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backend</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">instruction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_map</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">dict()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">dict()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/tts.html#VoxyVoice"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.tts.VoxyVoice" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">braidio.tts.</span></span><span class="sig-name descname"><span class="pre">VoxyVoice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backend</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">instruction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_map</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">dict()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">options</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">dict()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'rate'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/tts.html#VoxyVoice"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.tts.VoxyVoice" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>Any voxy backend as a render’s voice: Seed Speech or OpenAI through fal/aix,
 a local model, ElevenLabs on another account.</p>
@@ -652,7 +652,10 @@ shipped formats resolve lines to ElevenLabs ids, which mean nothing to
 another engine, so an unmapped line voice is never sent. ElevenLabs-only
 arguments (<code class="docutils literal notranslate"><span class="pre">model_id</span></code> of the delivery, <code class="docutils literal notranslate"><span class="pre">voice_settings</span></code>, <code class="docutils literal notranslate"><span class="pre">api_key</span></code>,
 <code class="docutils literal notranslate"><span class="pre">output_format</span></code>) are accepted and ignored; <code class="docutils literal notranslate"><span class="pre">options</span></code> are this
-engine’s own (<code class="docutils literal notranslate"><span class="pre">{&quot;language&quot;:</span> <span class="pre">&quot;en&quot;}</span></code>, <code class="docutils literal notranslate"><span class="pre">{&quot;speed&quot;:</span> <span class="pre">1.05}</span></code>).</p>
+engine’s own (<code class="docutils literal notranslate"><span class="pre">{&quot;language&quot;:</span> <span class="pre">&quot;en&quot;}</span></code>, <code class="docutils literal notranslate"><span class="pre">{&quot;speed&quot;:</span> <span class="pre">1.05}</span></code>). Set the
+engine’s language there: Seed Speech detects it per request and once read
+an English sentence full of numbers in Tagalog. New takes are validated
+before caching (<code class="docutils literal notranslate"><span class="pre">validate</span></code>).</p>
 <p>Register it under its own name and select it by that name:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">register_voxy_voice</span><span class="p">(</span><span class="s2">"seed-tim"</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"fal"</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="s2">"tim_en"</span><span class="p">,</span>
                     <span class="n">model_id</span><span class="o">=</span><span class="s2">"fal-ai/bytedance/seed-speech/tts/v2"</span><span class="p">,</span>
@@ -662,6 +665,14 @@ engine’s own (<code class="docutils literal notranslate"><span class="pre">{&q
 </div>
 <dl class="field-list simple">
 </dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="braidio.tts.VoxyVoice.validate">
+<span class="sig-name descname"><span class="pre">validate</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'rate'</span></span><a class="headerlink" href="#braidio.tts.VoxyVoice.validate" title="Link to this definition">#</a></dt>
+<dd><p>run on every new take before it is cached; <code class="docutils literal notranslate"><span class="pre">&quot;rate&quot;</span></code> (default) is
+<code class="docutils literal notranslate"><span class="pre">voxy.speaking_rate_check</span></code> (a hosted engine once returned 29 s of breath
+for a sentence), <code class="docutils literal notranslate"><span class="pre">None</span></code> disables, a callable <code class="docutils literal notranslate"><span class="pre">(speech,</span> <span class="pre">text)</span> <span class="pre">-&gt;</span> <span class="pre">problem</span> <span class="pre">|</span> <span class="pre">None</span></code></p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py function">
@@ -964,7 +975,10 @@ Any other voice: none, so every break becomes real silence between turns.</p>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.TTS_BACKENDS"><code class="docutils literal notranslate"><span class="pre">TTS_BACKENDS</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.VoiceBackend"><code class="docutils literal notranslate"><span class="pre">VoiceBackend</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.VoxyVoice"><code class="docutils literal notranslate"><span class="pre">VoxyVoice</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.VoxyVoice"><code class="docutils literal notranslate"><span class="pre">VoxyVoice</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.VoxyVoice.validate"><code class="docutils literal notranslate"><span class="pre">VoxyVoice.validate</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.narrate"><code class="docutils literal notranslate"><span class="pre">narrate()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.narrator_from_speak"><code class="docutils literal notranslate"><span class="pre">narrator_from_speak()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.register_tts"><code class="docutils literal notranslate"><span class="pre">register_tts()</span></code></a></li>

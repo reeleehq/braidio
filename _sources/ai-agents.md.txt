@@ -40,7 +40,7 @@ Subagents are Markdown files with a frontmatter (`name`, `description`, `tools`)
 
 ### `commentary-video`
 
-Build a commentary video end to end from a subject — research it, author the script, render the audio with braidio, source freely-licensed stills, cut them into a Ken Burns film, caption it, and hand back a file (publishing only if asked). Use when someone names a target and wants the finished thing: "make a video essay about <song/book/film/paper>", "do the Actually Romantic treatment for <X>", "commentary video on <topic>". Returns the artifact paths, the sources it used, and anything it could not source. Does not publish without an explicit instruction to.
+Build a commentary video end to end from a subject — research it, author the script, render the audio with braidio, source freely-licensed stills, cut them into a Ken Burns film, caption it, and hand back a file (publishing only if asked). Use when someone names a target and wants the finished thing: "make a video essay about <song/book/film/paper>", "do the Actually Romantic treatment for <X>", "commentary video on <topic>", "video readout of my article", an explainer resting on sources (historical, technical, educational) where the cited pages and papers should appear on screen with the quoted passage highlighted as it is read. Returns the artifact paths, the sources it used, and anything it could not source. Does not publish without an explicit instruction to.
 
 Source: [`.claude/agents/commentary-video.md`](https://github.com/thorwhalen/braidio/tree/HEAD/.claude/agents/commentary-video.md); tools: `Bash, Read, Write, Edit, Glob, Grep, WebSearch, WebFetch, Skill`.
 

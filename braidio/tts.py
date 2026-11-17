@@ -367,7 +367,9 @@ class VoxyVoice:
         options = dict(self.options)
         if self.model_id:
             options["model_id"] = self.model_id
-        validate = voxy.speaking_rate_check if self.validate == "rate" else self.validate
+        validate = (
+            voxy.speaking_rate_check if self.validate == "rate" else self.validate
+        )
         speech = voxy.text_to_speech(
             text,
             self._voice(voice_id),

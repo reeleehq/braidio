@@ -277,11 +277,23 @@ appear. `render_video` calls it for you.
 For anything that rests on sources (history, science, engineering, an essay that cites research), the strongest picture for a claim is **the source itself**: the page, the paper's title and abstract, the report's chart, with the exact sentence highlighted while the narration says it. Viewers trust what they can read, and it carries its own attribution. A stock photo of "a scientist" over "a 2026 study found 3–13% of URLs were invented" is decoration; the abstract with that clause lighting up is evidence.
 
 ```python
-from walkthru import capture_passage, render_highlight_clip  # walkthru's `evidence` extra (+ `ocr` for scans)
+from walkthru import (
+    capture_passage,
+    render_highlight_clip,
+)  # walkthru's `evidence` extra (+ `ocr` for scans)
 
-cap = capture_passage(url_or_pdf, quote="the exact words the narration quotes", out="shots/x.png")
-render_highlight_clip(cap, "clips/x.mp4", duration=panel_s, sweep=(said_at - panel_start, said_end - panel_start))
-Panel(start, end, cap.png, footage=Footage("clips/x.mp4"))  # a straight-cut footage panel
+cap = capture_passage(
+    url_or_pdf, quote="the exact words the narration quotes", out="shots/x.png"
+)
+render_highlight_clip(
+    cap,
+    "clips/x.mp4",
+    duration=panel_s,
+    sweep=(said_at - panel_start, said_end - panel_start),
+)
+Panel(
+    start, end, cap.png, footage=Footage("clips/x.mp4")
+)  # a straight-cut footage panel
 ```
 
 - **Only highlight what verification passed** (`cap.found`): walkthru proves the boxes are the quote and are visible (DOM caret hit tests on web pages; whole-word text boxes on born-digital PDFs; OCR re-boxing on scans, whose text layer can sit 50–80 px off the glyphs). Otherwise show the page without a highlight, and say so in your report.

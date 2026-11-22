@@ -191,6 +191,7 @@ from braidio.formats import (  # noqa: F401
 # --- composition + weaving (audio) ---
 from braidio.compose import compose_narration  # noqa: F401
 from braidio.render import render_production  # noqa: F401
+from braidio.prefetch import PrefetchReport, prefetch  # noqa: F401
 from braidio.sound_design import SoundDesign  # noqa: F401
 from braidio.timeline import (  # noqa: F401
     BeatSpan,
@@ -387,6 +388,8 @@ __all__ = [
     "__version__",
     # production kinds
     "WeaveKind",
+    "prefetch",
+    "PrefetchReport",
     "HAS_GRAPH",
     "HAS_NW",
     "HAS_VIDEO",

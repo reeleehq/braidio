@@ -289,3 +289,46 @@ def test_prepare_still_interrupted_rebuild_leaves_no_stale_claim(tmp_path, monke
         video.prepare_still(tmp_path / "a.png", dst, size=(64, 36)).read_bytes()
         != blue_dst
     )
+
+
+# --- canvas naming and versioning (braidio#215) ---------------------------------
+
+PIL = pytest.importorskip("PIL")
+
+
+def test_default_canvas_names_follow_the_bytes_not_the_stem_or_ordinal(tmp_path):
+    from PIL import Image
+
+    from braidio.video import content_keyed_prepare
+
+    a, b = tmp_path / "a" / "x.png", tmp_path / "b" / "x.png"  # same stem
+    for path, colour in ((a, "red"), (b, "blue")):
+        path.parent.mkdir()
+        Image.new("RGB", (40, 20), colour).save(path)
+    prep = content_keyed_prepare(tmp_path / "w", (64, 36))
+    ca, cb = prep(a, None), prep(b, None)
+    assert ca != cb and ca.read_bytes() != cb.read_bytes()
+    assert prep(a, None) == ca  # the same bytes name the same canvas
+    assert "_v" in ca.name
+
+
+def test_the_canvas_version_is_in_the_stamp_and_a_key_skips_the_second_hash(
+    tmp_path, monkeypatch
+):
+    from PIL import Image
+
+    import braidio.video as video
+
+    src = tmp_path / "s.png"
+    Image.new("RGB", (40, 20), "red").save(src)
+    dst = video.prepare_still(src, tmp_path / "o.jpg", size=(64, 36))
+    assert dst.with_name("o.jpg.src").read_text().endswith(f"v{video.CANVAS_VERSION}")
+    reads = []
+    monkeypatch.setattr(video, "source_digest", lambda p: reads.append(p) or "k")
+    video.prepare_still(src, tmp_path / "o.jpg", size=(64, 36), key="precomputed")
+    assert reads == []
+    # a canvas made by an older algorithm is rebuilt, not served
+    monkeypatch.setattr(video, "CANVAS_VERSION", "2")
+    before = dst.stat().st_mtime_ns
+    video.prepare_still(src, tmp_path / "o.jpg", size=(64, 36))
+    assert dst.stat().st_mtime_ns != before

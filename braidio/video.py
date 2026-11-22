@@ -56,6 +56,9 @@ __all__ = [
     "missing_dependencies",
     "plan_spans",
     "prepare_still",
+    "content_keyed_prepare",
+    "source_digest",
+    "CANVAS_VERSION",
     "save_atomically",
     "render_video",
     "concat_argv",
@@ -296,12 +299,52 @@ def assign_stills(
     return out
 
 
-def _still_stamp(src, size: tuple[int, int]) -> str:
-    """What a prepared canvas was made from: the source's bytes and the frame size."""
+#: Bump when :func:`prepare_still`'s output changes for the same bytes and size
+#: (blur, darkening, resampling). It is part of every canvas's stamp and of the
+#: content-keyed canvas name, so a canvas made by an older algorithm is rebuilt
+#: instead of served from a shared workdir.
+CANVAS_VERSION = "1"
+#: Chars of a content digest used in a canvas file name.
+NAME_DIGEST_CHARS = 16
+
+
+def source_digest(src) -> str:
+    """The sha256 hex digest of the still's bytes: what a canvas is keyed on."""
     import hashlib
 
-    digest = hashlib.sha256(Path(src).read_bytes()).hexdigest()
-    return f"{digest} {size[0]}x{size[1]}"
+    return hashlib.sha256(Path(src).read_bytes()).hexdigest()
+
+
+def _still_stamp(src, size: tuple[int, int], key: str | None = None) -> str:
+    """What a prepared canvas was made from: the source's bytes (``key``, when the
+    caller already hashed them), the frame size and the canvas algorithm."""
+    return f"{key or source_digest(src)} {size[0]}x{size[1]} v{CANVAS_VERSION}"
+
+
+def content_keyed_prepare(workdir, size: tuple[int, int]):
+    """A ``prepare=`` for :func:`render_video` that names each canvas by the
+    source's **bytes**, the frame size and :data:`CANVAS_VERSION`, never by its
+    ordinal or filename stem.
+
+    Naming by ordinal and stem would let two renders into one folder collide, serve
+    a stale canvas for a swapped still with the same stem, or a landscape canvas
+    to a vertical cut. This is :func:`render_video`'s default.
+
+    Returns ``prepare(src, dst_ignored, *, size=size) -> Path``: ``dst_ignored`` is
+    there only to fit ``render_video``'s ``prepare`` signature; a caller of its own
+    passes ``None``. The bytes are hashed once, here, and the digest handed on.
+    """
+    workdir = Path(workdir)
+
+    def prepare(src, _dst_ignored=None, *, size=size):
+        digest = source_digest(src)
+        name = (
+            f"canvas_{digest[:NAME_DIGEST_CHARS]}_{size[0]}x{size[1]}"
+            f"_v{CANVAS_VERSION}.jpg"
+        )
+        return prepare_still(src, workdir / name, size=size, key=digest)
+
+    return prepare
 
 
 def _stamp_path(dst: Path) -> Path:
@@ -309,7 +352,12 @@ def _stamp_path(dst: Path) -> Path:
 
 
 def prepare_still(
-    src, dst, *, size: tuple[int, int] = DEFAULT_SIZE, refresh: bool = False
+    src,
+    dst,
+    *,
+    size: tuple[int, int] = DEFAULT_SIZE,
+    refresh: bool = False,
+    key: str | None = None,
 ) -> Path:
     """Composite ``src`` onto a blurred fill of itself at exactly ``size``.
 
@@ -318,7 +366,10 @@ def prepare_still(
     sidecar (``<dst>.src``) records that it was made from these source bytes at
     this ``size``. A different still, or a different size, into the same ``dst``
     is rebuilt; so is a ``dst`` with no sidecar (its origin is unknown).
-    ``refresh=True`` rebuilds unconditionally.
+    ``refresh=True`` rebuilds unconditionally. The canvas algorithm's version
+    (:data:`CANVAS_VERSION`) is in the stamp too, so a ``dst`` made by an older
+    one is rebuilt. ``key`` is the source's :func:`source_digest` when the caller
+    already has it (the bytes are then not read twice).
 
     Examples:
         >>> import tempfile
@@ -340,7 +391,7 @@ def prepare_still(
     from PIL import Image, ImageEnhance, ImageFilter
 
     dst = Path(dst)
-    stamp = _still_stamp(src, size)
+    stamp = _still_stamp(src, size, key)
     stamp_file = _stamp_path(dst)
     if (
         not refresh
@@ -551,7 +602,7 @@ def render_video(
         _require()
         from burns import content_aware_path_for, ken_burns_film
 
-        prep = prepare or prepare_still
+        prep = prepare or content_keyed_prepare(workdir, size)
 
         def default_path_for(image, index, panel):
             return content_aware_path_for(

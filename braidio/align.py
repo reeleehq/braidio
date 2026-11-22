@@ -15,8 +15,8 @@ The one entry point is :func:`align_script`::
     alignment.timeline          # plugs into braidio.video.plan_spans
     captions_from_cues(alignment.cues)   # the SRT
 
-Free, offline, pure and dependency-free (stdlib ``difflib``): part of the
-functional core.
+Free, offline and pure; the word alignment is ``mixing.transcript``'s
+(stdlib only), imported when a script is aligned.
 
 Seams (keyword-only, each defaulting to the strongest built-in):
 
@@ -30,8 +30,9 @@ Seams (keyword-only, each defaulting to the strongest built-in):
 A dialogue beat is timed as its turns' text, one unit per turn; the speaker labels
 are not spoken, so they appear in no cue (unlike :func:`~braidio.captions.cues_for`).
 
-This is the in-package stand-in for a shared word aligner (authored tokens against
-timed words), a kind of code several packages of the fleet carry; see braidio#212.
+The word alignment (authored tokens against timed words) is the fleet's shared one,
+``mixing.transcript.align_words`` (braidio#250); this module keeps the chunk
+ownership and where a chunk nothing matched is placed.
 
 Examples:
     >>> words = [
@@ -50,7 +51,6 @@ Examples:
 
 from __future__ import annotations
 
-import difflib
 import re
 import unicodedata
 from collections.abc import Callable, Iterable, Mapping, Sequence
@@ -266,32 +266,33 @@ def _cue_pieces(text: str, max_chars: int) -> list[str]:
 def _chunk_times(chunks, spoken, *, normalize, end_s):
     """``([(start, end)] per chunk, [unmatched chunk], matched, total tokens)``.
 
-    The authored tokens are walked against the heard ones in order
-    (:class:`difflib.SequenceMatcher`); a chunk takes the times of the words that
+    The authored tokens are timed by :func:`mixing.transcript.align_words`
+    (braidio#250); a chunk takes the times of the words that
     matched it, and a chunk nothing matched is placed between its neighbours
     (inside the audio, when its length ``end_s`` is known).
     """
-    heard, heard_times = [], []
-    for text, start, end in spoken:
-        for tok in normalize(text):
-            heard.append(tok)
-            heard_times.append((start, end))
+    from mixing.transcript import align_words
+
     authored, owner = [], []
     for ci, chunk in enumerate(chunks):
         for tok in normalize(chunk):
             authored.append(tok)
             owner.append(ci)
-    matcher = difflib.SequenceMatcher(a=authored, b=heard, autojunk=False)
+    aligned = align_words(
+        authored,
+        spoken,
+        bounds=(0.0, end_s) if end_s is not None else None,
+        normalize=lambda word: " ".join(normalize(word)),
+        split=lambda word: normalize(word),  # heard words cut like the script's
+    )
+    matched = aligned.matched
     times: dict[int, tuple[float, float]] = {}
-    matched = 0
-    for a, b, size in matcher.get_matching_blocks():
-        matched += size
-        for k in range(size):
-            lo, hi = heard_times[b + k]
-            cur = times.get(owner[a + k])
-            times[owner[a + k]] = (
-                (lo, hi) if cur is None else (min(cur[0], lo), max(cur[1], hi))
-            )
+    for k in aligned.anchors:  # a chunk's span: the words that anchored its tokens
+        _, lo, hi = aligned.words[k]
+        cur = times.get(owner[k])
+        times[owner[k]] = (
+            (lo, hi) if cur is None else (min(cur[0], lo), max(cur[1], hi))
+        )
     unmatched = []
     for ci, chunk in enumerate(chunks):
         if ci in times:
@@ -313,7 +314,7 @@ def _chunk_times(chunks, spoken, *, normalize, end_s):
         [times[ci] for ci in range(len(chunks))],
         unmatched,
         matched,
-        len(authored),
+        aligned.total,
     )
 
 

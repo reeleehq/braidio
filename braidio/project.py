@@ -101,8 +101,8 @@ class Project(nw.Project):
         tiers = _tiers()
         if len(episodes) <= 1:
             return episodes[-1] if episodes else None
-        with tiers.fresh_ids_pass():  # writes nothing: one walk for every lookup
-            fresh_ids = tiers.fresh_ids(self)
+        with nw.freshness_pass():  # writes nothing: one walk for every lookup
+            fresh_ids = nw.fresh_ids(self)
             fresh = [e for e in episodes if e.id in fresh_ids]
             if len(fresh) > 1:  # e.g. an env voice flip A→B→A (braidio#172)
                 from braidio.transforms._voice import voiced_as_now
@@ -187,7 +187,7 @@ class Project(nw.Project):
 
         from braidio.transforms._sound import sound_design_of, sound_design_row
 
-        with _tiers().fresh_ids_pass():  # one freshness walk, only once a design exists
+        with nw.freshness_pass():  # one freshness walk, only once a design exists
             design = sound_design_of(self, current)
         if design is None:
             return {}

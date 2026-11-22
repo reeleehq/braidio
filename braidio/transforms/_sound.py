@@ -45,7 +45,6 @@ from braidio.sound_design import spoken_of, talk_segments, talk_spans
 from braidio.transforms._common import (
     TIER_SOUND_DESIGN,
     annotation_parents,
-    fresh_ids,
     media_path,
 )
 
@@ -123,7 +122,9 @@ def sound_design_of(project, episode: Annotation) -> Annotation | None:
     )
     if not designs:
         return None
-    fresh = fresh_ids(project)
+    import nw
+
+    fresh = nw.fresh_ids(project)
     return next((a for a in reversed(designs) if a.id in fresh), None)
 
 

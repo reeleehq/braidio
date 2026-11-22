@@ -150,10 +150,6 @@ _NAME_DIGEST_CHARS = 16
 #: JPEG quality a cropped still is re-encoded at (PIL's default 75 would put a
 #: lossy generation under prepare_still's q94 canvas).
 _CROP_JPEG_QUALITY = 96
-#: Bump when prepare_still's output changes for the same bytes and size
-#: (blur, darkening, resampling): canvases are cached by name in a shared
-#: workdir, and the motion key alone cannot see a canvas algorithm change.
-_CANVAS_VERSION = "1"
 #: Staging area for a finish's intermediates — a SUBdirectory, so a crash
 #: between stages leaves nothing the delivery lister (which walks only the
 #: files directly in data/cuts) would present as a cut.
@@ -927,28 +923,12 @@ def _crop_still(
 
 
 def content_keyed_prepare(workdir: Path, size: tuple[int, int]):
-    """A ``prepare=`` for :func:`braidio.video.render_video` that names each
-    canvas by the source's **bytes** and the frame size — never by its
-    ordinal or its filename stem. ``render_video``'s default naming
-    (``{i:03d}_{stem}.jpg``) plus ``prepare_still``'s existing-file shortcut
-    would otherwise serve a stale canvas for a swapped still with the same
-    stem, or a landscape canvas to a vertical cut.
+    """:func:`braidio.video.content_keyed_prepare` (canvases named by the source's
+    bytes, the frame size and the canvas version): ``render_video``'s default now,
+    and what :func:`panel_canvas` frames on."""
+    from braidio.video import content_keyed_prepare as _prepare
 
-    Returns ``prepare(src, dst_ignored, *, size=size) -> Path``: the canvas
-    for the picture at ``src``, written under ``workdir``. ``dst_ignored`` is
-    there only to fit ``render_video``'s ``prepare`` signature; a caller of
-    its own passes ``None``. To get the canvas a panel is framed on, call
-    :func:`panel_canvas` instead — it is this, over :func:`panel_source`, in
-    one call.
-    """
-    from braidio.video import prepare_still
-
-    def prepare(src, _dst_ignored, *, size=size):
-        digest = hashlib.sha256(Path(src).read_bytes()).hexdigest()[:_NAME_DIGEST_CHARS]
-        dst = workdir / f"canvas_{digest}_{size[0]}x{size[1]}_v{_CANVAS_VERSION}.jpg"
-        return prepare_still(src, dst, size=size)
-
-    return prepare
+    return _prepare(workdir, size)
 
 
 def frames_dir(project) -> Path:

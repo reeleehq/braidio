@@ -129,6 +129,7 @@ class SegmentExtractionFFmpeg(BaseTransform):
             # cache-keyed artifact — never return a node whose parents a
             # re-ingest replaced or removed (braidio#51).
             existing = fresh_equivalent(project, skel)
+            reused = existing is not None  # an adopted node is written, not reused
             if existing is None:
                 hit = cached_output(project, TIER_SEGMENT_EXTRACTION, cache_key)
                 if hit is not None:
@@ -136,7 +137,10 @@ class SegmentExtractionFFmpeg(BaseTransform):
                     project.graph.add_annotation(existing)
             if existing is not None:
                 return TransformResult(
-                    annotations=(existing,), artifacts=(), cost_usd_actual=0.0
+                    annotations=(existing,),
+                    artifacts=(),
+                    cost_usd_actual=0.0,
+                    reused_ids=frozenset({existing.id}) if reused else frozenset(),
                 )
 
         parents = resolve_parents(skel, graph_index(project))

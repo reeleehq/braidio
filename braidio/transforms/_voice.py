@@ -97,6 +97,7 @@ class BeatToVoiceAssignment(BaseTransform):
                 artifacts=(),
                 cost_usd_actual=0.0,
                 cache_hit_savings_usd=0.0,
+                reused_ids=frozenset({existing.id}),  # written nothing (nw#215)
             )
         project.graph.add_annotation(ann)
         return TransformResult(

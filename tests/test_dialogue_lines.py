@@ -683,22 +683,23 @@ def test_a_last_line_timed_past_the_take_ends_with_the_take(tmp_path, api):
 
 
 @needs_ffmpeg
-def test_the_insert_window_is_exact_and_silent_outside_the_insert(tmp_path):
-    """braidio#209: the one thing the splice still owns is which window of the
-    re-rendered line goes in; outside the insert it is silence."""
-    from braidio.dialogue_lines import _insert_window
+def test_the_splice_window_is_exact_and_silent_outside_the_insert(tmp_path):
+    """braidio#209/#252: the one thing the splice still owns is which window of
+    the re-rendered line goes in; outside the insert it is silence."""
+    from braidio.dialogue_lines import _splice_line
 
     n = RATE // 2  # half a second of tone
+    base = tmp_path / "base.wav"
+    base.write_bytes(_wav(array("h", [0] * (RATE * 3))))
     src = tmp_path / "solo.wav"
     src.write_bytes(_wav(_tone(440.0, n)))
-    window = _insert_window(src, (-0.25, 0.75), rate=RATE)
-    assert len(window) == RATE  # exactly keep1 - keep0 long
-    quarter = RATE // 4
-    assert float(abs(window[: quarter - 50]).max()) < 1e-4  # leading silence
-    assert float(abs(window[quarter + 100 : quarter + n - 100]).max()) > 0.1  # the tone
-    assert float(abs(window[quarter + n + 50 :]).max()) < 1e-4  # trailing silence
-    with pytest.raises(ValueError, match="nothing to insert"):
-        _insert_window(src, (0.5, 0.5), rate=RATE)
+    out = tmp_path / "out.wav"
+    _splice_line(base, src, span=(1.0, 2.0), keep=(-0.25, 0.75), out=out)
+    audio = decode(out)
+    assert abs(len(audio) - RATE * 3) <= 2  # a 1 s window replaces a 1 s span
+    assert rms(audio, 1.0, 1.2) < SILENT_RMS  # leading silence
+    assert rms(audio, 1.3, 1.7) > AUDIBLE_RMS  # the tone
+    assert rms(audio, 1.8, 2.0) < SILENT_RMS  # trailing silence
 
 
 @needs_ffmpeg

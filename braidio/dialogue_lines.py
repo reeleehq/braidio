@@ -49,14 +49,10 @@ MASTER_SUFFIX = ".master.flac"
 #: float durations, and a touching pair must not read as overlapping.
 _TIME_EPS_S = 1e-6
 
-#: The output formats a take can be spliced in: ElevenLabs' format family ->
-#: (ffmpeg encoder, ffmpeg muxer). Raw ``pcm_``/``ulaw_``/``alaw_`` output has
-#: no container ffmpeg could read back, so it is refused before any spend.
-_SPLICE_CODECS: dict[str, tuple[str, str]] = {
-    "mp3": ("libmp3lame", "mp3"),
-    "wav": ("pcm_s16le", "wav"),
-    "opus": ("libopus", "ogg"),
-}
+#: ElevenLabs output families with no container: ffmpeg cannot read them back
+#: (the master is decoded from the take), so a take refuses them before any spend.
+#: mixing can *encode* them; braidio cannot *splice* them.
+_RAW_FAMILIES = frozenset({"pcm", "ulaw", "alaw"})
 
 
 class DialogueTimingError(RuntimeError):
@@ -206,18 +202,16 @@ def _require_text(turns) -> None:
 
 
 def _encode_args(output_format: str) -> list[str]:
-    """ffmpeg output args reproducing ElevenLabs' ``{codec}_{rate}[_{kbps}]``."""
-    family, *rest = output_format.split("_")
-    if family not in _SPLICE_CODECS or not rest:
+    """ffmpeg output args for ``output_format``, refusing the formats a take cannot splice."""
+    from mixing.dubbing import output_format_encode_args
+
+    if output_format.split("_")[0] in _RAW_FAMILIES:
         raise ValueError(
-            f"output_format {output_format!r} cannot be spliced line by line; "
-            f"use one of the {sorted(_SPLICE_CODECS)} formats (e.g. 'mp3_44100_128')"
+            f"output_format {output_format!r} cannot be spliced line by line (raw "
+            "audio has no container to read back); use an mp3, wav or opus format "
+            "(e.g. 'mp3_44100_128')"
         )
-    encoder, muxer = _SPLICE_CODECS[family]
-    args = ["-c:a", encoder, "-ar", rest[0]]
-    if len(rest) > 1:
-        args += ["-b:a", f"{rest[1]}k"]
-    return args + ["-f", muxer]
+    return output_format_encode_args(output_format)
 
 
 def _cast_voices(turns, cast: ConversationCast) -> list[tuple[str, str]]:
@@ -331,51 +325,24 @@ def _lines(turns, bounds, *, total_s: float) -> tuple[DialogueLine, ...]:
 # --- the splice (mixing's replace_span_file does the cutting) --------------------------------------------
 
 
-def _insert_window(
-    insert: Path, keep: tuple[float, float], *, rate: int
-) -> "np.ndarray":
-    """``insert[keep0:keep1]`` as float samples at ``rate``, exactly ``keep1 - keep0`` long.
-
-    The window may reach outside the insert: what falls outside is silence, so a
-    line that brings its lead-in or decay along from a pause it does not have
-    still fills the span it replaces.
-    """
-    import numpy as np
-    from mixing.decode import decode_float_chunks
-
-    k0, k1 = keep
-    n = round((k1 - k0) * rate)
-    if n <= 0:
-        raise ValueError(f"nothing to insert: keep window {keep} is empty")
-    _, chunks = decode_float_chunks(insert, sample_rate=rate)
-    audio = np.concatenate(list(chunks), axis=0)
-    window = np.zeros((n, audio.shape[1]), dtype=audio.dtype)
-    first = round(k0 * rate)  # sample of ``audio`` at the window's start (may be < 0)
-    lo, hi = max(first, 0), min(first + n, len(audio))
-    if hi > lo:
-        window[lo - first : hi - first] = audio[lo:hi]
-    return window
-
-
 def _splice_line(
     base: Path,
     insert: Path,
     *,
     span: tuple[float, float],
-    rate: int,
     keep: tuple[float, float],
     out: Path,
 ) -> None:
     """Write ``base[:span0] + insert[keep0:keep1] + base[span1:]`` to ``out``.
 
-    ``rate`` is ``base``'s sample rate. The cutting, the faded joins (mixing's
-    own join fade) and the single lossless encode are
+    The cutting, the window of the insert (silence where it reaches outside the
+    line), the faded joins and the single lossless encode are
     :func:`mixing.splice.replace_span_file`'s; what is braidio's is only which
     window of the re-rendered line goes in.
     """
     from mixing.splice import replace_span_file
 
-    replace_span_file(base, span, _insert_window(insert, keep, rate=rate), output=out)
+    replace_span_file(base, span, insert, insert_window=keep, output=out)
 
 
 def _scratch(near: Path, tag: str, suffix: str) -> Path:
@@ -630,7 +597,7 @@ def rerender_line(
     _encode_args(take.output_format)
     _require_ffmpeg()
     _check_master(take)
-    total_s, rate = _probe(take.master)
+    total_s, _ = _probe(take.master)
     cut, pre, post = _cut_points(take, index, total_s)
     out = Path(out_path) if out_path is not None else take.path
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -670,7 +637,6 @@ def rerender_line(
             take.master,
             solo,
             span=(cut[0], total_s if cut[1] is None else cut[1]),
-            rate=rate,
             keep=(start - pre, end + post),
             out=new_master,
         )

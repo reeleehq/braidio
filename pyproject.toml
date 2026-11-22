@@ -53,10 +53,12 @@ authors = [
 #   (mixing#195, braidio#250).
 # mixing>=0.0.111: braidio.dialogue_lines splices a re-rendered line into the
 #   take's master with mixing.splice.replace_span_file (mixing#167/#184; braidio#209).
+# mixing>=0.0.123: braidio.dialogue_lines splices with replace_span_file(insert_window=)
+#   and encodes with dubbing.output_format_encode_args (mixing#196/#202; braidio#252).
 # mixing>=0.0.87: braidio.dialogue_lines reads a take's duration and sample rate
 #   with mixing.probe.probe (added there; braidio#145).
 dependencies = [
-    "mixing[media]>=0.0.118",
+    "mixing[media]>=0.0.123",
     "elevenlabs",
     # voxy.pauses (SSML breaks), voxy.direction (the tag grammar + per-engine dialects), VoxyVoice
     "voxy>=0.0.75",

@@ -262,8 +262,8 @@ def test_an_episode_with_nothing_spoken_is_refused(project, tmp_path):
     episode = NS(id="e", body={"ordered_member_ids": [], "timeline": {"beats": []}})
     with pytest.raises(ValueError, match="no spoken text"):
         episode_talk(project, episode)
-    with pytest.raises(RuntimeError, match="while planning"):
-        EpisodeToSoundDesign().narration_segments(episode)
+    with pytest.raises(ValueError, match="no spoken text"):  # the seam nw plans through
+        EpisodeToSoundDesign().narration_track(project, episode)
 
 
 def _designed(project, script_and_source):

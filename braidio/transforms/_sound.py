@@ -29,14 +29,16 @@ import json
 import os
 import tempfile
 import warnings
-from contextvars import ContextVar
 from pathlib import Path, PurePath
-from typing import Optional
 
 from lacing import Annotation
 from nw import register_transform
 from nw.bodies.sound_design import SOUND_DESIGN_CONFIG_BODY_SCHEMA_URI
-from nw.transforms.sound_design import SOUND_DESIGN_TAGS, NarrationToSoundDesign
+from nw.transforms.sound_design import (
+    SOUND_DESIGN_TAGS,
+    NarrationToSoundDesign,
+    NarrationTrack,
+)
 
 from braidio.bodies._render_nodes import EPISODE_RENDER_V1
 from braidio.sound_design import spoken_of, talk_segments, talk_spans
@@ -55,14 +57,6 @@ SOUND_DESIGN_DIR = ("data", "sound-design")
 
 #: Catalog kind of a design's mix (a mastered FLAC).
 SOUND_DESIGN_CATALOG_KIND = "audio"
-
-#: The episode's ``(segments, starts)`` while its plan is being made: nw's
-#: segment seams take only the node, and reading the spoken text needs the
-#: project, so :meth:`EpisodeToSoundDesign.plan` binds it for the call.
-_TALK: ContextVar[Optional[tuple[list[str], list[float]]]] = ContextVar(
-    "braidio_sound_design_talk", default=None
-)
-
 
 def episode_talk(project, episode: Annotation) -> tuple[list[str], list[float]]:
     """foley's ``(segments, segment_starts)`` for ``episode``: its spoken
@@ -89,23 +83,13 @@ class EpisodeToSoundDesign(NarrationToSoundDesign):
     input_kinds = (EPISODE_RENDER_V1, SOUND_DESIGN_CONFIG_BODY_SCHEMA_URI)
     attributed_to = f"agent:{NAME}"
 
-    def plan(self, project, inputs, *, params=None):
-        token = None
-        # nw refuses a wrong count, a missing config and a disabled one plans
-        # nothing: read the episode's text only when it will be designed
-        if len(inputs.primary) == 1 and self.config(inputs).enabled:
-            token = _TALK.set(episode_talk(project, inputs.primary[0]))
-        try:
-            return super().plan(project, inputs, params=params)
-        finally:
-            if token is not None:
-                _TALK.reset(token)
-
-    def narration_segments(self, narration: Annotation) -> list[str]:
-        return list(self._talk()[0])
-
-    def narration_segment_starts(self, narration: Annotation) -> list[float]:
-        return list(self._talk()[1])
+    def narration_track(self, project, narration: Annotation) -> NarrationTrack:
+        # nw calls this only once a design is enabled (nw#221), so the episode's
+        # text is read exactly when it will be designed
+        segments, starts = episode_talk(project, narration)
+        return NarrationTrack(
+            segments, self.narration_audio_path(project, narration), starts
+        )
 
     def narration_audio_path(self, project, narration: Annotation) -> PurePath:
         audio = media_path(
@@ -118,15 +102,6 @@ class EpisodeToSoundDesign(NarrationToSoundDesign):
                 f"the project ({root}); re-weave it here before designing."
             )
         return PurePath(audio.relative_to(root))
-
-    def _talk(self) -> tuple[list[str], list[float]]:
-        talk = _TALK.get()
-        if talk is None:
-            raise RuntimeError(
-                f"{self.name}: the episode's text is read while planning; call "
-                "plan(project, inputs), not the segment seams directly."
-            )
-        return talk
 
 
 def sound_design_of(project, episode: Annotation) -> Annotation | None:

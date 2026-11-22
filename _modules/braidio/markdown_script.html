@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../../_static/documentation_options.js?v=ee59aaf7"></script>
+    <script src="../../_static/documentation_options.js?v=0d7dcda5"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.129" />
+  <meta name="docsearch:version" content="0.0.130" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -1001,8 +1001,15 @@ window.runMermaid = runMermaid;</script>
         <span class="p">]</span>
     <span class="n">respelled</span> <span class="o">=</span> <span class="n">_respeller</span><span class="p">(</span><span class="n">respell</span><span class="p">)</span>
     <span class="n">beats</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="n">Narration</span><span class="p">(</span><span class="n">respelled</span><span class="p">(</span><span class="n">text</span><span class="p">),</span> <span class="n">voice</span><span class="o">=</span><span class="n">voice</span><span class="p">,</span> <span class="n">lead_gap_s</span><span class="o">=</span><span class="n">gap_of</span><span class="p">[</span><span class="n">kind</span><span class="p">],</span> <span class="n">style</span><span class="o">=</span><span class="n">kind</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">kind</span><span class="p">,</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">entries</span>
+        <span class="n">Narration</span><span class="p">(</span>
+            <span class="n">spoken</span><span class="p">,</span>
+            <span class="n">voice</span><span class="o">=</span><span class="n">voice</span><span class="p">,</span>
+            <span class="n">lead_gap_s</span><span class="o">=</span><span class="n">gap_of</span><span class="p">[</span><span class="n">kind</span><span class="p">],</span>
+            <span class="n">style</span><span class="o">=</span><span class="n">kind</span><span class="p">,</span>
+            <span class="n">written</span><span class="o">=</span><span class="n">text</span> <span class="k">if</span> <span class="n">spoken</span> <span class="o">!=</span> <span class="n">text</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">kind</span><span class="p">,</span> <span class="n">text</span> <span class="ow">in</span> <span class="p">((</span><span class="n">k</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">entries</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">spoken</span> <span class="ow">in</span> <span class="p">(</span><span class="n">respelled</span><span class="p">(</span><span class="n">text</span><span class="p">),)</span>
     <span class="p">]</span>
     <span class="k">return</span> <span class="n">Script</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">id_slug</span><span class="o">=</span><span class="n">id_slug</span> <span class="ow">or</span> <span class="n">_slug</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="n">beats</span><span class="o">=</span><span class="n">beats</span><span class="p">)</span></div>
 

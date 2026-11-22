@@ -37,7 +37,7 @@ at render time). Rendered in ONE pass via Text-to-Dialogue so it sounds like
 people talking to each other. This is our own commentary → always publishable
 (its text is still scanned for forbidden verbatim quotes in the published cut).
 
-### *class* braidio.script.Narration(text, style=None, published_text=None, lead_gap_s=0.0, voice=None, voice_settings=None)
+### *class* braidio.script.Narration(text, style=None, published_text=None, lead_gap_s=0.0, voice=None, voice_settings=None, written=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -46,6 +46,11 @@ A spoken narration beat (authored, synthesized by TTS).
 `published_text` is an optional rights-safe rewrite the published profile
 uses when the default `text` quotes forbidden (e.g. copyrighted) content;
 leave it `None` when the narration is already clean.
+
+`written` is the text as authored, when `text` has been respelled for the
+voice (`BDUF` → `bee-duff`): `text` is what the voice receives,
+`written` is what a viewer should read, so captions show it (braidio#237).
+`None` means the two are the same.
 
 `lead_gap_s` prepends a beat of silence — breathing room before a
 register change (e.g. a book-read entering after a conversation), so it

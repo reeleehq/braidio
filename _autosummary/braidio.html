@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../_static/documentation_options.js?v=ee59aaf7"></script>
+    <script src="../_static/documentation_options.js?v=0d7dcda5"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.129" />
+  <meta name="docsearch:version" content="0.0.130" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -1030,12 +1030,16 @@ default) makes an unprefixed reference an error.</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="braidio.Narration">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">braidio.</span></span><span class="sig-name descname"><span class="pre">Narration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">style</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">published_text</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lead_gap_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_settings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/script.html#Narration"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.Narration" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">braidio.</span></span><span class="sig-name descname"><span class="pre">Narration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">style</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">published_text</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lead_gap_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_settings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">written</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/script.html#Narration"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.Narration" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>A spoken narration beat (authored, synthesized by TTS).</p>
 <p><code class="docutils literal notranslate"><span class="pre">published_text</span></code> is an optional rights-safe rewrite the published profile
 uses when the default <code class="docutils literal notranslate"><span class="pre">text</span></code> quotes forbidden (e.g. copyrighted) content;
 leave it <code class="docutils literal notranslate"><span class="pre">None</span></code> when the narration is already clean.</p>
+<p><code class="docutils literal notranslate"><span class="pre">written</span></code> is the text as authored, when <code class="docutils literal notranslate"><span class="pre">text</span></code> has been respelled for the
+voice (<code class="docutils literal notranslate"><span class="pre">BDUF</span></code> → <code class="docutils literal notranslate"><span class="pre">bee-duff</span></code>): <code class="docutils literal notranslate"><span class="pre">text</span></code> is what the voice receives,
+<code class="docutils literal notranslate"><span class="pre">written</span></code> is what a viewer should read, so captions show it (braidio#237).
+<code class="docutils literal notranslate"><span class="pre">None</span></code> means the two are the same.</p>
 <p><code class="docutils literal notranslate"><span class="pre">lead_gap_s</span></code> prepends a beat of silence — breathing room before a
 register change (e.g. a book-read entering after a conversation), so it
 doesn’t feel glued to the previous speaker.</p>

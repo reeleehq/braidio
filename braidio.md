@@ -1,4 +1,4 @@
-> built 2026-11-17 14:18 UTC from ad01444 (main) · braidio 0.0.129. Details: build_info.json
+> built 2026-11-22 08:24 UTC from d42b69e (main) · braidio 0.0.130. Details: build_info.json
 
 # index.html.md
 
@@ -1859,7 +1859,7 @@ Split `reference` into `(namespace, body)`, applying the default.
 * **Return type:**
   [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 
-### *class* braidio.Narration(text, style=None, published_text=None, lead_gap_s=0.0, voice=None, voice_settings=None)
+### *class* braidio.Narration(text, style=None, published_text=None, lead_gap_s=0.0, voice=None, voice_settings=None, written=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -1868,6 +1868,11 @@ A spoken narration beat (authored, synthesized by TTS).
 `published_text` is an optional rights-safe rewrite the published profile
 uses when the default `text` quotes forbidden (e.g. copyrighted) content;
 leave it `None` when the narration is already clean.
+
+`written` is the text as authored, when `text` has been respelled for the
+voice (`BDUF` → `bee-duff`): `text` is what the voice receives,
+`written` is what a viewer should read, so captions show it (braidio#237).
+`None` means the two are the same.
 
 `lead_gap_s` prepends a beat of silence — breathing room before a
 register change (e.g. a book-read entering after a conversation), so it
@@ -4169,7 +4174,7 @@ at render time). Rendered in ONE pass via Text-to-Dialogue so it sounds like
 people talking to each other. This is our own commentary → always publishable
 (its text is still scanned for forbidden verbatim quotes in the published cut).
 
-### *class* braidio.script.Narration(text, style=None, published_text=None, lead_gap_s=0.0, voice=None, voice_settings=None)
+### *class* braidio.script.Narration(text, style=None, published_text=None, lead_gap_s=0.0, voice=None, voice_settings=None, written=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -4178,6 +4183,11 @@ A spoken narration beat (authored, synthesized by TTS).
 `published_text` is an optional rights-safe rewrite the published profile
 uses when the default `text` quotes forbidden (e.g. copyrighted) content;
 leave it `None` when the narration is already clean.
+
+`written` is the text as authored, when `text` has been respelled for the
+voice (`BDUF` → `bee-duff`): `text` is what the voice receives,
+`written` is what a viewer should read, so captions show it (braidio#237).
+`None` means the two are the same.
 
 `lead_gap_s` prepends a beat of silence — breathing room before a
 register change (e.g. a book-read entering after a conversation), so it
@@ -6385,7 +6395,7 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-17 14:18 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/ad01444e72e457e4c672e7f240923396d0a6e249"><code>ad01444</code></a> on branch <code>main</code>, for **braidio 0.0.129** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-22 08:24 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/d42b69efda21f5ed38e2e80e97059bc7bfcf07f0"><code>d42b69e</code></a> on branch <code>main</code>, for **braidio 0.0.130** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -6394,9 +6404,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/ad01444e72e457e4c672e7f240923396d0a6e249"><code>ad01444e72e457e4c672e7f240923396d0a6e249</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/d42b69efda21f5ed38e2e80e97059bc7bfcf07f0"><code>d42b69efda21f5ed38e2e80e97059bc7bfcf07f0</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | <code>0.0.129</code>                                                                                                                                    |
+| Tags at this commit | <code>0.0.130</code>                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -6405,15 +6415,15 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/44100666324">44100666324</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/45002193638">45002193638</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>fe4d157396924983716f299a7b809249e6021786</code> (in the history of the built commit) |
+| Event commit | <code>dbfbc1d41a58eb99191639550316e912fbc28691</code> (in the history of the built commit) |
 
 ## Tools
 
 |          |         |
 |----------|---------|
-| epythet  | 0.2.22  |
+| epythet  | 0.2.23  |
 | Sphinx   | 9.1.1   |
 | docutils | 0.22.4  |
 | Python   | 3.12.16 |
@@ -6432,14 +6442,14 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.129/">0.0.129</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/braidio/0.0.130/">0.0.130</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout ad01444e72e457e4c672e7f240923396d0a6e249
-pip install "epythet==0.2.22"
+git checkout d42b69efda21f5ed38e2e80e97059bc7bfcf07f0
+pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
 

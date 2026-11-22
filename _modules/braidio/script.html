@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../../_static/documentation_options.js?v=ee59aaf7"></script>
+    <script src="../../_static/documentation_options.js?v=0d7dcda5"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.129" />
+  <meta name="docsearch:version" content="0.0.130" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -743,6 +743,11 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">    uses when the default ``text`` quotes forbidden (e.g. copyrighted) content;</span>
 <span class="sd">    leave it ``None`` when the narration is already clean.</span>
 
+<span class="sd">    ``written`` is the text as authored, when ``text`` has been respelled for the</span>
+<span class="sd">    voice (``BDUF`` → ``bee-duff``): ``text`` is what the voice receives,</span>
+<span class="sd">    ``written`` is what a viewer should read, so captions show it (braidio#237).</span>
+<span class="sd">    ``None`` means the two are the same.</span>
+
 <span class="sd">    ``lead_gap_s`` prepends a beat of silence — breathing room before a</span>
 <span class="sd">    register change (e.g. a book-read entering after a conversation), so it</span>
 <span class="sd">    doesn't feel glued to the previous speaker.</span>
@@ -761,7 +766,10 @@ window.runMermaid = runMermaid;</script>
     <span class="n">voice</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="p">(</span>
         <span class="kc">None</span>  <span class="c1"># per-beat voice override (e.g. presenter vs book-narrator)</span>
     <span class="p">)</span>
-    <span class="n">voice_settings</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># per-beat delivery override (e.g. V2_NARRATOR)</span></div>
+    <span class="n">voice_settings</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># per-beat delivery override (e.g. V2_NARRATOR)</span>
+    <span class="n">written</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="kc">None</span>  <span class="c1"># on-screen form when ``text`` is respelled (braidio#237)</span>
+    <span class="p">)</span></div>
 
 
 

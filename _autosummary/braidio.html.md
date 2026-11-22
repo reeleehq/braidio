@@ -19,8 +19,9 @@ in the *Hamilton* repo — braidio has its own #18 about something else.
 
 ### Functions
 
-| [`skills_dir`](#braidio.skills_dir)()                                       | Path to the agent skills that ship with braidio.                                                                        |
+| [`prefetch`](#braidio.prefetch)(script, \*[, source, voice, ...])         | Warm the voice's cache for `script` with `workers` concurrent requests.                                                 |
 |-----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| [`skills_dir`](#braidio.skills_dir)()                                       | Path to the agent skills that ship with braidio.                                                                        |
 | [`script_from_markdown`](#braidio.script_from_markdown)(md, \*[, voice, title, ...])  | Turn a markdown document into a [`Script`](#braidio.Script) of narration beats.             |
 | [`untagged_differences`](#braidio.untagged_differences)(before, after)                | Where `after` differs from `before` by more than `[audio tags]`.                                                        |
 | [`captions_for`](#braidio.captions_for)(script, timeline, \*[, max_chars])    | The SRT document for `script` as laid out by `timeline`.                                                                |
@@ -78,6 +79,7 @@ in the *Hamilton* repo — braidio has its own #18 about something else.
 
 | [`WeaveKind`](#braidio.WeaveKind)(\*values)                               | A braidio production kind.                                                                                         |
 |----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| [`PrefetchReport`](#braidio.PrefetchReport)(requests, fetched, cached[, ...])  | What [`prefetch()`](#braidio.prefetch) did.                                              |
 | [`TagMismatch`](#braidio.TagMismatch)(index, before, after)                 | A beat whose text changed by more than audio tags.                                                                 |
 | [`Cue`](#braidio.Cue)(start_s, end_s, text)                         | One subtitle: `[start_s, end_s)` and the text shown.                                                               |
 | [`Alignment`](#braidio.Alignment)(timeline, cues, unmatched, ...)         | What [`align_script()`](#braidio.align_script) measured.                                     |
@@ -402,6 +404,13 @@ A beat resolved for a profile — what the renderer actually plays.
 `turns`) or `"scene_break"` (a structural boundary — no content; the
 renderer marks it with music). `from_index` points at the source beat;
 `note` records any substitution/drop reasoning.
+
+### *class* braidio.PrefetchReport(requests, fetched, cached, failed=dict())
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+What [`prefetch()`](#braidio.prefetch) did. `failed` maps a request’s text to its last error;
+those requests are simply made again, sequentially, by the render.
 
 ### *class* braidio.Profile(\*values)
 
@@ -1281,6 +1290,19 @@ Flagged hits per `per` words (default 1000). 0.0 for empty text.
 
 * **Return type:**
   [`float`](https://docs.python.org/3/builtins/functions.html#float)
+
+### braidio.prefetch(script, \*, source=None, voice=None, workers=8, retries=5, backoff_s=2.0, sleep=<built-in function sleep>, \*\*render_kwargs)
+
+Warm the voice’s cache for `script` with `workers` concurrent requests.
+
+`render_kwargs` are the arguments you will give the render
+([`braidio.render_production()`](#braidio.render_production): `config`, `delivery`, `cast`,
+`profile`, `voice_id`…). The voice is the one the render will pick
+(`voice=`, else `config.tts`). A failed request is retried `retries`
+times with `backoff_s * attempt` seconds between tries, then reported.
+
+* **Return type:**
+  [`PrefetchReport`](#braidio.PrefetchReport)
 
 ### braidio.render_format(fmt, script, , source, out_path=None, profile=Profile.PERSONAL, bed_asset=None, sting_asset=None, \*\*overrides)
 

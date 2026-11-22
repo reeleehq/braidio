@@ -1,4 +1,4 @@
-> built 2026-11-22 08:24 UTC from d42b69e (main) · braidio 0.0.130. Details: build_info.json
+> built 2026-11-22 08:44 UTC from 8ff0272 (main) · braidio 0.0.130. Details: build_info.json
 
 # index.html.md
 
@@ -1512,8 +1512,9 @@ in the *Hamilton* repo — braidio has its own #18 about something else.
 
 ### Functions
 
-| [`skills_dir`](_autosummary/braidio.html.md#braidio.skills_dir)()                                       | Path to the agent skills that ship with braidio.                                                                        |
+| [`prefetch`](_autosummary/braidio.html.md#braidio.prefetch)(script, \*[, source, voice, ...])         | Warm the voice's cache for `script` with `workers` concurrent requests.                                                 |
 |-----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| [`skills_dir`](_autosummary/braidio.html.md#braidio.skills_dir)()                                       | Path to the agent skills that ship with braidio.                                                                        |
 | [`script_from_markdown`](_autosummary/braidio.html.md#braidio.script_from_markdown)(md, \*[, voice, title, ...])  | Turn a markdown document into a [`Script`](_autosummary/braidio.html.md#braidio.Script) of narration beats.             |
 | [`untagged_differences`](_autosummary/braidio.html.md#braidio.untagged_differences)(before, after)                | Where `after` differs from `before` by more than `[audio tags]`.                                                        |
 | [`captions_for`](_autosummary/braidio.html.md#braidio.captions_for)(script, timeline, \*[, max_chars])    | The SRT document for `script` as laid out by `timeline`.                                                                |
@@ -1571,6 +1572,7 @@ in the *Hamilton* repo — braidio has its own #18 about something else.
 
 | [`WeaveKind`](_autosummary/braidio.html.md#braidio.WeaveKind)(\*values)                               | A braidio production kind.                                                                                         |
 |----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| [`PrefetchReport`](_autosummary/braidio.html.md#braidio.PrefetchReport)(requests, fetched, cached[, ...])  | What [`prefetch()`](_autosummary/braidio.html.md#braidio.prefetch) did.                                              |
 | [`TagMismatch`](_autosummary/braidio.html.md#braidio.TagMismatch)(index, before, after)                 | A beat whose text changed by more than audio tags.                                                                 |
 | [`Cue`](_autosummary/braidio.html.md#braidio.Cue)(start_s, end_s, text)                         | One subtitle: `[start_s, end_s)` and the text shown.                                                               |
 | [`Alignment`](_autosummary/braidio.html.md#braidio.Alignment)(timeline, cues, unmatched, ...)         | What [`align_script()`](_autosummary/braidio.html.md#braidio.align_script) measured.                                     |
@@ -1895,6 +1897,13 @@ A beat resolved for a profile — what the renderer actually plays.
 `turns`) or `"scene_break"` (a structural boundary — no content; the
 renderer marks it with music). `from_index` points at the source beat;
 `note` records any substitution/drop reasoning.
+
+### *class* braidio.PrefetchReport(requests, fetched, cached, failed=dict())
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+What [`prefetch()`](_autosummary/braidio.html.md#braidio.prefetch) did. `failed` maps a request’s text to its last error;
+those requests are simply made again, sequentially, by the render.
 
 ### *class* braidio.Profile(\*values)
 
@@ -2774,6 +2783,19 @@ Flagged hits per `per` words (default 1000). 0.0 for empty text.
 
 * **Return type:**
   [`float`](https://docs.python.org/3/builtins/functions.html#float)
+
+### braidio.prefetch(script, \*, source=None, voice=None, workers=8, retries=5, backoff_s=2.0, sleep=<built-in function sleep>, \*\*render_kwargs)
+
+Warm the voice’s cache for `script` with `workers` concurrent requests.
+
+`render_kwargs` are the arguments you will give the render
+([`braidio.render_production()`](_autosummary/braidio.html.md#braidio.render_production): `config`, `delivery`, `cast`,
+`profile`, `voice_id`…). The voice is the one the render will pick
+(`voice=`, else `config.tts`). A failed request is retried `retries`
+times with `backoff_s * attempt` seconds between tries, then reported.
+
+* **Return type:**
+  [`PrefetchReport`](_autosummary/braidio.html.md#braidio.PrefetchReport)
 
 ### braidio.render_format(fmt, script, , source, out_path=None, profile=Profile.PERSONAL, bed_asset=None, sting_asset=None, \*\*overrides)
 
@@ -6395,7 +6417,7 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-22 08:24 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/d42b69efda21f5ed38e2e80e97059bc7bfcf07f0"><code>d42b69e</code></a> on branch <code>main</code>, for **braidio 0.0.130** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-22 08:44 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/8ff027288e5007b083c27b0d15482438fbb43471"><code>8ff0272</code></a> on branch <code>main</code>, for **braidio 0.0.130** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -6404,9 +6426,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/d42b69efda21f5ed38e2e80e97059bc7bfcf07f0"><code>d42b69efda21f5ed38e2e80e97059bc7bfcf07f0</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/8ff027288e5007b083c27b0d15482438fbb43471"><code>8ff027288e5007b083c27b0d15482438fbb43471</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | <code>0.0.130</code>                                                                                                                                    |
+| Tags at this commit | none                                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -6415,9 +6437,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/45002193638">45002193638</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/45003786207">45003786207</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>dbfbc1d41a58eb99191639550316e912fbc28691</code> (in the history of the built commit) |
+| Event commit | <code>8ff027288e5007b083c27b0d15482438fbb43471</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6448,7 +6470,7 @@ Latest release: <a href="https://pypi.org/project/braidio/0.0.130/">0.0.130</a>,
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout d42b69efda21f5ed38e2e80e97059bc7bfcf07f0
+git checkout 8ff027288e5007b083c27b0d15482438fbb43471
 pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "built_at": "2026-11-22T08:24:09Z",
+  "built_at": "2026-11-22T08:44:53Z",
   "package": {
     "name": "braidio",
     "version": "0.0.130",
@@ -9,26 +9,24 @@
   },
   "git": {
     "available": true,
-    "commit": "d42b69efda21f5ed38e2e80e97059bc7bfcf07f0",
-    "short_commit": "d42b69e",
+    "commit": "8ff027288e5007b083c27b0d15482438fbb43471",
+    "short_commit": "8ff0272",
     "branch": "main",
-    "tags": [
-      "0.0.130"
-    ],
+    "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/reeleehq/braidio",
-    "commit_url": "https://github.com/reeleehq/braidio/commit/d42b69efda21f5ed38e2e80e97059bc7bfcf07f0",
+    "commit_url": "https://github.com/reeleehq/braidio/commit/8ff027288e5007b083c27b0d15482438fbb43471",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "reeleehq/braidio",
-    "sha": "dbfbc1d41a58eb99191639550316e912fbc28691",
+    "sha": "8ff027288e5007b083c27b0d15482438fbb43471",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "45002193638",
-    "run_url": "https://github.com/reeleehq/braidio/actions/runs/45002193638",
+    "run_id": "45003786207",
+    "run_url": "https://github.com/reeleehq/braidio/actions/runs/45003786207",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -58,7 +56,7 @@
   },
   "site": {
     "modules_documented": 31,
-    "objects_documented": 363
+    "objects_documented": 366
   },
   "pypi": {
     "checked": true,
@@ -66,7 +64,7 @@
     "relation": "same",
     "error": null
   },
-  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout d42b69efda21f5ed38e2e80e97059bc7bfcf07f0\npip install \"epythet==0.2.23\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout 8ff027288e5007b083c27b0d15482438fbb43471\npip install \"epythet==0.2.23\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
     "aligned": true,

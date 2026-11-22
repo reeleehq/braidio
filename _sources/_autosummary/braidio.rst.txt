@@ -8,6 +8,7 @@
 
    .. autosummary::
    
+      prefetch
       skills_dir
       script_from_markdown
       untagged_differences
@@ -67,6 +68,7 @@
    .. autosummary::
    
       WeaveKind
+      PrefetchReport
       TagMismatch
       Cue
       Alignment

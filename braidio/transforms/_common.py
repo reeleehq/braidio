@@ -386,23 +386,18 @@ def source_media_path(project_root, body: dict) -> Path:
     registered by content (``artifact_id``, braidio#153), else its recorded path
     (``asset_id``, which on this tier holds a path, not a content id).
 
-    A registered id the catalog cannot answer for falls back to the path, and the
-    error names both when neither is there.
+    A registered id goes through :func:`media_path` (the catalog, then the path; the
+    error names both when neither is there).
     """
-    artifact_id = str(body.get("artifact_id") or "")
     path = Path(str(body["asset_id"]))
-    if artifact_id:
-        from nw.media_catalog import HostArtifactCatalog
-
-        blob = HostArtifactCatalog(project_root).blob_path(artifact_id)
-        if blob is not None:
-            return blob
-        if not path.exists():
-            raise FileNotFoundError(
-                f"segment source missing — looked for catalog blob "
-                f"{artifact_id[:12]}… and {path}"
-            )
-    return path
+    if not body.get("artifact_id"):
+        return path  # as before #153: the extractor reports a missing file
+    # the one "content first" rule, shared with every other media read
+    return media_path(
+        project_root,
+        {"artifact_id": body["artifact_id"], "url": file_url(path)},
+        what="segment source",
+    )
 
 
 def source_media_identity(body: dict) -> str:

@@ -2523,6 +2523,74 @@ def test_a_moved_project_re_extracts_its_segment_from_the_catalog(
     plan, skel = segment.plan(project, TransformInputs(primary=(clip,)))
     segment.execute(project, plan, skel, use_cache=False)
     assert read == [b"SONG"]
+    # a second run on this machine is a cache hit under the content-keyed key
+    plan2, skel2 = segment.plan(project, TransformInputs(primary=(clip,)))
+    assert skel2[0].body["cache_key"] == skel[0].body["cache_key"]
+    segment.execute(project, plan2, skel2)
+    assert read == [b"SONG"]
+
+
+def test_the_content_id_survives_a_default_reingest_and_a_moved_one(
+    project, script_and_source
+):
+    """On, then a default re-ingest (what a connector's save_script does), then on again
+    with the source file gone: one rewrite when the id is added, then nothing."""
+    import nw
+
+    from braidio.transforms._common import TIER_SOURCE_MEDIA
+
+    script, source = script_and_source
+    braidio.transforms.ingest_script(project, script, source=source)
+    plain = _source_media(project)
+    braidio.transforms.ingest_script(
+        project, script, source=source, register_sources=True
+    )
+    on = _source_media(project)
+    assert on.id == plain.id and "artifact_id" in on.body  # rewritten once, in place
+    braidio.transforms.ingest_script(project, script, source=source)
+    default = _source_media(project)
+    assert default.body == on.body
+    assert default.provenance.generated_at_time == on.provenance.generated_at_time
+    Path(on.body["asset_id"]).unlink()  # the project moved; the catalog has the bytes
+    braidio.transforms.ingest_script(
+        project, script, source=source, register_sources=True
+    )
+    moved = _source_media(project)
+    assert moved.body == on.body
+    assert moved.provenance.generated_at_time == on.provenance.generated_at_time
+    assert len(nw.annotations_at_tier(project.root, TIER_SOURCE_MEDIA)) == 1
+
+
+def test_registering_a_missing_uncatalogued_source_is_refused_before_any_write(
+    project, script_and_source
+):
+    import nw
+
+    script, source = script_and_source
+    Path(source._asset_path).unlink()
+    with pytest.raises(FileNotFoundError, match="holds no copy"):
+        braidio.transforms.ingest_script(
+            project, script, source=source, register_sources=True
+        )
+    assert list(nw.iter_all_annotations(project.root)) == []
+
+
+def test_registering_sources_needs_the_local_catalog(
+    project, script_and_source, monkeypatch
+):
+    import nw
+    import nw.media_catalog as mc
+
+    def mismatch():
+        raise mc.CatalogBackendMismatch("the host serves blobs from elsewhere")
+
+    monkeypatch.setattr(mc, "assert_local_backend", mismatch)
+    script, source = script_and_source
+    with pytest.raises(RuntimeError, match="local artifact catalog"):
+        braidio.transforms.ingest_script(
+            project, script, source=source, register_sources=True
+        )
+    assert list(nw.iter_all_annotations(project.root)) == []
 
 
 def test_an_unregistered_source_still_reads_and_keys_by_its_path(tmp_path):

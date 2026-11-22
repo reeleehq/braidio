@@ -59,9 +59,7 @@ class Workspace:
     @property
     def renders_dir(self) -> Path:
         return (
-            self.root
-            / "renders"
-            / check_path_segment(self.email.strip(), what="email")
+            self.root / "renders" / check_path_segment(self.email.strip(), what="email")
         )
 
     def project_root(self, project_id: str) -> Path:
@@ -169,9 +167,7 @@ class Workspace:
     @property
     def assets_dir(self) -> Path:
         return (
-            self.root
-            / "assets"
-            / check_path_segment(self.email.strip(), what="email")
+            self.root / "assets" / check_path_segment(self.email.strip(), what="email")
         )
 
     def content_store(self):

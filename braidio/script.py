@@ -48,7 +48,9 @@ class Narration:
         None  # per-beat voice override (e.g. presenter vs book-narrator)
     )
     voice_settings: dict | None = None  # per-beat delivery override (e.g. V2_NARRATOR)
-    written: str | None = None  # on-screen form when ``text`` is respelled (braidio#237)
+    written: str | None = (
+        None  # on-screen form when ``text`` is respelled (braidio#237)
+    )
 
 
 CLIP_PLACEMENTS = ("before", "under", "after")

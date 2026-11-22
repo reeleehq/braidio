@@ -21,7 +21,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from braidio._paths import safe_component
+from nw.paths import check_path_segment
 
 #: Env var overriding the braidio data root (where per-user projects/renders live).
 DATA_HOME_ENV_VAR = "BRAIDIO_DATA_HOME"
@@ -50,14 +50,22 @@ class Workspace:
 
     @property
     def projects_dir(self) -> Path:
-        return self.root / "projects" / safe_component(self.email, label="email")
+        return (
+            self.root
+            / "projects"
+            / check_path_segment(self.email.strip(), what="email")
+        )
 
     @property
     def renders_dir(self) -> Path:
-        return self.root / "renders" / safe_component(self.email, label="email")
+        return (
+            self.root
+            / "renders"
+            / check_path_segment(self.email.strip(), what="email")
+        )
 
     def project_root(self, project_id: str) -> Path:
-        pid = safe_component(project_id, label="project_id")
+        pid = check_path_segment(project_id.strip(), what="project_id")
         return self.projects_dir / pid
 
     def create_project(self, project_id: str, *, title: str = "", force: bool = False):
@@ -132,7 +140,7 @@ class Workspace:
         guarantee, defended at the create side too — organise's collision
         scan can only see names that exist when IT runs).
         """
-        stem = safe_component(name, label="render name")
+        stem = check_path_segment(name.strip(), what="render name")
         from braidio.downloads import _media_exists, _stem_for_assigned_title
 
         holder = _stem_for_assigned_title(self.renders_dir, stem.casefold())
@@ -160,7 +168,11 @@ class Workspace:
 
     @property
     def assets_dir(self) -> Path:
-        return self.root / "assets" / safe_component(self.email, label="email")
+        return (
+            self.root
+            / "assets"
+            / check_path_segment(self.email.strip(), what="email")
+        )
 
     def content_store(self):
         """The user's content-addressed asset store (``dol`` — local now, S3 later).
@@ -177,14 +189,18 @@ class Workspace:
         """The user's asset metadata sidecar (``{hash: {name, mimeType, size, ...}}``)."""
         from dol import JsonFiles
 
-        d = self.root / "assets_meta" / safe_component(self.email, label="email")
+        d = (
+            self.root
+            / "assets_meta"
+            / check_path_segment(self.email.strip(), what="email")
+        )
         d.mkdir(parents=True, exist_ok=True)
         return JsonFiles(str(d))
 
     def asset_path(self, asset_id: str) -> str:
         """Resolve a stored asset (a :class:`dol.ContentRef` ``item_id``/hash) to its
         server-local file path — so weave/render can read the media."""
-        key = safe_component(asset_id, label="asset_id")
+        key = check_path_segment(asset_id.strip(), what="asset_id")
         if key not in self.content_store():
             raise FileNotFoundError(f"no asset {asset_id!r} for {self.email}")
         return str(self.assets_dir / key)

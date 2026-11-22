@@ -338,13 +338,13 @@ def resolve(email: str, project_id: str, artifact_id: str) -> Deliverable:
     "someone else's episode" and "no such episode" are indistinguishable here,
     and saying which would leak existence.)
     """
-    from braidio._paths import safe_component
+    from nw.paths import check_path_segment
 
     name = (artifact_id or "").strip()
     try:
         # The same rule the workspace applies when it CREATES a render, so we
         # never refuse something it happily wrote.
-        safe_component(name, label="artifact_id")
+        check_path_segment(name.strip(), what="artifact_id")
     except ValueError as e:
         raise KeyError(str(e)) from None
 

@@ -538,7 +538,9 @@ def weave_project(
             designed = (
                 None
                 if ing.sound_design is None
-                else _design_sound(run, nw.get_transform(SOUND_DESIGN_TRANSFORM), woven, ing)
+                else _design_sound(
+                    run, nw.get_transform(SOUND_DESIGN_TRANSFORM), woven, ing
+                )
             )
             if designed is not None:  # retrievable by id, like the episode (#193)
                 register_sound_design(project, designed)
@@ -625,9 +627,7 @@ def _design_sound(run, transform, woven, ing):
         return run(transform, woven, context=context, force=True)
 
 
-def _execute(
-    transform, project, *primary, secrets=None, context=None, force=False
-):
+def _execute(transform, project, *primary, secrets=None, context=None, force=False):
     """``plan`` then ``execute`` one transform over ``primary``; its ``TransformResult``.
 
     ``secrets`` is offered only when there is one — the Transform's ``execute``

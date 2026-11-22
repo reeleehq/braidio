@@ -54,6 +54,7 @@ from __future__ import annotations
 import uuid
 from collections import defaultdict
 from dataclasses import dataclass
+from pathlib import Path
 
 from lacing import Annotation, MediaRef, TimeInterval
 
@@ -264,6 +265,7 @@ def ingest_script(
     )
     # Phase 2 — commit, by identity.
     committed = _commit_nodes(project, nodes)
+    _register_structure_assets(project, structure=structure, bed=bed)
 
     ordered = tuple(
         (
@@ -544,6 +546,69 @@ def _structure_node(*, structure, bed) -> _AuthoringNode | None:
         ),
         body_schema_uri=PRODUCTION_STRUCTURE_V1,
     )
+
+
+#: Where a structure asset's bytes are kept inside the project, which owns them.
+STRUCTURE_ASSET_DIR = ("data", "structure")
+#: Catalog kind of a sting or bed (audio).
+STRUCTURE_ASSET_CATALOG_KIND = "audio"
+
+
+def _register_structure_assets(project, *, structure, bed) -> None:
+    """Make the sting and bed bytes retrievable by their recorded id (braidio#152).
+
+    The ``production-structure/v1`` node records each by content hash, and
+    ``weave_to_episode`` looks them up by that id first (``media_path``); until a
+    catalog row exists that lookup cannot hit, and a project moved to another
+    machine reads them at the importing machine's path. The rules are the
+    importer's: **copy** into the project first (a catalog blob hardlinks from
+    the file it is given, and these live in shared trees), key the row on the hash
+    the graph already recorded, and never write a ``file://`` url into it.
+    Idempotent: an id the catalog already answers for is left alone. When the
+    host's catalog is not the local one the registration is skipped with a
+    ``RuntimeWarning`` (the structure still renders here, from its recorded url).
+    """
+    paths = [
+        a.asset_path
+        for a in (structure.sting if structure else None, bed)
+        if a is not None
+    ]
+    if not paths:
+        return
+    import warnings
+
+    from nw.atomic_io import copy_file_atomic
+    from nw.media_catalog import (
+        CatalogBackendMismatch,
+        HostArtifactCatalog,
+        assert_local_backend,
+    )
+
+    try:
+        assert_local_backend()
+    except CatalogBackendMismatch as exc:
+        warnings.warn(
+            f"the sting and bed were not registered for retrieval: {exc}",
+            RuntimeWarning,
+            stacklevel=3,
+        )
+        return
+    catalog = HostArtifactCatalog(project.root)
+    for path in paths:
+        artifact_id, _url = asset_ref(path)
+        if catalog.has(artifact_id):
+            continue
+        dest = Path(project.root).joinpath(
+            *STRUCTURE_ASSET_DIR, f"{artifact_id}{Path(path).suffix}"
+        )
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        copy_file_atomic(Path(path), dest)
+        catalog.register(
+            dest,
+            kind=STRUCTURE_ASSET_CATALOG_KIND,
+            artifact_id=artifact_id,
+            note="sting or bed of a production-structure",
+        )
 
 
 def _knobs(obj, *, drop: str) -> dict:

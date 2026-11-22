@@ -350,3 +350,49 @@ def test_a_format_with_no_structure_declared_is_inert(
     # A sting would ring here; the format asked for a pause, so this stays quiet.
     assert rms(pcm, 1.15, 1.45) < SILENT_RMS
     assert seconds(pcm) == pytest.approx(2.0 + fmt.structure.pause_s, abs=0.3)
+
+
+def test_sting_and_bed_are_retrievable_by_their_recorded_id(
+    project, source, silent_narration, tmp_path
+):
+    """braidio#152: the structure node's asset ids resolve from the project's own
+    catalog, so the bytes survive the original files going away."""
+    import json
+
+    from nw.media_catalog import HostArtifactCatalog
+
+    from braidio.transforms._common import TIER_PRODUCTION_STRUCTURE, optional_singleton
+
+    sting_file = tone(tmp_path / "hit.wav", 880, 1.0)
+    bed_file = tone(tmp_path / "bed.wav", 220, 4.0)
+    script = _script(
+        braidio.Narration(text="one"),
+        braidio.SceneBreak(label="act 2"),
+        braidio.Narration(text="two"),
+    )
+    kw = dict(
+        source=source,
+        structure=braidio.MusicStructure(sting=braidio.Sting(str(sting_file))),
+        bed=braidio.MusicBed(str(bed_file)),
+    )
+    braidio.weave_project(project, script, **kw)
+    body = optional_singleton(project, TIER_PRODUCTION_STRUCTURE).body
+    catalog = HostArtifactCatalog(project.root)
+    for kind, original in (("sting", sting_file), ("bed", bed_file)):
+        blob = catalog.blob_path(body[f"{kind}_asset_id"])
+        assert blob is not None and blob.read_bytes() == original.read_bytes()
+        assert Path(project.root).resolve() in blob.resolve().parents
+    rows = list(catalog.iter_rows())
+    assert len(rows) >= 2 and not any("file://" in json.dumps(r) for r in rows)
+    # a re-weave neither duplicates nor rewrites the registration
+    before = sorted(str(r) for r in catalog.iter_rows())
+    braidio.weave_project(project, script, **kw)
+    assert before == sorted(str(r) for r in catalog.iter_rows())
+    # and the weave reads them from the catalog even when the originals are gone
+    sting_file.unlink(), bed_file.unlink()
+    from braidio.transforms._episode import _structure_and_bed
+
+    structure, bed = _structure_and_bed(
+        project.root, optional_singleton(project, TIER_PRODUCTION_STRUCTURE)
+    )
+    assert Path(structure.sting.asset_path).exists() and Path(bed.asset_path).exists()

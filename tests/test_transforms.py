@@ -1642,6 +1642,13 @@ def test_a_missing_bed_does_not_fail_a_read_that_never_plays_it(
     (node,) = nw.annotations_at_tier(project.root, "production-structures")
     (tmp_path / "bed.mp3").unlink()
     (tmp_path / "hit.mp3").unlink()
+    # ingest registers both in the project's catalog (braidio#152); a project from
+    # before that (or one whose catalog lost them) has them nowhere
+    from nw.media_catalog import HostArtifactCatalog
+
+    catalog = HostArtifactCatalog(project.root)
+    for asset in ("bed", "sting"):
+        catalog.blob_path(node.body[f"{asset}_asset_id"]).unlink()
 
     structure, bed = _structure_and_bed(project.root, node)
 

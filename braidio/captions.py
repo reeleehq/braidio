@@ -86,7 +86,7 @@ def _beat_text(beat) -> tuple[str, bool]:
     if isinstance(beat, SegmentBeat):
         return beat.reference.strip(), True
     if isinstance(beat, Narration):
-        return on_screen(beat.text), False
+        return on_screen(beat.written or beat.text), False
     if isinstance(beat, Dialogue):
         # One cue stream; the speaker labels are the useful part on screen.
         return " ".join(
@@ -126,6 +126,22 @@ def cues_for(script, timeline, *, max_chars: int = 0) -> list[Cue]:
             continue
         text, is_quote = _beat_text(beat)
         if not text:
+            continue
+
+        written = isinstance(beat, Narration) and beat.written is not None
+        if written and span.turns:
+            # The turns carry the spoken (respelled) words; show the written ones
+            # over the stretch the beat is actually spoken (braidio#237).
+            pieces = _sentences(text)
+            if max_chars > 0:
+                pieces = [p for piece in pieces for p in _wrap(piece, max_chars)]
+            began, ended = span.turns[0].start, span.turns[-1].end
+            total = sum(len(p) for p in pieces) or 1
+            t = span.start + began
+            for piece in pieces:
+                share = (ended - began) * len(piece) / total
+                raw.append(Cue(t, t + share, piece))
+                t += share
             continue
 
         if span.turns and not is_quote:

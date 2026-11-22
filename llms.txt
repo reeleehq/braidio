@@ -31,6 +31,7 @@
 - [braidio.sources](_autosummary/braidio.sources.html.md): Segment sources: resolve a &#42;reference&#42; to a cuttable &#96;&#91;start, end&#93;&#96; window.
 - [braidio.structure](_autosummary/braidio.structure.html.md): Structural music — stings at scene breaks, fade-to-spotlight on exhibits.
 - [braidio.style](_autosummary/braidio.style.html.md): Style audit — flag the recycled rhetorical tics in commentary text.
+- [braidio.testing](_autosummary/braidio.testing.html.md): Test helpers for hosts that build on braidio, importable without pytest (braidio#229).
 - [braidio.textprep](_autosummary/braidio.textprep.html.md): Text preparation for scripts — clean OCR’d source, tidy authored lines.
 - [braidio.timeline](_autosummary/braidio.timeline.html.md): Timeline breakdown — what a production spends its time on, and in what order.
 - [braidio.tts](_autosummary/braidio.tts.html.md): ElevenLabs narration synthesis.
@@ -39,7 +40,7 @@
 - [braidio.weave](_autosummary/braidio.weave.html.md): Weave narration + audio clips on a timeline (#21) — the reusable mix engine.
 - [braidio.weave_config](_autosummary/braidio.weave_config.html.md): WeaveConfig — every editing choice for weaving narration + segments (#20).
 - [For AI agents](ai-agents.html.md): &#96;braidio&#96; ships artifacts for coding agents alongside its code. This page lists
-- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-11-22 08:44 UTC&#42;&#42; from commit &lt;a href="https://github.com/ree...
+- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-11-22 09:02 UTC&#42;&#42; from commit &lt;a href="https://github.com/ree...
 
 ## Optional
 

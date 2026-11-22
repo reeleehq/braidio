@@ -1645,6 +1645,7 @@ quiet passage stays quiet relative to its loud neighbours.
 | [`sources`](braidio.sources.html.md#module-braidio.sources)                 | Segment sources: resolve a *reference* to a cuttable `[start, end]` window.                                |
 | [`structure`](braidio.structure.html.md#module-braidio.structure)             | Structural music — stings at scene breaks, fade-to-spotlight on exhibits.                                  |
 | [`style`](braidio.style.html.md#module-braidio.style)                     | Style audit — flag the recycled rhetorical tics in commentary text.                                        |
+| [`testing`](braidio.testing.html.md#module-braidio.testing)                 | Test helpers for hosts that build on braidio, importable without pytest (braidio#229).                     |
 | [`textprep`](braidio.textprep.html.md#module-braidio.textprep)               | Text preparation for scripts — clean OCR'd source, tidy authored lines.                                    |
 | [`timeline`](braidio.timeline.html.md#module-braidio.timeline)               | Timeline breakdown — what a production spends its time on, and in what order.                              |
 | [`tts`](braidio.tts.html.md#module-braidio.tts)                         | ElevenLabs narration synthesis.                                                                            |

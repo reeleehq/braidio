@@ -1,0 +1,18 @@
+braidio.testing
+===============
+
+.. automodule:: braidio.testing
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      SECONDS_PER_CHAR
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      timed_dialogue_stand_in
+   

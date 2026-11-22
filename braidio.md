@@ -1,4 +1,4 @@
-> built 2026-11-22 08:44 UTC from 8ff0272 (main) · braidio 0.0.130. Details: build_info.json
+> built 2026-11-22 09:02 UTC from e10ed3a (main) · braidio 0.0.132. Details: build_info.json
 
 # index.html.md
 
@@ -3138,6 +3138,7 @@ quiet passage stays quiet relative to its loud neighbours.
 | [`sources`](_autosummary/braidio.sources.html.md#module-braidio.sources)                 | Segment sources: resolve a *reference* to a cuttable `[start, end]` window.                                |
 | [`structure`](_autosummary/braidio.structure.html.md#module-braidio.structure)             | Structural music — stings at scene breaks, fade-to-spotlight on exhibits.                                  |
 | [`style`](_autosummary/braidio.style.html.md#module-braidio.style)                     | Style audit — flag the recycled rhetorical tics in commentary text.                                        |
+| [`testing`](_autosummary/braidio.testing.html.md#module-braidio.testing)                 | Test helpers for hosts that build on braidio, importable without pytest (braidio#229).                     |
 | [`textprep`](_autosummary/braidio.textprep.html.md#module-braidio.textprep)               | Text preparation for scripts — clean OCR'd source, tidy authored lines.                                    |
 | [`timeline`](_autosummary/braidio.timeline.html.md#module-braidio.timeline)               | Timeline breakdown — what a production spends its time on, and in what order.                              |
 | [`tts`](_autosummary/braidio.tts.html.md#module-braidio.tts)                         | ElevenLabs narration synthesis.                                                                            |
@@ -4974,6 +4975,55 @@ Flagged hits per `per` words (default 1000). 0.0 for empty text.
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 
+# _autosummary/braidio.testing.html.md
+
+# braidio.testing
+
+Test helpers for hosts that build on braidio, importable without pytest (braidio#229).
+
+[`timed_dialogue_stand_in()`](_autosummary/braidio.testing.html.md#braidio.testing.timed_dialogue_stand_in) replaces the one paid call under
+`braidio.render_dialogue_lines()` and `braidio.rerender_line()`, so a host
+can test its own code offline with braidio’s real take, master and splice running
+(ffmpeg is still needed for those):
+
+```default
+fake, calls = braidio.testing.timed_dialogue_stand_in()
+monkeypatch.setattr("braidio.dialogue_lines.text_to_dialogue_with_timestamps", fake)
+```
+
+### Module Attributes
+
+| [`SECONDS_PER_CHAR`](_autosummary/braidio.testing.html.md#braidio.testing.SECONDS_PER_CHAR)   | Seconds of speech per character, the pause around and between turns, the sample rate, the tone amplitude, and the base pitch and pitch step per voice.   |
+|---------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
+
+### Functions
+
+| [`timed_dialogue_stand_in`](_autosummary/braidio.testing.html.md#braidio.testing.timed_dialogue_stand_in)()   | A stand-in for braidio's ONE paid dialogue call: `(fake, calls)`.   |
+|------------------------------------------------------------------------------|---------------------------------------------------------------------|
+
+### braidio.testing.SECONDS_PER_CHAR *= 0.01*
+
+Seconds of speech per character, the pause around and between turns, the
+sample rate, the tone amplitude, and the base pitch and pitch step per voice.
+
+### braidio.testing.timed_dialogue_stand_in()
+
+A stand-in for braidio’s ONE paid dialogue call: `(fake, calls)`.
+
+`fake` has the signature of [`braidio.tts.text_to_dialogue_with_timestamps()`](_autosummary/braidio.tts.html.md#braidio.tts.text_to_dialogue_with_timestamps)
+and answers with a sine tone per input (one pitch per voice, 10 ms per
+character, 0.2 s pauses) as WAV, plus the
+[`DialogueSegment`](_autosummary/braidio.tts.html.md#braidio.tts.DialogueSegment)s that time each input. Each call is
+appended to `calls` as `{"inputs": [(voice_id, text), ...], "refresh": bool}`.
+
+```pycon
+>>> fake, calls = timed_dialogue_stand_in()
+>>> audio, segments = fake([("v", "hello")])
+>>> [(s.input_index, s.voice_id) for s in segments], calls[0]["inputs"]
+([(0, 'v')], [('v', 'hello')])
+```
+
+
 # _autosummary/braidio.textprep.html.md
 
 # braidio.textprep
@@ -6417,7 +6467,7 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-22 08:44 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/8ff027288e5007b083c27b0d15482438fbb43471"><code>8ff0272</code></a> on branch <code>main</code>, for **braidio 0.0.130** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-22 09:02 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/e10ed3a3c0af6a24c643850c19fe1797872f9b63"><code>e10ed3a</code></a> on branch <code>main</code>, for **braidio 0.0.132** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -6426,9 +6476,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/8ff027288e5007b083c27b0d15482438fbb43471"><code>8ff027288e5007b083c27b0d15482438fbb43471</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/e10ed3a3c0af6a24c643850c19fe1797872f9b63"><code>e10ed3a3c0af6a24c643850c19fe1797872f9b63</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | none                                                                                                                                                    |
+| Tags at this commit | <code>0.0.132</code>                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -6437,9 +6487,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/45003786207">45003786207</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/45005133475">45005133475</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>8ff027288e5007b083c27b0d15482438fbb43471</code> (in the history of the built commit) |
+| Event commit | <code>8c78c96d16156f72ba2276ece66996809217c83c</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6464,13 +6514,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.130/">0.0.130</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/braidio/0.0.132/">0.0.132</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 8ff027288e5007b083c27b0d15482438fbb43471
+git checkout e10ed3a3c0af6a24c643850c19fe1797872f9b63
 pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

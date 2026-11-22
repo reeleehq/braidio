@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../../_static/documentation_options.js?v=0d7dcda5"></script>
+    <script src="../../_static/documentation_options.js?v=9efdc3d6"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.130" />
+  <meta name="docsearch:version" content="0.0.132" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -780,13 +780,19 @@ window.runMermaid = runMermaid;</script>
         <span class="n">out</span> <span class="o">=</span> <span class="n">prepare_pause</span><span class="p">(</span><span class="n">_STAND_IN_S</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">out_path</span><span class="p">)</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">".mp3"</span><span class="p">))</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span> <span class="k">if</span> <span class="n">return_cache_status</span> <span class="k">else</span> <span class="n">out</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">render_dialogue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">turns</span><span class="p">,</span> <span class="n">cast</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="n">return_cache_status</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">render_dialogue</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">turns</span><span class="p">,</span> <span class="n">cast</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="n">return_cache_status</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span>
+    <span class="p">):</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real</span><span class="p">,</span> <span class="n">ElevenLabsVoice</span><span class="p">):</span>  <span class="c1"># one pass: nothing to prefetch</span>
             <span class="n">out</span> <span class="o">=</span> <span class="n">prepare_pause</span><span class="p">(</span><span class="n">_STAND_IN_S</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">out_path</span><span class="p">)</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">".mp3"</span><span class="p">))</span>
             <span class="k">return</span> <span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span> <span class="k">if</span> <span class="n">return_cache_status</span> <span class="k">else</span> <span class="n">out</span>
         <span class="k">return</span> <span class="n">SpeakVoice</span><span class="o">.</span><span class="n">render_dialogue</span><span class="p">(</span>
-            <span class="bp">self</span><span class="p">,</span> <span class="n">turns</span><span class="p">,</span> <span class="n">cast</span><span class="p">,</span> <span class="n">out_path</span><span class="o">=</span><span class="n">out_path</span><span class="p">,</span>
-            <span class="n">return_cache_status</span><span class="o">=</span><span class="n">return_cache_status</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">,</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">turns</span><span class="p">,</span>
+            <span class="n">cast</span><span class="p">,</span>
+            <span class="n">out_path</span><span class="o">=</span><span class="n">out_path</span><span class="p">,</span>
+            <span class="n">return_cache_status</span><span class="o">=</span><span class="n">return_cache_status</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kw</span><span class="p">,</span>
         <span class="p">)</span>
 
 

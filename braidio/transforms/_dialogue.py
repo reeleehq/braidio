@@ -176,6 +176,7 @@ class DialogueRenderTTS(BaseTransform):
             # artifact — never a node whose parents a re-ingest replaced or
             # removed (braidio#51).
             existing = fresh_equivalent(project, skel)
+            reused = existing is not None  # an adopted node is written, not reused
             if existing is None:
                 hit = cached_output(project, TIER_DIALOGUE_RENDER, cache_key)
                 if hit is not None:
@@ -190,6 +191,7 @@ class DialogueRenderTTS(BaseTransform):
                     cost_usd_actual=0.0,
                     cache_hit_savings_usd=cost if cost is not None else 0.0,
                     has_unknown_costs=cost is None,
+                    reused_ids=frozenset({existing.id}) if reused else frozenset(),
                 )
 
         out_path = project.root / "data" / "dialogue" / f"{skel.id}.mp3"

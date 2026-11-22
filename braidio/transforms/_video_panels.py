@@ -718,7 +718,10 @@ class VideoPanelsPlan(BaseTransform):
             existing = panels_for_episode(project, episode_id)
             if existing and _track_value(existing) == _track_value(skeleton):
                 return TransformResult(
-                    annotations=tuple(existing), artifacts=(), cost_usd_actual=0.0
+                    annotations=tuple(existing),
+                    artifacts=(),
+                    cost_usd_actual=0.0,
+                    reused_ids=frozenset(a.id for a in existing),  # nw#215
                 )
         for skel in skeleton:
             project.graph.add_annotation(skel)

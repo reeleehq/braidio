@@ -335,6 +335,7 @@ class NarrationRenderTTS(BaseTransform):
             # Idempotent re-run: the same render over the same, still-fresh
             # inputs is the node already there.
             existing = fresh_equivalent(project, skel)
+            reused = existing is not None  # an adopted node is written, not reused
             if existing is None:
                 # The audio is already made under this key, but the node that
                 # made it may describe parents since replaced or removed
@@ -353,6 +354,7 @@ class NarrationRenderTTS(BaseTransform):
                     cost_usd_actual=0.0,
                     cache_hit_savings_usd=cost if cost is not None else 0.0,
                     has_unknown_costs=cost is None,
+                    reused_ids=frozenset({existing.id}) if reused else frozenset(),
                 )
 
         out_path = project.root / "data" / "tts" / f"{skel.id}.mp3"
@@ -419,6 +421,7 @@ def _speak_from_override(
     cache, a person chose not to have one.
     """
     existing = fresh_equivalent(project, skel) if reuse else None
+    reused = existing is not None  # a fresh node is returned untouched (nw#215)
     if existing is None:
         existing = skel.model_copy(
             update={
@@ -437,4 +440,5 @@ def _speak_from_override(
         cost_usd_actual=0.0,
         cache_hit_savings_usd=0.0,
         has_unknown_costs=False,
+        reused_ids=frozenset({existing.id}) if reused else frozenset(),
     )

@@ -778,7 +778,13 @@ def _reuse(project, skel: Annotation):
     elif action == "adopt":
         existing = adopt_output(skel, existing)
         project.graph.add_annotation(existing)
-    return TransformResult(annotations=(existing,), artifacts=(), cost_usd_actual=0.0)
+    return TransformResult(
+        annotations=(existing,),
+        artifacts=(),
+        cost_usd_actual=0.0,
+        # only a "fresh" node is returned untouched: reverify and adopt write (nw#215)
+        reused_ids=frozenset({existing.id}) if action == "fresh" else frozenset(),
+    )
 
 
 # --- video_cut.render -------------------------------------------------------

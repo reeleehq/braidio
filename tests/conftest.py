@@ -45,3 +45,16 @@ def _no_ambient_braidio_defaults(monkeypatch, tmp_path_factory):
     monkeypatch.setenv(
         "BRAIDIO_CONFIG", str(tmp_path_factory.getbasetemp() / "no-braidio-config.json")
     )
+
+
+# Every braidio Transform's ``execute`` must report truthfully which rows it
+# wrote and which it only reused (nw#215, braidio#217): a guard that derives its
+# scope from the registry, so a Transform added later is covered without a list.
+try:
+    from nw.testing.transforms import make_truthful_writes_fixture
+
+    truthful_writes = make_truthful_writes_fixture(
+        owner_filter=lambda cls: cls.__module__.startswith("braidio.")
+    )
+except ImportError:  # the nw-app layer is optional
+    pass

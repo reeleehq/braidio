@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../../_static/documentation_options.js?v=df9b7052"></script>
+    <script src="../../_static/documentation_options.js?v=1412e09f"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.143" />
+  <meta name="docsearch:version" content="0.0.144" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -766,14 +766,10 @@ window.runMermaid = runMermaid;</script>
 <span class="c1">#: float durations, and a touching pair must not read as overlapping.</span>
 <span class="n">_TIME_EPS_S</span> <span class="o">=</span> <span class="mf">1e-6</span>
 
-<span class="c1">#: The output formats a take can be spliced in: ElevenLabs' format family -&gt;</span>
-<span class="c1">#: (ffmpeg encoder, ffmpeg muxer). Raw ``pcm_``/``ulaw_``/``alaw_`` output has</span>
-<span class="c1">#: no container ffmpeg could read back, so it is refused before any spend.</span>
-<span class="n">_SPLICE_CODECS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">"mp3"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"libmp3lame"</span><span class="p">,</span> <span class="s2">"mp3"</span><span class="p">),</span>
-    <span class="s2">"wav"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"pcm_s16le"</span><span class="p">,</span> <span class="s2">"wav"</span><span class="p">),</span>
-    <span class="s2">"opus"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"libopus"</span><span class="p">,</span> <span class="s2">"ogg"</span><span class="p">),</span>
-<span class="p">}</span>
+<span class="c1">#: ElevenLabs output families with no container: ffmpeg cannot read them back</span>
+<span class="c1">#: (the master is decoded from the take), so a take refuses them before any spend.</span>
+<span class="c1">#: mixing can *encode* them; braidio cannot *splice* them.</span>
+<span class="n">_RAW_FAMILIES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">"pcm"</span><span class="p">,</span> <span class="s2">"ulaw"</span><span class="p">,</span> <span class="s2">"alaw"</span><span class="p">})</span>
 
 
 <div class="viewcode-block" id="DialogueTimingError">
@@ -941,18 +937,16 @@ window.runMermaid = runMermaid;</script>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_encode_args</span><span class="p">(</span><span class="n">output_format</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""ffmpeg output args reproducing ElevenLabs' ``{codec}_{rate}[_{kbps}]``."""</span>
-    <span class="n">family</span><span class="p">,</span> <span class="o">*</span><span class="n">rest</span> <span class="o">=</span> <span class="n">output_format</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">family</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_SPLICE_CODECS</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">rest</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""ffmpeg output args for ``output_format``, refusing the formats a take cannot splice."""</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">mixing.dubbing</span><span class="w"> </span><span class="kn">import</span> <span class="n">output_format_encode_args</span>
+
+    <span class="k">if</span> <span class="n">output_format</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">_RAW_FAMILIES</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"output_format </span><span class="si">{</span><span class="n">output_format</span><span class="si">!r}</span><span class="s2"> cannot be spliced line by line; "</span>
-            <span class="sa">f</span><span class="s2">"use one of the </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">_SPLICE_CODECS</span><span class="p">)</span><span class="si">}</span><span class="s2"> formats (e.g. 'mp3_44100_128')"</span>
+            <span class="sa">f</span><span class="s2">"output_format </span><span class="si">{</span><span class="n">output_format</span><span class="si">!r}</span><span class="s2"> cannot be spliced line by line (raw "</span>
+            <span class="s2">"audio has no container to read back); use an mp3, wav or opus format "</span>
+            <span class="s2">"(e.g. 'mp3_44100_128')"</span>
         <span class="p">)</span>
-    <span class="n">encoder</span><span class="p">,</span> <span class="n">muxer</span> <span class="o">=</span> <span class="n">_SPLICE_CODECS</span><span class="p">[</span><span class="n">family</span><span class="p">]</span>
-    <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"-c:a"</span><span class="p">,</span> <span class="n">encoder</span><span class="p">,</span> <span class="s2">"-ar"</span><span class="p">,</span> <span class="n">rest</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">rest</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="n">args</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"-b:a"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">rest</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">k"</span><span class="p">]</span>
-    <span class="k">return</span> <span class="n">args</span> <span class="o">+</span> <span class="p">[</span><span class="s2">"-f"</span><span class="p">,</span> <span class="n">muxer</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">output_format_encode_args</span><span class="p">(</span><span class="n">output_format</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_cast_voices</span><span class="p">(</span><span class="n">turns</span><span class="p">,</span> <span class="n">cast</span><span class="p">:</span> <span class="n">ConversationCast</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
@@ -1066,51 +1060,24 @@ window.runMermaid = runMermaid;</script>
 <span class="c1"># --- the splice (mixing's replace_span_file does the cutting) --------------------------------------------</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_insert_window</span><span class="p">(</span>
-    <span class="n">insert</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">keep</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">rate</span><span class="p">:</span> <span class="nb">int</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"np.ndarray"</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""``insert[keep0:keep1]`` as float samples at ``rate``, exactly ``keep1 - keep0`` long.</span>
-
-<span class="sd">    The window may reach outside the insert: what falls outside is silence, so a</span>
-<span class="sd">    line that brings its lead-in or decay along from a pause it does not have</span>
-<span class="sd">    still fills the span it replaces.</span>
-<span class="sd">    """</span>
-    <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">mixing.decode</span><span class="w"> </span><span class="kn">import</span> <span class="n">decode_float_chunks</span>
-
-    <span class="n">k0</span><span class="p">,</span> <span class="n">k1</span> <span class="o">=</span> <span class="n">keep</span>
-    <span class="n">n</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">k1</span> <span class="o">-</span> <span class="n">k0</span><span class="p">)</span> <span class="o">*</span> <span class="n">rate</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"nothing to insert: keep window </span><span class="si">{</span><span class="n">keep</span><span class="si">}</span><span class="s2"> is empty"</span><span class="p">)</span>
-    <span class="n">_</span><span class="p">,</span> <span class="n">chunks</span> <span class="o">=</span> <span class="n">decode_float_chunks</span><span class="p">(</span><span class="n">insert</span><span class="p">,</span> <span class="n">sample_rate</span><span class="o">=</span><span class="n">rate</span><span class="p">)</span>
-    <span class="n">audio</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">chunks</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-    <span class="n">window</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="n">audio</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">audio</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
-    <span class="n">first</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">k0</span> <span class="o">*</span> <span class="n">rate</span><span class="p">)</span>  <span class="c1"># sample of ``audio`` at the window's start (may be &lt; 0)</span>
-    <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="nb">min</span><span class="p">(</span><span class="n">first</span> <span class="o">+</span> <span class="n">n</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">audio</span><span class="p">))</span>
-    <span class="k">if</span> <span class="n">hi</span> <span class="o">&gt;</span> <span class="n">lo</span><span class="p">:</span>
-        <span class="n">window</span><span class="p">[</span><span class="n">lo</span> <span class="o">-</span> <span class="n">first</span> <span class="p">:</span> <span class="n">hi</span> <span class="o">-</span> <span class="n">first</span><span class="p">]</span> <span class="o">=</span> <span class="n">audio</span><span class="p">[</span><span class="n">lo</span><span class="p">:</span><span class="n">hi</span><span class="p">]</span>
-    <span class="k">return</span> <span class="n">window</span>
-
-
 <span class="k">def</span><span class="w"> </span><span class="nf">_splice_line</span><span class="p">(</span>
     <span class="n">base</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
     <span class="n">insert</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">span</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
-    <span class="n">rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">keep</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
     <span class="n">out</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Write ``base[:span0] + insert[keep0:keep1] + base[span1:]`` to ``out``.</span>
 
-<span class="sd">    ``rate`` is ``base``'s sample rate. The cutting, the faded joins (mixing's</span>
-<span class="sd">    own join fade) and the single lossless encode are</span>
+<span class="sd">    The cutting, the window of the insert (silence where it reaches outside the</span>
+<span class="sd">    line), the faded joins and the single lossless encode are</span>
 <span class="sd">    :func:`mixing.splice.replace_span_file`'s; what is braidio's is only which</span>
 <span class="sd">    window of the re-rendered line goes in.</span>
 <span class="sd">    """</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">mixing.splice</span><span class="w"> </span><span class="kn">import</span> <span class="n">replace_span_file</span>
 
-    <span class="n">replace_span_file</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">span</span><span class="p">,</span> <span class="n">_insert_window</span><span class="p">(</span><span class="n">insert</span><span class="p">,</span> <span class="n">keep</span><span class="p">,</span> <span class="n">rate</span><span class="o">=</span><span class="n">rate</span><span class="p">),</span> <span class="n">output</span><span class="o">=</span><span class="n">out</span><span class="p">)</span>
+    <span class="n">replace_span_file</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">span</span><span class="p">,</span> <span class="n">insert</span><span class="p">,</span> <span class="n">insert_window</span><span class="o">=</span><span class="n">keep</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">out</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_scratch</span><span class="p">(</span><span class="n">near</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">suffix</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
@@ -1379,7 +1346,7 @@ window.runMermaid = runMermaid;</script>
     <span class="n">_encode_args</span><span class="p">(</span><span class="n">take</span><span class="o">.</span><span class="n">output_format</span><span class="p">)</span>
     <span class="n">_require_ffmpeg</span><span class="p">()</span>
     <span class="n">_check_master</span><span class="p">(</span><span class="n">take</span><span class="p">)</span>
-    <span class="n">total_s</span><span class="p">,</span> <span class="n">rate</span> <span class="o">=</span> <span class="n">_probe</span><span class="p">(</span><span class="n">take</span><span class="o">.</span><span class="n">master</span><span class="p">)</span>
+    <span class="n">total_s</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_probe</span><span class="p">(</span><span class="n">take</span><span class="o">.</span><span class="n">master</span><span class="p">)</span>
     <span class="n">cut</span><span class="p">,</span> <span class="n">pre</span><span class="p">,</span> <span class="n">post</span> <span class="o">=</span> <span class="n">_cut_points</span><span class="p">(</span><span class="n">take</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">total_s</span><span class="p">)</span>
     <span class="n">out</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">out_path</span><span class="p">)</span> <span class="k">if</span> <span class="n">out_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">take</span><span class="o">.</span><span class="n">path</span>
     <span class="n">out</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -1419,7 +1386,6 @@ window.runMermaid = runMermaid;</script>
             <span class="n">take</span><span class="o">.</span><span class="n">master</span><span class="p">,</span>
             <span class="n">solo</span><span class="p">,</span>
             <span class="n">span</span><span class="o">=</span><span class="p">(</span><span class="n">cut</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">total_s</span> <span class="k">if</span> <span class="n">cut</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">cut</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
-            <span class="n">rate</span><span class="o">=</span><span class="n">rate</span><span class="p">,</span>
             <span class="n">keep</span><span class="o">=</span><span class="p">(</span><span class="n">start</span> <span class="o">-</span> <span class="n">pre</span><span class="p">,</span> <span class="n">end</span> <span class="o">+</span> <span class="n">post</span><span class="p">),</span>
             <span class="n">out</span><span class="o">=</span><span class="n">new_master</span><span class="p">,</span>
         <span class="p">)</span>

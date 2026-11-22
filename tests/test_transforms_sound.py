@@ -334,8 +334,7 @@ def test_a_pruned_blob_warns_and_is_not_reported_retrievable(
     project, script_and_source, patched_synthesis, foley
 ):
     """A blob evicted from falaw's store cannot be served: registration warns
-    instead of raising, and the status door says so (review of #193). nw's own
-    reuse path still refuses such a design: braidio#228."""
+    instead of raising, and the status door says so (review of #193). a weave re-designs it (braidio#228)."""
     from falaw.content import default_content_store
 
     _, _, receipt = _designed(project, script_and_source)
@@ -392,3 +391,27 @@ def test_large_credits_are_counted_not_carried_in_the_status_door():
     )
     row = sound_design_row(design, retrievable=True)
     assert row["credits"] is None and row["credits_omitted"] is True
+
+
+def test_a_pruned_blob_is_re_designed_once_on_the_next_weave(
+    project, script_and_source, patched_synthesis, foley
+):
+    """A re-weave whose cached mix was pruned from falaw's store designs again
+    with ``force=True`` (nw's ``SoundDesignMixGone``) instead of raising on
+    every run; a real re-design, so the receipt says its spend is unknown
+    (braidio#228)."""
+    from falaw.content import default_content_store
+
+    script, source = script_and_source
+    first = braidio.weave_project(
+        project, script, source=source, sound_design=braidio.SoundDesign(),
+        return_receipt=True,
+    )  # fmt: skip
+    default_content_store().delete_blob(first.sound_design.body["artifact_id"])
+    again = braidio.weave_project(
+        project, script, source=source, sound_design=braidio.SoundDesign(),
+        return_receipt=True,
+    )  # fmt: skip
+    assert again.sound_design is not None
+    assert again.has_unknown_costs
+    assert default_content_store().has_blob(again.sound_design.body["artifact_id"])

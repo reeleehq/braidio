@@ -498,9 +498,16 @@ def weave_project(
 
     results = []
 
-    def run(transform, *primary, secrets=None, context=None):
+    def run(transform, *primary, secrets=None, context=None, force=False):
         results.append(
-            _execute(transform, project, *primary, secrets=secrets, context=context)
+            _execute(
+                transform,
+                project,
+                *primary,
+                secrets=secrets,
+                context=context,
+                force=force,
+            )
         )
         if not results[-1].annotations:
             raise RuntimeError(f"{transform.name} produced nothing to weave on")
@@ -534,11 +541,7 @@ def weave_project(
             designed = (
                 None
                 if ing.sound_design is None
-                else run(
-                    nw.get_transform(SOUND_DESIGN_TRANSFORM),
-                    woven,
-                    context={ing.sound_design.body_schema_uri: (ing.sound_design,)},
-                )
+                else _design_sound(run, nw.get_transform(SOUND_DESIGN_TRANSFORM), woven, ing)
             )
             if designed is not None:  # retrievable by id, like the episode (#193)
                 register_sound_design(project, designed)
@@ -610,7 +613,24 @@ class WeaveReceipt:
         )
 
 
-def _execute(transform, project, *primary, secrets=None, context=None):
+def _design_sound(run, transform, woven, ing):
+    """Run nw's sound-design Transform over the episode; when its cached mix was
+    pruned from falaw's content store (:class:`nw.transforms.sound_design.SoundDesignMixGone`),
+    design again once with ``force=True`` instead of wedging every re-weave
+    (braidio#228). That is a real re-design, so a spend of unknown size: nw
+    totals it as ``has_unknown_costs`` on the receipt."""
+    from nw.transforms.sound_design import SoundDesignMixGone
+
+    context = {ing.sound_design.body_schema_uri: (ing.sound_design,)}
+    try:
+        return run(transform, woven, context=context)
+    except SoundDesignMixGone:
+        return run(transform, woven, context=context, force=True)
+
+
+def _execute(
+    transform, project, *primary, secrets=None, context=None, force=False
+):
     """``plan`` then ``execute`` one transform over ``primary``; its ``TransformResult``.
 
     ``secrets`` is offered only when there is one — the Transform's ``execute``
@@ -621,6 +641,8 @@ def _execute(transform, project, *primary, secrets=None, context=None):
     inputs = TransformInputs(primary=tuple(primary), context=context or {})
     plan, skeleton = transform.plan(project, inputs)
     kwargs = {} if secrets is None else {"secrets": secrets}
+    if force:
+        kwargs["force"] = True
     return transform.execute(project, plan, skeleton, **kwargs)
 
 

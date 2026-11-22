@@ -19,8 +19,8 @@ alignment.timeline          # plugs into braidio.video.plan_spans
 captions_from_cues(alignment.cues)   # the SRT
 ```
 
-Free, offline, pure and dependency-free (stdlib `difflib`): part of the
-functional core.
+Free, offline and pure; the word alignment is `mixing.transcript`’s
+(stdlib only), imported when a script is aligned.
 
 Seams (keyword-only, each defaulting to the strongest built-in):
 
@@ -34,8 +34,9 @@ Seams (keyword-only, each defaulting to the strongest built-in):
 A dialogue beat is timed as its turns’ text, one unit per turn; the speaker labels
 are not spoken, so they appear in no cue (unlike [`cues_for()`](braidio.captions.html.md#braidio.captions.cues_for)).
 
-This is the in-package stand-in for a shared word aligner (authored tokens against
-timed words), a kind of code several packages of the fleet carry; see braidio#212.
+The word alignment (authored tokens against timed words) is the fleet’s shared one,
+`mixing.transcript.align_words` (braidio#250); this module keeps the chunk
+ownership and where a chunk nothing matched is placed.
 
 ### Examples
 

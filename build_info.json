@@ -1,32 +1,32 @@
 {
   "schema_version": 1,
-  "built_at": "2026-11-22T11:12:01Z",
+  "built_at": "2026-11-22T15:13:15Z",
   "package": {
     "name": "braidio",
-    "version": "0.0.138",
+    "version": "0.0.140",
     "display_name": "braidio",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "422e886b430968d8051109ba5522b9d77a693e15",
-    "short_commit": "422e886",
+    "commit": "fbc4b49ef50e3f5b1f8f2f93d0e28d58bf5829a7",
+    "short_commit": "fbc4b49",
     "branch": "main",
     "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/reeleehq/braidio",
-    "commit_url": "https://github.com/reeleehq/braidio/commit/422e886b430968d8051109ba5522b9d77a693e15",
+    "commit_url": "https://github.com/reeleehq/braidio/commit/fbc4b49ef50e3f5b1f8f2f93d0e28d58bf5829a7",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "reeleehq/braidio",
-    "sha": "b34963c5d419dd971773a88768e2f722752e80ca",
+    "sha": "38946f5880dd34aa190f3a96ea27c35d105c6cdb",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "45015516111",
-    "run_url": "https://github.com/reeleehq/braidio/actions/runs/45015516111",
+    "run_id": "45036574660",
+    "run_url": "https://github.com/reeleehq/braidio/actions/runs/45036574660",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -60,14 +60,16 @@
   },
   "pypi": {
     "checked": true,
-    "latest": "0.0.138",
-    "relation": "same",
+    "latest": "0.0.141",
+    "relation": "behind",
     "error": null
   },
-  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout 422e886b430968d8051109ba5522b9d77a693e15\npip install \"epythet==0.2.23\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout fbc4b49ef50e3f5b1f8f2f93d0e28d58bf5829a7\npip install \"epythet==0.2.23\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
-    "aligned": true,
-    "notes": []
+    "aligned": false,
+    "notes": [
+      "The documented version (0.0.140) is behind the latest release on PyPI (0.0.141): `pip install braidio` gives newer code than these docs describe."
+    ]
   }
 }

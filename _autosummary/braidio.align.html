@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../_static/documentation_options.js?v=2eeefeaa"></script>
+    <script src="../_static/documentation_options.js?v=e863fa38"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.138" />
+  <meta name="docsearch:version" content="0.0.140" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -433,8 +433,8 @@ that heard “mate” for «Matte.» never reaches a subtitle.</p>
 <span class="n">captions_from_cues</span><span class="p">(</span><span class="n">alignment</span><span class="o">.</span><span class="n">cues</span><span class="p">)</span>   <span class="c1"># the SRT</span>
 </pre></div>
 </div>
-<p>Free, offline, pure and dependency-free (stdlib <code class="docutils literal notranslate"><span class="pre">difflib</span></code>): part of the
-functional core.</p>
+<p>Free, offline and pure; the word alignment is <code class="docutils literal notranslate"><span class="pre">mixing.transcript</span></code>’s
+(stdlib only), imported when a script is aligned.</p>
 <p>Seams (keyword-only, each defaulting to the strongest built-in):</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">normalize</span></code>: how a text is reduced to comparable tokens (default: lowercase,
@@ -446,8 +446,9 @@ SRT’s line width is <a class="reference internal" href="braidio.captions.html#
 </ul>
 <p>A dialogue beat is timed as its turns’ text, one unit per turn; the speaker labels
 are not spoken, so they appear in no cue (unlike <a class="reference internal" href="braidio.captions.html#braidio.captions.cues_for" title="braidio.captions.cues_for"><code class="xref py py-func docutils literal notranslate"><span class="pre">cues_for()</span></code></a>).</p>
-<p>This is the in-package stand-in for a shared word aligner (authored tokens against
-timed words), a kind of code several packages of the fleet carry; see braidio#212.</p>
+<p>The word alignment (authored tokens against timed words) is the fleet’s shared one,
+<code class="docutils literal notranslate"><span class="pre">mixing.transcript.align_words</span></code> (braidio#250); this module keeps the chunk
+ownership and where a chunk nothing matched is placed.</p>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">words</span> <span class="o">=</span> <span class="p">[</span>
 <span class="gp">... </span>    <span class="p">{</span><span class="s2">"text"</span><span class="p">:</span> <span class="s2">"Hello"</span><span class="p">,</span> <span class="s2">"start"</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s2">"end"</span><span class="p">:</span> <span class="mf">0.9</span><span class="p">},</span>

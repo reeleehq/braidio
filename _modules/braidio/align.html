@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../../_static/documentation_options.js?v=2eeefeaa"></script>
+    <script src="../../_static/documentation_options.js?v=e863fa38"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.138" />
+  <meta name="docsearch:version" content="0.0.140" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -732,8 +732,8 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">    alignment.timeline          # plugs into braidio.video.plan_spans</span>
 <span class="sd">    captions_from_cues(alignment.cues)   # the SRT</span>
 
-<span class="sd">Free, offline, pure and dependency-free (stdlib ``difflib``): part of the</span>
-<span class="sd">functional core.</span>
+<span class="sd">Free, offline and pure; the word alignment is ``mixing.transcript``'s</span>
+<span class="sd">(stdlib only), imported when a script is aligned.</span>
 
 <span class="sd">Seams (keyword-only, each defaulting to the strongest built-in):</span>
 
@@ -747,8 +747,9 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">A dialogue beat is timed as its turns' text, one unit per turn; the speaker labels</span>
 <span class="sd">are not spoken, so they appear in no cue (unlike :func:`~braidio.captions.cues_for`).</span>
 
-<span class="sd">This is the in-package stand-in for a shared word aligner (authored tokens against</span>
-<span class="sd">timed words), a kind of code several packages of the fleet carry; see braidio#212.</span>
+<span class="sd">The word alignment (authored tokens against timed words) is the fleet's shared one,</span>
+<span class="sd">``mixing.transcript.align_words`` (braidio#250); this module keeps the chunk</span>
+<span class="sd">ownership and where a chunk nothing matched is placed.</span>
 
 <span class="sd">Examples:</span>
 <span class="sd">    &gt;&gt;&gt; words = [</span>
@@ -767,7 +768,6 @@ window.runMermaid = runMermaid;</script>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">difflib</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">unicodedata</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
@@ -992,32 +992,33 @@ window.runMermaid = runMermaid;</script>
 <span class="k">def</span><span class="w"> </span><span class="nf">_chunk_times</span><span class="p">(</span><span class="n">chunks</span><span class="p">,</span> <span class="n">spoken</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">normalize</span><span class="p">,</span> <span class="n">end_s</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""``([(start, end)] per chunk, [unmatched chunk], matched, total tokens)``.</span>
 
-<span class="sd">    The authored tokens are walked against the heard ones in order</span>
-<span class="sd">    (:class:`difflib.SequenceMatcher`); a chunk takes the times of the words that</span>
+<span class="sd">    The authored tokens are timed by :func:`mixing.transcript.align_words`</span>
+<span class="sd">    (braidio#250); a chunk takes the times of the words that</span>
 <span class="sd">    matched it, and a chunk nothing matched is placed between its neighbours</span>
 <span class="sd">    (inside the audio, when its length ``end_s`` is known).</span>
 <span class="sd">    """</span>
-    <span class="n">heard</span><span class="p">,</span> <span class="n">heard_times</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">text</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="ow">in</span> <span class="n">spoken</span><span class="p">:</span>
-        <span class="k">for</span> <span class="n">tok</span> <span class="ow">in</span> <span class="n">normalize</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
-            <span class="n">heard</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tok</span><span class="p">)</span>
-            <span class="n">heard_times</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">))</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">mixing.transcript</span><span class="w"> </span><span class="kn">import</span> <span class="n">align_words</span>
+
     <span class="n">authored</span><span class="p">,</span> <span class="n">owner</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">ci</span><span class="p">,</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">chunks</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">tok</span> <span class="ow">in</span> <span class="n">normalize</span><span class="p">(</span><span class="n">chunk</span><span class="p">):</span>
             <span class="n">authored</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tok</span><span class="p">)</span>
             <span class="n">owner</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ci</span><span class="p">)</span>
-    <span class="n">matcher</span> <span class="o">=</span> <span class="n">difflib</span><span class="o">.</span><span class="n">SequenceMatcher</span><span class="p">(</span><span class="n">a</span><span class="o">=</span><span class="n">authored</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="n">heard</span><span class="p">,</span> <span class="n">autojunk</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">aligned</span> <span class="o">=</span> <span class="n">align_words</span><span class="p">(</span>
+        <span class="n">authored</span><span class="p">,</span>
+        <span class="n">spoken</span><span class="p">,</span>
+        <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">end_s</span><span class="p">)</span> <span class="k">if</span> <span class="n">end_s</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">normalize</span><span class="o">=</span><span class="k">lambda</span> <span class="n">word</span><span class="p">:</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">normalize</span><span class="p">(</span><span class="n">word</span><span class="p">)),</span>
+        <span class="n">split</span><span class="o">=</span><span class="k">lambda</span> <span class="n">word</span><span class="p">:</span> <span class="n">normalize</span><span class="p">(</span><span class="n">word</span><span class="p">),</span>  <span class="c1"># heard words cut like the script's</span>
+    <span class="p">)</span>
+    <span class="n">matched</span> <span class="o">=</span> <span class="n">aligned</span><span class="o">.</span><span class="n">matched</span>
     <span class="n">times</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="n">matched</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">size</span> <span class="ow">in</span> <span class="n">matcher</span><span class="o">.</span><span class="n">get_matching_blocks</span><span class="p">():</span>
-        <span class="n">matched</span> <span class="o">+=</span> <span class="n">size</span>
-        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">size</span><span class="p">):</span>
-            <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span> <span class="o">=</span> <span class="n">heard_times</span><span class="p">[</span><span class="n">b</span> <span class="o">+</span> <span class="n">k</span><span class="p">]</span>
-            <span class="n">cur</span> <span class="o">=</span> <span class="n">times</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">owner</span><span class="p">[</span><span class="n">a</span> <span class="o">+</span> <span class="n">k</span><span class="p">])</span>
-            <span class="n">times</span><span class="p">[</span><span class="n">owner</span><span class="p">[</span><span class="n">a</span> <span class="o">+</span> <span class="n">k</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="p">(</span><span class="n">lo</span><span class="p">,</span> <span class="n">hi</span><span class="p">)</span> <span class="k">if</span> <span class="n">cur</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">cur</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">lo</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">cur</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">hi</span><span class="p">))</span>
-            <span class="p">)</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">aligned</span><span class="o">.</span><span class="n">anchors</span><span class="p">:</span>  <span class="c1"># a chunk's span: the words that anchored its tokens</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span> <span class="o">=</span> <span class="n">aligned</span><span class="o">.</span><span class="n">words</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+        <span class="n">cur</span> <span class="o">=</span> <span class="n">times</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">owner</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+        <span class="n">times</span><span class="p">[</span><span class="n">owner</span><span class="p">[</span><span class="n">k</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">(</span><span class="n">lo</span><span class="p">,</span> <span class="n">hi</span><span class="p">)</span> <span class="k">if</span> <span class="n">cur</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">cur</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">lo</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">cur</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">hi</span><span class="p">))</span>
+        <span class="p">)</span>
     <span class="n">unmatched</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">ci</span><span class="p">,</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">chunks</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">ci</span> <span class="ow">in</span> <span class="n">times</span><span class="p">:</span>
@@ -1039,7 +1040,7 @@ window.runMermaid = runMermaid;</script>
         <span class="p">[</span><span class="n">times</span><span class="p">[</span><span class="n">ci</span><span class="p">]</span> <span class="k">for</span> <span class="n">ci</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">chunks</span><span class="p">))],</span>
         <span class="n">unmatched</span><span class="p">,</span>
         <span class="n">matched</span><span class="p">,</span>
-        <span class="nb">len</span><span class="p">(</span><span class="n">authored</span><span class="p">),</span>
+        <span class="n">aligned</span><span class="o">.</span><span class="n">total</span><span class="p">,</span>
     <span class="p">)</span>
 
 

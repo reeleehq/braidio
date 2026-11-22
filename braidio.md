@@ -1,4 +1,4 @@
-> built 2026-11-22 11:12 UTC from 422e886 (main) · braidio 0.0.138. Details: build_info.json
+> built 2026-11-22 15:13 UTC from fbc4b49 (main) · braidio 0.0.140. Details: build_info.json
 
 # index.html.md
 
@@ -329,8 +329,8 @@ alignment.timeline          # plugs into braidio.video.plan_spans
 captions_from_cues(alignment.cues)   # the SRT
 ```
 
-Free, offline, pure and dependency-free (stdlib `difflib`): part of the
-functional core.
+Free, offline and pure; the word alignment is `mixing.transcript`’s
+(stdlib only), imported when a script is aligned.
 
 Seams (keyword-only, each defaulting to the strongest built-in):
 
@@ -344,8 +344,9 @@ Seams (keyword-only, each defaulting to the strongest built-in):
 A dialogue beat is timed as its turns’ text, one unit per turn; the speaker labels
 are not spoken, so they appear in no cue (unlike [`cues_for()`](_autosummary/braidio.captions.html.md#braidio.captions.cues_for)).
 
-This is the in-package stand-in for a shared word aligner (authored tokens against
-timed words), a kind of code several packages of the fleet carry; see braidio#212.
+The word alignment (authored tokens against timed words) is the fleet’s shared one,
+`mixing.transcript.align_words` (braidio#250); this module keeps the chunk
+ownership and where a chunk nothing matched is placed.
 
 ### Examples
 
@@ -6505,16 +6506,18 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-22 11:12 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/422e886b430968d8051109ba5522b9d77a693e15"><code>422e886</code></a> on branch <code>main</code>, for **braidio 0.0.138** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-22 15:13 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/fbc4b49ef50e3f5b1f8f2f93d0e28d58bf5829a7"><code>fbc4b49</code></a> on branch <code>main</code>, for **braidio 0.0.140** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.140) is behind the latest release on PyPI (0.0.141): `pip install braidio` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/422e886b430968d8051109ba5522b9d77a693e15"><code>422e886b430968d8051109ba5522b9d77a693e15</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/fbc4b49ef50e3f5b1f8f2f93d0e28d58bf5829a7"><code>fbc4b49ef50e3f5b1f8f2f93d0e28d58bf5829a7</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
 | Tags at this commit | none                                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
@@ -6525,9 +6528,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/45015516111">45015516111</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/45036574660">45036574660</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>b34963c5d419dd971773a88768e2f722752e80ca</code> (in the history of the built commit) |
+| Event commit | <code>38946f5880dd34aa190f3a96ea27c35d105c6cdb</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6552,13 +6555,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.138/">0.0.138</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/braidio/0.0.141/">0.0.141</a>, newer than the documented version (0.0.140).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 422e886b430968d8051109ba5522b9d77a693e15
+git checkout fbc4b49ef50e3f5b1f8f2f93d0e28d58bf5829a7
 pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

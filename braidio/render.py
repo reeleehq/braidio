@@ -584,6 +584,13 @@ def render_production(
         or (turn_overlap is not None and turn_overlap.max_s > 0)
     )
 
+    # What the timeline must say about a clip join: the weave overlaps it by the
+    # configured edge overlap, but the plain concat below crossfades EVERY join
+    # (clip edges included) by ``crossfade``, so that is what the audio lost there
+    # and what the timeline has to subtract, or cues drift by one crossfade per
+    # clip edge (braidio#234). The audio is left exactly as it was.
+    layout_edge_overlap = edge_overlap if woven else crossfade
+
     if woven:
         items = [
             TimelineItem(
@@ -628,7 +635,7 @@ def render_production(
             placements=placements,
             labels=labels,
             source_spans=spans,
-            clip_edge_overlap_s=edge_overlap,
+            clip_edge_overlap_s=layout_edge_overlap,
             narration_crossfade_s=crossfade,
             speakers=speakers,
             overlap=turn_overlap,
@@ -642,7 +649,7 @@ def render_production(
             settings=render_settings(
                 config=config,
                 crossfade_s=crossfade,
-                clip_edge_overlap_s=edge_overlap,
+                clip_edge_overlap_s=layout_edge_overlap,
                 target_lufs=target_lufs,
                 duck_db=duck_db,
                 delivery=delivery,

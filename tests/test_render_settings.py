@@ -178,3 +178,46 @@ def test_rendered_record_names_the_delivery_and_profile(
     assert tl.settings["delivery"]["name"] == braidio.default_delivery().name
     assert tl.settings["profile"] == braidio.DEFAULT_PROFILE.value
     json.dumps(tl.to_dict())  # still JSON on the real render path
+
+
+@needs_ffmpeg
+def test_timeline_end_equals_the_file_on_the_plain_concat_branch(tmp_path, monkeypatch):
+    """braidio#234: with clips, no bed and ``clip_edge_overlap_s=0`` the render is a
+    plain concat that crossfades every join; the timeline must subtract the same."""
+    import braidio
+    from braidio.render import duration_s
+    from braidio.weave_config import WeaveConfig
+
+    from _audio import FixedSource, tone
+
+    def fake_narrate(text, out, *, return_cache_status=False, **kw):
+        p = tone(Path(out), 440, 2.0)
+        return (p, False) if return_cache_status else p
+
+    monkeypatch.setattr(braidio, "narrate", fake_narrate)
+    source = FixedSource(tone(tmp_path / "song.wav", 220, 8.0), start_s=1.0, end_s=4.0)
+    script = braidio.Script(
+        title="t",
+        id_slug="t",
+        beats=[
+            braidio.Narration("One sentence."),
+            braidio.SegmentBeat(reference="a"),
+            braidio.SegmentBeat(reference="b"),
+            braidio.Narration("Another sentence."),
+        ],
+    )
+    out, tl = braidio.render_production(
+        script,
+        source=source,
+        config=WeaveConfig(clip_edge_overlap_s=0.0, crossfade_s=0.12),
+        out_path=tmp_path / "o.mp3",
+        normalize=False,
+        end_silence_s=0.0,
+        end_fade_s=0.0,
+        return_timeline=True,
+        tts_dir=tmp_path / "tts",
+        clips_dir=tmp_path / "clips",
+        episodes_dir=tmp_path / "ep",
+    )
+    assert tl.beats[-1].end == pytest.approx(duration_s(out), abs=0.1)
+    assert tl.settings["resolved"]["clip_edge_overlap_s"] == pytest.approx(0.12)

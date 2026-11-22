@@ -255,9 +255,10 @@ def open_or_create_project_at(
     root = Path(projects_dir) / check_path_segment(
         (project_id).strip(), what="project_id"
     )
-    if root.is_dir() and any(root.iterdir()):
+    import nw
+
+    if root.is_dir() and any(root.iterdir()) and not nw.is_project(root):
         return Project(root)  # not a project: nw says so, and nothing is written
-    try:
-        return create_project_at(projects_dir, project_id, title=title)
-    except FileExistsError:
-        return Project(root)  # another host created it between the check and here
+    root.parent.mkdir(parents=True, exist_ok=True)
+    # nw opens it, or creates it under its cross-process lock (nw#217)
+    return Project.open_or_init(root, title=title or project_id)

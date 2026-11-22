@@ -403,7 +403,9 @@ def ingest_document(
 
     ws = _workspace()
     root = ws.project_root(project_id)
-    if not (root / "project.json").exists():
+    import nw
+
+    if not nw.is_project(root):
         raise ToolError(f"no project {project_id!r} — call create_project first")
     try:
         if uri:

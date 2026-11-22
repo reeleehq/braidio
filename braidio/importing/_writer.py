@@ -1066,7 +1066,9 @@ def _import_into_project(
 
     # --- the project --------------------------------------------------------
     root = report.project_root
-    if (root / "project.json").exists():
+    import nw
+
+    if nw.is_project(root):
         project = Project(root)
     else:
         project = Project.init(root, title=manifest.title, force=True)

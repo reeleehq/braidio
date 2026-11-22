@@ -46,8 +46,6 @@ from nw.transforms import total_cost
 from braidio.defaults import default_delivery as _default_delivery
 from braidio.transforms._common import (
     ELEVENLABS_SECRET,
-    fresh_ids_pass,
-    note_output,
     TIER_WEAVE_CONFIG,
     TIER_PRODUCTION_STRUCTURE,
     TIER_RENDER_PROFILE,
@@ -505,15 +503,14 @@ def weave_project(
         if not results[-1].annotations:
             raise RuntimeError(f"{transform.name} produced nothing to weave on")
         out = results[-1].annotations[0]
-        note_output(project, out)  # a node the held walk did not know: walk again
         return out
 
     render_by_authoring_id = {}
     woven = None
     # one freshness walk per write, not ~two per beat (braidio#171): nw's pass
-    # for the reuse lookups (dropped by nw's own writers), braidio's for the
-    # "current node" readers (fresh_ids, dropped by note_output)
-    with nw.freshness_pass(), fresh_ids_pass():
+    # serves the reuse lookups and `nw.fresh_ids` (nw#222), and nw's own write
+    # paths drop it
+    with nw.freshness_pass():
         try:
             for beat in ing.narration_beats:
                 run(voice, beat)

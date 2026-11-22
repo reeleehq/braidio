@@ -2327,24 +2327,17 @@ def test_a_noop_reweave_walks_freshness_once(
     """braidio#171: freshness changes only through a write, so a re-weave that
     writes nothing needs one walk of the graph, not about two per beat.
 
-    Counted at nw's one walk primitive, which both of its entry points use
-    (``stale_verdicts_all`` for braidio's "current node" readers, and
-    ``fresh_equivalents`` for reuse since braidio#180), so a second walk
-    through either would show."""
+    Counted with nw's supported walk counter, which every entry point
+    (``fresh_ids``, ``fresh_equivalents``) goes through, so a second walk
+    through either would show (braidio#221)."""
     import nw.freshness
 
     script, source = script_and_source
     first = braidio.weave_project(project, script, source=source)
-    walks = []
-    real = nw.freshness._verdicts_for
-    monkeypatch.setattr(
-        nw.freshness,
-        "_verdicts_for",
-        lambda *a, **kw: walks.append(1) or real(*a, **kw),
-    )
+    before = nw.freshness.walk_count()
     again = braidio.weave_project(project, script, source=source)
     assert again.id == first.id
-    assert len(walks) == 1
+    assert nw.freshness.walk_count() - before == 1
 
 
 def test_after_a_voice_flip_and_back_the_status_names_the_episode_the_weave_returned(
@@ -2380,13 +2373,11 @@ def test_the_status_after_a_voice_change_walks_freshness_once(
     braidio.weave_project(project, script, source=source)
     monkeypatch.setenv("BRAIDIO_TTS_VOICE", "voiceB")
     braidio.weave_project(project, script, source=source)
-    walks = []
-    real = nw.stale_verdicts_all
-    monkeypatch.setattr(
-        nw, "stale_verdicts_all", lambda root: walks.append(root) or real(root)
-    )
+    import nw.freshness
+
+    before = nw.freshness.walk_count()
     project.genre_status()
-    assert len(walks) == 1
+    assert nw.freshness.walk_count() - before == 1
 
 
 def test_a_voice_never_woven_names_the_newest_fresh_mix(

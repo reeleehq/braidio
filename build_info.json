@@ -1,32 +1,32 @@
 {
   "schema_version": 1,
-  "built_at": "2026-11-22T15:14:02Z",
+  "built_at": "2026-11-22T15:17:25Z",
   "package": {
     "name": "braidio",
-    "version": "0.0.142",
+    "version": "0.0.143",
     "display_name": "braidio",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "f7f945b2741ca30d5907de7cba9440195a9f528a",
-    "short_commit": "f7f945b",
+    "commit": "6740e61333c5c5fb7d5bd87ded0df99fc9b42956",
+    "short_commit": "6740e61",
     "branch": "main",
     "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/reeleehq/braidio",
-    "commit_url": "https://github.com/reeleehq/braidio/commit/f7f945b2741ca30d5907de7cba9440195a9f528a",
+    "commit_url": "https://github.com/reeleehq/braidio/commit/6740e61333c5c5fb7d5bd87ded0df99fc9b42956",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "reeleehq/braidio",
-    "sha": "6ee1ded35c45d1103176db2ec1fc6066d5d0c6c0",
+    "sha": "4d1da13fcb25917d64b09b848c7510d2897ae3ca",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "45036564428",
-    "run_url": "https://github.com/reeleehq/braidio/actions/runs/45036564428",
+    "run_id": "45036923530",
+    "run_url": "https://github.com/reeleehq/braidio/actions/runs/45036923530",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -60,11 +60,11 @@
   },
   "pypi": {
     "checked": true,
-    "latest": "0.0.142",
+    "latest": "0.0.143",
     "relation": "same",
     "error": null
   },
-  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout f7f945b2741ca30d5907de7cba9440195a9f528a\npip install \"epythet==0.2.23\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout 6740e61333c5c5fb7d5bd87ded0df99fc9b42956\npip install \"epythet==0.2.23\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
     "aligned": true,

@@ -39,7 +39,7 @@ from fastmcp.exceptions import ToolError
 from fastmcp.server.middleware import Middleware
 
 from braidio.mcp.credentials import redact_caller_key, scrub_caller_key
-from braidio._paths import safe_component
+from nw.paths import check_path_segment
 
 #: Set by :class:`MeteringMiddleware` for the duration of a tool call; read by tools.
 _CURRENT_EMAIL: ContextVar[Optional[str]] = ContextVar(
@@ -97,7 +97,7 @@ class UsageLedger:
     store: MutableMapping
 
     def record(self, entry: dict) -> str:
-        email = safe_component(entry["email"], label="ledger email")
+        email = check_path_segment(entry["email"].strip(), what="ledger email")
         key = f"{email}/{entry['month']}/{entry['id']}.json"
         self.store[key] = entry
         return key
@@ -197,7 +197,7 @@ class MeteringMiddleware(Middleware):
                 raise ToolError("authentication required")
             email = self.local_user
         try:
-            email = safe_component(email, label="caller identity")
+            email = check_path_segment(email.strip(), what="caller identity")
         except ValueError as exc:
             raise ToolError(f"invalid caller identity: {exc}") from exc
         if self.allowed is not None:

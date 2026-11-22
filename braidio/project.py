@@ -223,9 +223,11 @@ def create_project_at(
     ...     p.root.name
     'ep_01'
     """
-    from braidio._paths import safe_component
+    from nw.paths import check_path_segment
 
-    root = Path(projects_dir) / safe_component(project_id, label="project_id")
+    root = Path(projects_dir) / check_path_segment(
+        (project_id).strip(), what="project_id"
+    )
     root.parent.mkdir(parents=True, exist_ok=True)
     return Project.init(root, title=title or project_id, force=force)
 
@@ -248,9 +250,11 @@ def open_or_create_project_at(
     ...     again.root == made.root, again.read_spec().title
     (True, 'Episode 1')
     """
-    from braidio._paths import safe_component
+    from nw.paths import check_path_segment
 
-    root = Path(projects_dir) / safe_component(project_id, label="project_id")
+    root = Path(projects_dir) / check_path_segment(
+        (project_id).strip(), what="project_id"
+    )
     if root.is_dir() and any(root.iterdir()):
         return Project(root)  # not a project: nw says so, and nothing is written
     try:

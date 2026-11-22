@@ -282,8 +282,15 @@ def script_from_markdown(
         ]
     respelled = _respeller(respell)
     beats = [
-        Narration(respelled(text), voice=voice, lead_gap_s=gap_of[kind], style=kind)
-        for kind, text in entries
+        Narration(
+            spoken,
+            voice=voice,
+            lead_gap_s=gap_of[kind],
+            style=kind,
+            written=text if spoken != text else None,
+        )
+        for kind, text in ((k, t) for k, t in entries)
+        for spoken in (respelled(text),)
     ]
     return Script(title=name, id_slug=id_slug or _slug(name), beats=beats)
 

@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../_static/documentation_options.js?v=3a8547cf"></script>
+    <script src="../_static/documentation_options.js?v=f10cd702"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.133" />
+  <meta name="docsearch:version" content="0.0.134" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -438,6 +438,15 @@ panel-length bounds. They are written directly, with constants at module top.</p
 cover-cropping a tall image into a wide frame throws most of it away. Compositing
 onto a blurred, darkened enlargement of the image itself keeps the whole picture
 and never shows dead black bars.</p>
+<p class="rubric">Module Attributes</p>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.video.CANVAS_VERSION" title="braidio.video.CANVAS_VERSION"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CANVAS_VERSION</span></code></a></p></td>
+<td><p>Bump when <a class="reference internal" href="#braidio.video.prepare_still" title="braidio.video.prepare_still"><code class="xref py py-func docutils literal notranslate"><span class="pre">prepare_still()</span></code></a>'s output changes for the same bytes and size (blur, darkening, resampling).</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 <p class="rubric">Functions</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
@@ -453,8 +462,14 @@ and never shows dead black bars.</p>
 <tr class="row-even"><td><p><a class="reference internal" href="#braidio.video.plan_spans" title="braidio.video.plan_spans"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plan_spans</span></code></a>(timeline, *[, min_panel_s, ...])</p></td>
 <td><p>Cut <code class="docutils literal notranslate"><span class="pre">timeline</span></code> into contiguous spans of roughly one still each.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.video.prepare_still" title="braidio.video.prepare_still"><code class="xref py py-obj docutils literal notranslate"><span class="pre">prepare_still</span></code></a>(src, dst, *[, size, refresh])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.video.prepare_still" title="braidio.video.prepare_still"><code class="xref py py-obj docutils literal notranslate"><span class="pre">prepare_still</span></code></a>(src, dst, *[, size, refresh, key])</p></td>
 <td><p>Composite <code class="docutils literal notranslate"><span class="pre">src</span></code> onto a blurred fill of itself at exactly <code class="docutils literal notranslate"><span class="pre">size</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.video.content_keyed_prepare" title="braidio.video.content_keyed_prepare"><code class="xref py py-obj docutils literal notranslate"><span class="pre">content_keyed_prepare</span></code></a>(workdir, size)</p></td>
+<td><p>A <code class="docutils literal notranslate"><span class="pre">prepare=</span></code> for <a class="reference internal" href="#braidio.video.render_video" title="braidio.video.render_video"><code class="xref py py-func docutils literal notranslate"><span class="pre">render_video()</span></code></a> that names each canvas by the source's <strong>bytes</strong>, the frame size and <a class="reference internal" href="#braidio.video.CANVAS_VERSION" title="braidio.video.CANVAS_VERSION"><code class="xref py py-data docutils literal notranslate"><span class="pre">CANVAS_VERSION</span></code></a>, never by its ordinal or filename stem.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.video.source_digest" title="braidio.video.source_digest"><code class="xref py py-obj docutils literal notranslate"><span class="pre">source_digest</span></code></a>(src)</p></td>
+<td><p>The sha256 hex digest of the still's bytes: what a canvas is keyed on.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#braidio.video.save_atomically" title="braidio.video.save_atomically"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save_atomically</span></code></a>(img, dst, **encode)</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">img.save(dst)</span></code> through a sibling temp file and an atomic rename.</p></td>
@@ -492,6 +507,15 @@ and never shows dead black bars.</p>
 </tbody>
 </table>
 </div>
+<dl class="py data">
+<dt class="sig sig-object py" id="braidio.video.CANVAS_VERSION">
+<span class="sig-prename descclassname"><span class="pre">braidio.video.</span></span><span class="sig-name descname"><span class="pre">CANVAS_VERSION</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'1'</span></span><a class="headerlink" href="#braidio.video.CANVAS_VERSION" title="Link to this definition">#</a></dt>
+<dd><p>Bump when <a class="reference internal" href="#braidio.video.prepare_still" title="braidio.video.prepare_still"><code class="xref py py-func docutils literal notranslate"><span class="pre">prepare_still()</span></code></a>’s output changes for the same bytes and size
+(blur, darkening, resampling). It is part of every canvas’s stamp and of the
+content-keyed canvas name, so a canvas made by an older algorithm is rebuilt
+instead of served from a shared workdir.</p>
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py" id="braidio.video.Footage">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">braidio.video.</span></span><span class="sig-name descname"><span class="pre">Footage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">in_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/video.html#Footage"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.video.Footage" title="Link to this definition">#</a></dt>
@@ -564,6 +588,22 @@ are interchangeable texture.</p>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span></p>
 </dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="braidio.video.content_keyed_prepare">
+<span class="sig-prename descclassname"><span class="pre">braidio.video.</span></span><span class="sig-name descname"><span class="pre">content_keyed_prepare</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">workdir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/video.html#content_keyed_prepare"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.video.content_keyed_prepare" title="Link to this definition">#</a></dt>
+<dd><p>A <code class="docutils literal notranslate"><span class="pre">prepare=</span></code> for <a class="reference internal" href="#braidio.video.render_video" title="braidio.video.render_video"><code class="xref py py-func docutils literal notranslate"><span class="pre">render_video()</span></code></a> that names each canvas by the
+source’s <strong>bytes</strong>, the frame size and <a class="reference internal" href="#braidio.video.CANVAS_VERSION" title="braidio.video.CANVAS_VERSION"><code class="xref py py-data docutils literal notranslate"><span class="pre">CANVAS_VERSION</span></code></a>, never by its
+ordinal or filename stem.</p>
+<p>Naming by ordinal and stem would let two renders into one folder collide, serve
+a stale canvas for a swapped still with the same stem, or a landscape canvas
+to a vertical cut. This is <a class="reference internal" href="#braidio.video.render_video" title="braidio.video.render_video"><code class="xref py py-func docutils literal notranslate"><span class="pre">render_video()</span></code></a>’s default.</p>
+<p>Returns <code class="docutils literal notranslate"><span class="pre">prepare(src,</span> <span class="pre">dst_ignored,</span> <span class="pre">*,</span> <span class="pre">size=size)</span> <span class="pre">-&gt;</span> <span class="pre">Path</span></code>: <code class="docutils literal notranslate"><span class="pre">dst_ignored</span></code> is
+there only to fit <code class="docutils literal notranslate"><span class="pre">render_video</span></code>’s <code class="docutils literal notranslate"><span class="pre">prepare</span></code> signature; a caller of its own
+passes <code class="docutils literal notranslate"><span class="pre">None</span></code>. The bytes are hashed once, here, and the digest handed on.</p>
+<dl class="field-list simple">
 </dl>
 </dd></dl>
 
@@ -663,14 +703,17 @@ producing a flicker.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="braidio.video.prepare_still">
-<span class="sig-prename descclassname"><span class="pre">braidio.video.</span></span><span class="sig-name descname"><span class="pre">prepare_still</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dst</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(1920,</span> <span class="pre">1080)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">refresh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/video.html#prepare_still"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.video.prepare_still" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">braidio.video.</span></span><span class="sig-name descname"><span class="pre">prepare_still</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dst</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(1920,</span> <span class="pre">1080)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">refresh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/video.html#prepare_still"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.video.prepare_still" title="Link to this definition">#</a></dt>
 <dd><p>Composite <code class="docutils literal notranslate"><span class="pre">src</span></code> onto a blurred fill of itself at exactly <code class="docutils literal notranslate"><span class="pre">size</span></code>.</p>
 <p>Nothing is cropped away and no dead black bar appears, whatever the source
 aspect. Idempotent <em>for the same input</em>: <code class="docutils literal notranslate"><span class="pre">dst</span></code> is reused only when a
 sidecar (<code class="docutils literal notranslate"><span class="pre">&lt;dst&gt;.src</span></code>) records that it was made from these source bytes at
 this <code class="docutils literal notranslate"><span class="pre">size</span></code>. A different still, or a different size, into the same <code class="docutils literal notranslate"><span class="pre">dst</span></code>
 is rebuilt; so is a <code class="docutils literal notranslate"><span class="pre">dst</span></code> with no sidecar (its origin is unknown).
-<code class="docutils literal notranslate"><span class="pre">refresh=True</span></code> rebuilds unconditionally.</p>
+<code class="docutils literal notranslate"><span class="pre">refresh=True</span></code> rebuilds unconditionally. The canvas algorithm’s version
+(<a class="reference internal" href="#braidio.video.CANVAS_VERSION" title="braidio.video.CANVAS_VERSION"><code class="xref py py-data docutils literal notranslate"><span class="pre">CANVAS_VERSION</span></code></a>) is in the stamp too, so a <code class="docutils literal notranslate"><span class="pre">dst</span></code> made by an older
+one is rebuilt. <code class="docutils literal notranslate"><span class="pre">key</span></code> is the source’s <a class="reference internal" href="#braidio.video.source_digest" title="braidio.video.source_digest"><code class="xref py py-func docutils literal notranslate"><span class="pre">source_digest()</span></code></a> when the caller
+already has it (the bytes are then not read twice).</p>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
@@ -791,6 +834,17 @@ near-lossless (they are re-encoded once more, by <a class="reference internal" h
 </dl>
 </dd></dl>
 
+<dl class="py function">
+<dt class="sig sig-object py" id="braidio.video.source_digest">
+<span class="sig-prename descclassname"><span class="pre">braidio.video.</span></span><span class="sig-name descname"><span class="pre">source_digest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/video.html#source_digest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.video.source_digest" title="Link to this definition">#</a></dt>
+<dd><p>The sha256 hex digest of the still’s bytes: what a canvas is keyed on.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 
 
@@ -840,11 +894,13 @@ near-lossless (they are re-encoded once more, by <a class="reference internal" h
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.CANVAS_VERSION"><code class="docutils literal notranslate"><span class="pre">CANVAS_VERSION</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.Footage"><code class="docutils literal notranslate"><span class="pre">Footage</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.Panel"><code class="docutils literal notranslate"><span class="pre">Panel</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.Span"><code class="docutils literal notranslate"><span class="pre">Span</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.assign_stills"><code class="docutils literal notranslate"><span class="pre">assign_stills()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.concat_argv"><code class="docutils literal notranslate"><span class="pre">concat_argv()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.content_keyed_prepare"><code class="docutils literal notranslate"><span class="pre">content_keyed_prepare()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.credits_card"><code class="docutils literal notranslate"><span class="pre">credits_card()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.frame_counts"><code class="docutils literal notranslate"><span class="pre">frame_counts()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.missing_dependencies"><code class="docutils literal notranslate"><span class="pre">missing_dependencies()</span></code></a></li>
@@ -854,6 +910,7 @@ near-lossless (they are re-encoded once more, by <a class="reference internal" h
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.runs"><code class="docutils literal notranslate"><span class="pre">runs()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.save_atomically"><code class="docutils literal notranslate"><span class="pre">save_atomically()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.segment_argv"><code class="docutils literal notranslate"><span class="pre">segment_argv()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.source_digest"><code class="docutils literal notranslate"><span class="pre">source_digest()</span></code></a></li>
 </ul>
   </nav></div>
 

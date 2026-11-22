@@ -1,4 +1,4 @@
-> built 2026-11-22 09:26 UTC from a61ece7 (main) · braidio 0.0.133. Details: build_info.json
+> built 2026-11-22 10:18 UTC from 9481514 (main) · braidio 0.0.134. Details: build_info.json
 
 # index.html.md
 
@@ -5692,20 +5692,27 @@ cover-cropping a tall image into a wide frame throws most of it away. Compositin
 onto a blurred, darkened enlargement of the image itself keeps the whole picture
 and never shows dead black bars.
 
+### Module Attributes
+
+| [`CANVAS_VERSION`](_autosummary/braidio.video.html.md#braidio.video.CANVAS_VERSION)   | Bump when [`prepare_still()`](_autosummary/braidio.video.html.md#braidio.video.prepare_still)'s output changes for the same bytes and size (blur, darkening, resampling).   |
+|-------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
+
 ### Functions
 
-| [`assign_stills`](_autosummary/braidio.video.html.md#braidio.video.assign_stills)(spans, stills, \*[, zoom])         | Attach stills to `spans`, cycling so none repeats back-to-back.                     |
-|---------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------|
-| [`credits_card`](_autosummary/braidio.video.html.md#braidio.video.credits_card)(lines, dst, \*[, heading, ...])     | Render an end card listing `lines`, **fitted** so none is lost.                     |
-| [`missing_dependencies`](_autosummary/braidio.video.html.md#braidio.video.missing_dependencies)()                           | Which `braidio[video]` dependencies are absent (empty when ready).                  |
-| [`plan_spans`](_autosummary/braidio.video.html.md#braidio.video.plan_spans)(timeline, \*[, min_panel_s, ...])     | Cut `timeline` into contiguous spans of roughly one still each.                     |
-| [`prepare_still`](_autosummary/braidio.video.html.md#braidio.video.prepare_still)(src, dst, \*[, size, refresh])     | Composite `src` onto a blurred fill of itself at exactly `size`.                    |
-| [`save_atomically`](_autosummary/braidio.video.html.md#braidio.video.save_atomically)(img, dst, \*\*encode)            | `img.save(dst)` through a sibling temp file and an atomic rename.                   |
-| [`render_video`](_autosummary/braidio.video.html.md#braidio.video.render_video)(panels, \*, audio_path, out_path)   | Render `panels` as one film and mux `audio_path` under it.                          |
-| [`concat_argv`](_autosummary/braidio.video.html.md#braidio.video.concat_argv)(listing, \*, audio_path, ...[, ...]) | Join the pieces a concat `listing` names, under `audio_path`, as the delivered mp4. |
-| [`segment_argv`](_autosummary/braidio.video.html.md#braidio.video.segment_argv)(source, in_s, frames, \*, out_path) | One cut: exactly `frames` frames of `source` from `in_s`, as a piece.               |
-| [`frame_counts`](_autosummary/braidio.video.html.md#braidio.video.frame_counts)(panels, \*, fps)                    | Frames per panel, rounded on the ABSOLUTE timeline so they never drift.             |
-| [`runs`](_autosummary/braidio.video.html.md#braidio.video.runs)(panels)                                     | Group consecutive panels into `("footage" | "stills", indices)` runs.               |
+| [`assign_stills`](_autosummary/braidio.video.html.md#braidio.video.assign_stills)(spans, stills, \*[, zoom])          | Attach stills to `spans`, cycling so none repeats back-to-back.                                                                                                                                                                                               |
+|----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`credits_card`](_autosummary/braidio.video.html.md#braidio.video.credits_card)(lines, dst, \*[, heading, ...])      | Render an end card listing `lines`, **fitted** so none is lost.                                                                                                                                                                                               |
+| [`missing_dependencies`](_autosummary/braidio.video.html.md#braidio.video.missing_dependencies)()                            | Which `braidio[video]` dependencies are absent (empty when ready).                                                                                                                                                                                            |
+| [`plan_spans`](_autosummary/braidio.video.html.md#braidio.video.plan_spans)(timeline, \*[, min_panel_s, ...])      | Cut `timeline` into contiguous spans of roughly one still each.                                                                                                                                                                                               |
+| [`prepare_still`](_autosummary/braidio.video.html.md#braidio.video.prepare_still)(src, dst, \*[, size, refresh, key]) | Composite `src` onto a blurred fill of itself at exactly `size`.                                                                                                                                                                                              |
+| [`content_keyed_prepare`](_autosummary/braidio.video.html.md#braidio.video.content_keyed_prepare)(workdir, size)              | A `prepare=` for [`render_video()`](_autosummary/braidio.video.html.md#braidio.video.render_video) that names each canvas by the source's **bytes**, the frame size and [`CANVAS_VERSION`](_autosummary/braidio.video.html.md#braidio.video.CANVAS_VERSION), never by its ordinal or filename stem. |
+| [`source_digest`](_autosummary/braidio.video.html.md#braidio.video.source_digest)(src)                                | The sha256 hex digest of the still's bytes: what a canvas is keyed on.                                                                                                                                                                                        |
+| [`save_atomically`](_autosummary/braidio.video.html.md#braidio.video.save_atomically)(img, dst, \*\*encode)             | `img.save(dst)` through a sibling temp file and an atomic rename.                                                                                                                                                                                             |
+| [`render_video`](_autosummary/braidio.video.html.md#braidio.video.render_video)(panels, \*, audio_path, out_path)    | Render `panels` as one film and mux `audio_path` under it.                                                                                                                                                                                                    |
+| [`concat_argv`](_autosummary/braidio.video.html.md#braidio.video.concat_argv)(listing, \*, audio_path, ...[, ...])  | Join the pieces a concat `listing` names, under `audio_path`, as the delivered mp4.                                                                                                                                                                           |
+| [`segment_argv`](_autosummary/braidio.video.html.md#braidio.video.segment_argv)(source, in_s, frames, \*, out_path)  | One cut: exactly `frames` frames of `source` from `in_s`, as a piece.                                                                                                                                                                                         |
+| [`frame_counts`](_autosummary/braidio.video.html.md#braidio.video.frame_counts)(panels, \*, fps)                     | Frames per panel, rounded on the ABSOLUTE timeline so they never drift.                                                                                                                                                                                       |
+| [`runs`](_autosummary/braidio.video.html.md#braidio.video.runs)(panels)                                      | Group consecutive panels into `("footage" | "stills", indices)` runs.                                                                                                                                                                                         |
 
 ### Classes
 
@@ -5713,6 +5720,13 @@ and never shows dead black bars.
 |-----------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
 | [`Panel`](_autosummary/braidio.video.html.md#braidio.video.Panel)(start, end, still[, style, zoom, ...]) | A [`Span`](_autosummary/braidio.video.html.md#braidio.video.Span) with a still and its camera move — or with footage. |
 | [`Span`](_autosummary/braidio.video.html.md#braidio.video.Span)(start, end, beat_index[, kind, label])  | A stretch of screen time, before any image is chosen for it.                                                |
+
+### braidio.video.CANVAS_VERSION *= '1'*
+
+Bump when [`prepare_still()`](_autosummary/braidio.video.html.md#braidio.video.prepare_still)’s output changes for the same bytes and size
+(blur, darkening, resampling). It is part of every canvas’s stamp and of the
+content-keyed canvas name, so a canvas made by an older algorithm is rebuilt
+instead of served from a shared workdir.
 
 ### *class* braidio.video.Footage(path, in_s=0.0)
 
@@ -5778,6 +5792,20 @@ Join the pieces a concat `listing` names, under `audio_path`, as the delivered m
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+### braidio.video.content_keyed_prepare(workdir, size)
+
+A `prepare=` for [`render_video()`](_autosummary/braidio.video.html.md#braidio.video.render_video) that names each canvas by the
+source’s **bytes**, the frame size and [`CANVAS_VERSION`](_autosummary/braidio.video.html.md#braidio.video.CANVAS_VERSION), never by its
+ordinal or filename stem.
+
+Naming by ordinal and stem would let two renders into one folder collide, serve
+a stale canvas for a swapped still with the same stem, or a landscape canvas
+to a vertical cut. This is [`render_video()`](_autosummary/braidio.video.html.md#braidio.video.render_video)’s default.
+
+Returns `prepare(src, dst_ignored, *, size=size) -> Path`: `dst_ignored` is
+there only to fit `render_video`’s `prepare` signature; a caller of its own
+passes `None`. The bytes are hashed once, here, and the digest handed on.
 
 ### braidio.video.credits_card(lines, dst, , heading='Credits', footer='', size=(1920, 1080))
 
@@ -5864,7 +5892,7 @@ A short beat does not become its own panel:
 1
 ```
 
-### braidio.video.prepare_still(src, dst, , size=(1920, 1080), refresh=False)
+### braidio.video.prepare_still(src, dst, , size=(1920, 1080), refresh=False, key=None)
 
 Composite `src` onto a blurred fill of itself at exactly `size`.
 
@@ -5873,7 +5901,10 @@ aspect. Idempotent *for the same input*: `dst` is reused only when a
 sidecar (`<dst>.src`) records that it was made from these source bytes at
 this `size`. A different still, or a different size, into the same `dst`
 is rebuilt; so is a `dst` with no sidecar (its origin is unknown).
-`refresh=True` rebuilds unconditionally.
+`refresh=True` rebuilds unconditionally. The canvas algorithm’s version
+([`CANVAS_VERSION`](_autosummary/braidio.video.html.md#braidio.video.CANVAS_VERSION)) is in the stamp too, so a `dst` made by an older
+one is rebuilt. `key` is the source’s [`source_digest()`](_autosummary/braidio.video.html.md#braidio.video.source_digest) when the caller
+already has it (the bytes are then not read twice).
 
 ### Examples
 
@@ -5978,6 +6009,13 @@ True
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+### braidio.video.source_digest(src)
+
+The sha256 hex digest of the still’s bytes: what a canvas is keyed on.
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 
 # _autosummary/braidio.voice_library.html.md
@@ -6467,18 +6505,18 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-22 09:26 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/a61ece73880161c858403be11cef9d57ce3b0a4e"><code>a61ece7</code></a> on branch <code>main</code>, for **braidio 0.0.133** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-22 10:18 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/948151433f1530554c2e9fe99fae0b6a2fef3d3f"><code>9481514</code></a> on branch <code>main</code>, for **braidio 0.0.134** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.0.133) is ahead of the latest release on PyPI (0.0.132): these docs describe unreleased code.
+- The documented version (0.0.134) is behind the latest release on PyPI (0.0.135): `pip install braidio` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/a61ece73880161c858403be11cef9d57ce3b0a4e"><code>a61ece73880161c858403be11cef9d57ce3b0a4e</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/948151433f1530554c2e9fe99fae0b6a2fef3d3f"><code>948151433f1530554c2e9fe99fae0b6a2fef3d3f</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
 | Tags at this commit | none                                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
@@ -6489,9 +6527,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/45007055511">45007055511</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/45011051435">45011051435</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>3cf9d4c22c85b960201f7edcc5484996d7b5e853</code> (in the history of the built commit) |
+| Event commit | <code>b20fdc679084422ea54727abb5eb7a64b8e6afe8</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6516,13 +6554,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.132/">0.0.132</a>, older than the documented version (0.0.133).
+Latest release: <a href="https://pypi.org/project/braidio/0.0.135/">0.0.135</a>, newer than the documented version (0.0.134).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout a61ece73880161c858403be11cef9d57ce3b0a4e
+git checkout 948151433f1530554c2e9fe99fae0b6a2fef3d3f
 pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

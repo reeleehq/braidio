@@ -4,6 +4,12 @@ braidio.video
 .. automodule:: braidio.video
 
    
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      CANVAS_VERSION
+   
    .. rubric:: Functions
 
    .. autosummary::
@@ -13,6 +19,8 @@ braidio.video
       missing_dependencies
       plan_spans
       prepare_still
+      content_keyed_prepare
+      source_digest
       save_atomically
       render_video
       concat_argv

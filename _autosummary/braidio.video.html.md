@@ -26,20 +26,27 @@ cover-cropping a tall image into a wide frame throws most of it away. Compositin
 onto a blurred, darkened enlargement of the image itself keeps the whole picture
 and never shows dead black bars.
 
+### Module Attributes
+
+| [`CANVAS_VERSION`](#braidio.video.CANVAS_VERSION)   | Bump when [`prepare_still()`](#braidio.video.prepare_still)'s output changes for the same bytes and size (blur, darkening, resampling).   |
+|-------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
+
 ### Functions
 
-| [`assign_stills`](#braidio.video.assign_stills)(spans, stills, \*[, zoom])         | Attach stills to `spans`, cycling so none repeats back-to-back.                     |
-|---------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------|
-| [`credits_card`](#braidio.video.credits_card)(lines, dst, \*[, heading, ...])     | Render an end card listing `lines`, **fitted** so none is lost.                     |
-| [`missing_dependencies`](#braidio.video.missing_dependencies)()                           | Which `braidio[video]` dependencies are absent (empty when ready).                  |
-| [`plan_spans`](#braidio.video.plan_spans)(timeline, \*[, min_panel_s, ...])     | Cut `timeline` into contiguous spans of roughly one still each.                     |
-| [`prepare_still`](#braidio.video.prepare_still)(src, dst, \*[, size, refresh])     | Composite `src` onto a blurred fill of itself at exactly `size`.                    |
-| [`save_atomically`](#braidio.video.save_atomically)(img, dst, \*\*encode)            | `img.save(dst)` through a sibling temp file and an atomic rename.                   |
-| [`render_video`](#braidio.video.render_video)(panels, \*, audio_path, out_path)   | Render `panels` as one film and mux `audio_path` under it.                          |
-| [`concat_argv`](#braidio.video.concat_argv)(listing, \*, audio_path, ...[, ...]) | Join the pieces a concat `listing` names, under `audio_path`, as the delivered mp4. |
-| [`segment_argv`](#braidio.video.segment_argv)(source, in_s, frames, \*, out_path) | One cut: exactly `frames` frames of `source` from `in_s`, as a piece.               |
-| [`frame_counts`](#braidio.video.frame_counts)(panels, \*, fps)                    | Frames per panel, rounded on the ABSOLUTE timeline so they never drift.             |
-| [`runs`](#braidio.video.runs)(panels)                                     | Group consecutive panels into `("footage" | "stills", indices)` runs.               |
+| [`assign_stills`](#braidio.video.assign_stills)(spans, stills, \*[, zoom])          | Attach stills to `spans`, cycling so none repeats back-to-back.                                                                                                                                                                                               |
+|----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`credits_card`](#braidio.video.credits_card)(lines, dst, \*[, heading, ...])      | Render an end card listing `lines`, **fitted** so none is lost.                                                                                                                                                                                               |
+| [`missing_dependencies`](#braidio.video.missing_dependencies)()                            | Which `braidio[video]` dependencies are absent (empty when ready).                                                                                                                                                                                            |
+| [`plan_spans`](#braidio.video.plan_spans)(timeline, \*[, min_panel_s, ...])      | Cut `timeline` into contiguous spans of roughly one still each.                                                                                                                                                                                               |
+| [`prepare_still`](#braidio.video.prepare_still)(src, dst, \*[, size, refresh, key]) | Composite `src` onto a blurred fill of itself at exactly `size`.                                                                                                                                                                                              |
+| [`content_keyed_prepare`](#braidio.video.content_keyed_prepare)(workdir, size)              | A `prepare=` for [`render_video()`](#braidio.video.render_video) that names each canvas by the source's **bytes**, the frame size and [`CANVAS_VERSION`](#braidio.video.CANVAS_VERSION), never by its ordinal or filename stem. |
+| [`source_digest`](#braidio.video.source_digest)(src)                                | The sha256 hex digest of the still's bytes: what a canvas is keyed on.                                                                                                                                                                                        |
+| [`save_atomically`](#braidio.video.save_atomically)(img, dst, \*\*encode)             | `img.save(dst)` through a sibling temp file and an atomic rename.                                                                                                                                                                                             |
+| [`render_video`](#braidio.video.render_video)(panels, \*, audio_path, out_path)    | Render `panels` as one film and mux `audio_path` under it.                                                                                                                                                                                                    |
+| [`concat_argv`](#braidio.video.concat_argv)(listing, \*, audio_path, ...[, ...])  | Join the pieces a concat `listing` names, under `audio_path`, as the delivered mp4.                                                                                                                                                                           |
+| [`segment_argv`](#braidio.video.segment_argv)(source, in_s, frames, \*, out_path)  | One cut: exactly `frames` frames of `source` from `in_s`, as a piece.                                                                                                                                                                                         |
+| [`frame_counts`](#braidio.video.frame_counts)(panels, \*, fps)                     | Frames per panel, rounded on the ABSOLUTE timeline so they never drift.                                                                                                                                                                                       |
+| [`runs`](#braidio.video.runs)(panels)                                      | Group consecutive panels into `("footage" | "stills", indices)` runs.                                                                                                                                                                                         |
 
 ### Classes
 
@@ -47,6 +54,13 @@ and never shows dead black bars.
 |-----------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
 | [`Panel`](#braidio.video.Panel)(start, end, still[, style, zoom, ...]) | A [`Span`](#braidio.video.Span) with a still and its camera move — or with footage. |
 | [`Span`](#braidio.video.Span)(start, end, beat_index[, kind, label])  | A stretch of screen time, before any image is chosen for it.                                                |
+
+### braidio.video.CANVAS_VERSION *= '1'*
+
+Bump when [`prepare_still()`](#braidio.video.prepare_still)’s output changes for the same bytes and size
+(blur, darkening, resampling). It is part of every canvas’s stamp and of the
+content-keyed canvas name, so a canvas made by an older algorithm is rebuilt
+instead of served from a shared workdir.
 
 ### *class* braidio.video.Footage(path, in_s=0.0)
 
@@ -112,6 +126,20 @@ Join the pieces a concat `listing` names, under `audio_path`, as the delivered m
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+### braidio.video.content_keyed_prepare(workdir, size)
+
+A `prepare=` for [`render_video()`](#braidio.video.render_video) that names each canvas by the
+source’s **bytes**, the frame size and [`CANVAS_VERSION`](#braidio.video.CANVAS_VERSION), never by its
+ordinal or filename stem.
+
+Naming by ordinal and stem would let two renders into one folder collide, serve
+a stale canvas for a swapped still with the same stem, or a landscape canvas
+to a vertical cut. This is [`render_video()`](#braidio.video.render_video)’s default.
+
+Returns `prepare(src, dst_ignored, *, size=size) -> Path`: `dst_ignored` is
+there only to fit `render_video`’s `prepare` signature; a caller of its own
+passes `None`. The bytes are hashed once, here, and the digest handed on.
 
 ### braidio.video.credits_card(lines, dst, , heading='Credits', footer='', size=(1920, 1080))
 
@@ -198,7 +226,7 @@ A short beat does not become its own panel:
 1
 ```
 
-### braidio.video.prepare_still(src, dst, , size=(1920, 1080), refresh=False)
+### braidio.video.prepare_still(src, dst, , size=(1920, 1080), refresh=False, key=None)
 
 Composite `src` onto a blurred fill of itself at exactly `size`.
 
@@ -207,7 +235,10 @@ aspect. Idempotent *for the same input*: `dst` is reused only when a
 sidecar (`<dst>.src`) records that it was made from these source bytes at
 this `size`. A different still, or a different size, into the same `dst`
 is rebuilt; so is a `dst` with no sidecar (its origin is unknown).
-`refresh=True` rebuilds unconditionally.
+`refresh=True` rebuilds unconditionally. The canvas algorithm’s version
+([`CANVAS_VERSION`](#braidio.video.CANVAS_VERSION)) is in the stamp too, so a `dst` made by an older
+one is rebuilt. `key` is the source’s [`source_digest()`](#braidio.video.source_digest) when the caller
+already has it (the bytes are then not read twice).
 
 ### Examples
 
@@ -312,3 +343,10 @@ True
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+### braidio.video.source_digest(src)
+
+The sha256 hex digest of the still’s bytes: what a canvas is keyed on.
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)

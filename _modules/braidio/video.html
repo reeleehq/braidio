@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../../_static/documentation_options.js?v=3a8547cf"></script>
+    <script src="../../_static/documentation_options.js?v=f10cd702"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.133" />
+  <meta name="docsearch:version" content="0.0.134" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -773,6 +773,9 @@ window.runMermaid = runMermaid;</script>
     <span class="s2">"missing_dependencies"</span><span class="p">,</span>
     <span class="s2">"plan_spans"</span><span class="p">,</span>
     <span class="s2">"prepare_still"</span><span class="p">,</span>
+    <span class="s2">"content_keyed_prepare"</span><span class="p">,</span>
+    <span class="s2">"source_digest"</span><span class="p">,</span>
+    <span class="s2">"CANVAS_VERSION"</span><span class="p">,</span>
     <span class="s2">"save_atomically"</span><span class="p">,</span>
     <span class="s2">"render_video"</span><span class="p">,</span>
     <span class="s2">"concat_argv"</span><span class="p">,</span>
@@ -1031,12 +1034,58 @@ window.runMermaid = runMermaid;</script>
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_still_stamp</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""What a prepared canvas was made from: the source's bytes and the frame size."""</span>
+<span class="c1">#: Bump when :func:`prepare_still`'s output changes for the same bytes and size</span>
+<span class="c1">#: (blur, darkening, resampling). It is part of every canvas's stamp and of the</span>
+<span class="c1">#: content-keyed canvas name, so a canvas made by an older algorithm is rebuilt</span>
+<span class="c1">#: instead of served from a shared workdir.</span>
+<span class="n">CANVAS_VERSION</span> <span class="o">=</span> <span class="s2">"1"</span>
+<span class="c1">#: Chars of a content digest used in a canvas file name.</span>
+<span class="n">NAME_DIGEST_CHARS</span> <span class="o">=</span> <span class="mi">16</span>
+
+
+<div class="viewcode-block" id="source_digest">
+<a class="viewcode-back" href="../../_autosummary/braidio.video.html#braidio.video.source_digest">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">source_digest</span><span class="p">(</span><span class="n">src</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The sha256 hex digest of the still's bytes: what a canvas is keyed on."""</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
 
-    <span class="n">digest</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">src</span><span class="p">)</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
-    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">digest</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">x</span><span class="si">{</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span>
+    <span class="k">return</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">src</span><span class="p">)</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_still_stamp</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What a prepared canvas was made from: the source's bytes (``key``, when the</span>
+<span class="sd">    caller already hashed them), the frame size and the canvas algorithm."""</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">key</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">source_digest</span><span class="p">(</span><span class="n">src</span><span class="p">)</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">x</span><span class="si">{</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2"> v</span><span class="si">{</span><span class="n">CANVAS_VERSION</span><span class="si">}</span><span class="s2">"</span>
+
+
+<div class="viewcode-block" id="content_keyed_prepare">
+<a class="viewcode-back" href="../../_autosummary/braidio.video.html#braidio.video.content_keyed_prepare">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">content_keyed_prepare</span><span class="p">(</span><span class="n">workdir</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]):</span>
+<span class="w">    </span><span class="sd">"""A ``prepare=`` for :func:`render_video` that names each canvas by the</span>
+<span class="sd">    source's **bytes**, the frame size and :data:`CANVAS_VERSION`, never by its</span>
+<span class="sd">    ordinal or filename stem.</span>
+
+<span class="sd">    Naming by ordinal and stem would let two renders into one folder collide, serve</span>
+<span class="sd">    a stale canvas for a swapped still with the same stem, or a landscape canvas</span>
+<span class="sd">    to a vertical cut. This is :func:`render_video`'s default.</span>
+
+<span class="sd">    Returns ``prepare(src, dst_ignored, *, size=size) -&gt; Path``: ``dst_ignored`` is</span>
+<span class="sd">    there only to fit ``render_video``'s ``prepare`` signature; a caller of its own</span>
+<span class="sd">    passes ``None``. The bytes are hashed once, here, and the digest handed on.</span>
+<span class="sd">    """</span>
+    <span class="n">workdir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">workdir</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">prepare</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">_dst_ignored</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">):</span>
+        <span class="n">digest</span> <span class="o">=</span> <span class="n">source_digest</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"canvas_</span><span class="si">{</span><span class="n">digest</span><span class="p">[:</span><span class="n">NAME_DIGEST_CHARS</span><span class="p">]</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">x</span><span class="si">{</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span>
+            <span class="sa">f</span><span class="s2">"_v</span><span class="si">{</span><span class="n">CANVAS_VERSION</span><span class="si">}</span><span class="s2">.jpg"</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">prepare_still</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">workdir</span> <span class="o">/</span> <span class="n">name</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">digest</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">prepare</span></div>
+
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_stamp_path</span><span class="p">(</span><span class="n">dst</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
@@ -1046,7 +1095,12 @@ window.runMermaid = runMermaid;</script>
 <div class="viewcode-block" id="prepare_still">
 <a class="viewcode-back" href="../../_autosummary/braidio.video.html#braidio.video.prepare_still">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">prepare_still</span><span class="p">(</span>
-    <span class="n">src</span><span class="p">,</span> <span class="n">dst</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">DEFAULT_SIZE</span><span class="p">,</span> <span class="n">refresh</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">src</span><span class="p">,</span>
+    <span class="n">dst</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">DEFAULT_SIZE</span><span class="p">,</span>
+    <span class="n">refresh</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Composite ``src`` onto a blurred fill of itself at exactly ``size``.</span>
 
@@ -1055,7 +1109,10 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">    sidecar (``&lt;dst&gt;.src``) records that it was made from these source bytes at</span>
 <span class="sd">    this ``size``. A different still, or a different size, into the same ``dst``</span>
 <span class="sd">    is rebuilt; so is a ``dst`` with no sidecar (its origin is unknown).</span>
-<span class="sd">    ``refresh=True`` rebuilds unconditionally.</span>
+<span class="sd">    ``refresh=True`` rebuilds unconditionally. The canvas algorithm's version</span>
+<span class="sd">    (:data:`CANVAS_VERSION`) is in the stamp too, so a ``dst`` made by an older</span>
+<span class="sd">    one is rebuilt. ``key`` is the source's :func:`source_digest` when the caller</span>
+<span class="sd">    already has it (the bytes are then not read twice).</span>
 
 <span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; import tempfile</span>
@@ -1077,7 +1134,7 @@ window.runMermaid = runMermaid;</script>
     <span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span><span class="p">,</span> <span class="n">ImageEnhance</span><span class="p">,</span> <span class="n">ImageFilter</span>
 
     <span class="n">dst</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">dst</span><span class="p">)</span>
-    <span class="n">stamp</span> <span class="o">=</span> <span class="n">_still_stamp</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
+    <span class="n">stamp</span> <span class="o">=</span> <span class="n">_still_stamp</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
     <span class="n">stamp_file</span> <span class="o">=</span> <span class="n">_stamp_path</span><span class="p">(</span><span class="n">dst</span><span class="p">)</span>
     <span class="k">if</span> <span class="p">(</span>
         <span class="ow">not</span> <span class="n">refresh</span>
@@ -1297,7 +1354,7 @@ window.runMermaid = runMermaid;</script>
         <span class="n">_require</span><span class="p">()</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">burns</span><span class="w"> </span><span class="kn">import</span> <span class="n">content_aware_path_for</span><span class="p">,</span> <span class="n">ken_burns_film</span>
 
-        <span class="n">prep</span> <span class="o">=</span> <span class="n">prepare</span> <span class="ow">or</span> <span class="n">prepare_still</span>
+        <span class="n">prep</span> <span class="o">=</span> <span class="n">prepare</span> <span class="ow">or</span> <span class="n">content_keyed_prepare</span><span class="p">(</span><span class="n">workdir</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">default_path_for</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">panel</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">content_aware_path_for</span><span class="p">(</span>

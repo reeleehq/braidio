@@ -876,3 +876,32 @@ def test_the_receipt_matches_what_the_listing_shows(tmp_path, monkeypatch):
     assert got.project_id == row.project_id == ""
     assert got.ref == row.ref == "Named"
     assert got.filename == row.filename == "Named.mp3"
+
+
+def test_a_hosts_projects_in_a_shared_data_home_are_not_braidios(tmp_path, monkeypatch):
+    """braidio#214: reelee's projects share the bucket; only braidio's genres list."""
+    import json
+
+    import nw
+
+    monkeypatch.setenv("BRAIDIO_DATA_HOME", str(tmp_path))
+    from braidio.downloads import list_projects
+    from braidio.genre import COMMENTARY_WEAVE_SLUG
+    from braidio.mcp.workspace import Workspace
+
+    ws = Workspace.for_email(OWNER)
+    for pid in ("mine", "legacy", "theirs", "unknown"):
+        d = ws.projects_dir / pid
+        d.mkdir(parents=True)
+        (d / "project.json").write_text(json.dumps({"title": pid}))
+    genres = {"mine": COMMENTARY_WEAVE_SLUG, "theirs": "storyboard_x", "unknown": "no_such"}
+
+    class _Factory:
+        __module__ = "reelee.genres"
+
+    monkeypatch.setitem(nw.genre_project_factories, "storyboard_x", _Factory())
+    monkeypatch.setattr(
+        nw, "project_genre",
+        lambda root, **kw: ({"genre": genres[root.name]} if root.name in genres else None),
+    )
+    assert {r.project_id for r in list_projects(OWNER)} == {"mine", "legacy"}

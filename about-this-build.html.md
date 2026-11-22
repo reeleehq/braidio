@@ -2,18 +2,16 @@
 
 # About this build
 
-This documentation was built on **2026-11-22 15:13 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/fbc4b49ef50e3f5b1f8f2f93d0e28d58bf5829a7"><code>fbc4b49</code></a> on branch <code>main</code>, for **braidio 0.0.140** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-22 15:13 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/f5124d617be7a11b017099de35256ce21dcfe400"><code>f5124d6</code></a> on branch <code>main</code>, for **braidio 0.0.141** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.0.140) is behind the latest release on PyPI (0.0.141): `pip install braidio` gives newer code than these docs describe.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/fbc4b49ef50e3f5b1f8f2f93d0e28d58bf5829a7"><code>fbc4b49ef50e3f5b1f8f2f93d0e28d58bf5829a7</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/f5124d617be7a11b017099de35256ce21dcfe400"><code>f5124d617be7a11b017099de35256ce21dcfe400</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
 | Tags at this commit | none                                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
@@ -24,9 +22,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/45036574660">45036574660</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/45036555677">45036555677</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>38946f5880dd34aa190f3a96ea27c35d105c6cdb</code> (in the history of the built commit) |
+| Event commit | <code>1e76dcf7bd57c13622e903caa1aa2c6f2e85d484</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -51,13 +49,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.141/">0.0.141</a>, newer than the documented version (0.0.140).
+Latest release: <a href="https://pypi.org/project/braidio/0.0.141/">0.0.141</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout fbc4b49ef50e3f5b1f8f2f93d0e28d58bf5829a7
+git checkout f5124d617be7a11b017099de35256ce21dcfe400
 pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

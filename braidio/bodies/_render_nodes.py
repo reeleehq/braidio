@@ -183,6 +183,16 @@ class SourceMediaBodyV1(BaseModel):
             "replaces it in place. None on nodes written before re-ingest existed."
         ),
     )
+    artifact_id: Optional[str] = Field(
+        None,
+        description=(
+            "Content hash of the source's bytes, registered in the project's "
+            "artifact catalog at ingest (``ingest_script(register_sources=True)``), "
+            "so a moved project re-extracts its segments from the catalog blob "
+            "rather than the recorded path (braidio#153). None: read from "
+            "``asset_id``, the path."
+        ),
+    )
 
 
 class VoiceAssignmentBodyV1(BaseModel):

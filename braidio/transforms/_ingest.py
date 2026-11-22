@@ -193,8 +193,20 @@ def ingest_script(
     rights: RightsPolicy | None = None,
     cast: ConversationCast | None = None,
     sound_design: SoundDesign | None = None,
+    register_sources: bool = False,
 ) -> IngestedScript:
     """Write ``script``'s authoring nodes into ``project``'s graph.
+
+    ``register_sources=True`` also records each segment source by content: its
+    ``source-media/v1`` node gains the bytes' ``artifact_id``, and the source is
+    copied into the project and registered in its artifact catalog, so a project
+    moved to another machine re-extracts its segments from there instead of the
+    recorded path (braidio#153). Off by default: it copies and hashes every
+    source (a whole song or recording) at each ingest, and turning it on for an
+    existing project rewrites its source nodes once, which re-stales the segment
+    extractions derived from them. The field is additive, so **deploy a build
+    that knows it before ingesting with it** (see the agent guide's "Body schemas
+    are a federation contract").
 
     ``config`` defaults to a plain :class:`WeaveConfig`. ``source`` (a
     :class:`~braidio.sources.SegmentSource`) is required iff the script has
@@ -263,9 +275,22 @@ def ingest_script(
         cast=cast if cast is not None else DEFAULT_CAST,
         sound_design=sound_design,
     )
+    # Content ids of the segment sources: kept from the stored nodes, or (when asked)
+    # hashed, once per file. Still before any write: a refusal leaves the graph as it was.
+    source_refs = _settle_source_ids(project, nodes, register=register_sources)
     # Phase 2 — commit, by identity.
     committed = _commit_nodes(project, nodes)
     _register_structure_assets(project, structure=structure, bed=bed)
+    if source_refs:
+        _register_assets(
+            project,
+            source_refs,
+            asset_dir=SOURCE_ASSET_DIR,
+            kind=SOURCE_ASSET_CATALOG_KIND,
+            note="segment source of a weave",
+            what="the segment sources",
+            stacklevel=2,  # -> ingest_script -> its caller
+        )
 
     ordered = tuple(
         (
@@ -554,6 +579,78 @@ STRUCTURE_ASSET_DIR = ("data", "structure")
 STRUCTURE_ASSET_CATALOG_KIND = "audio"
 
 
+#: Where :func:`_register_assets` copies a segment source before registering it.
+SOURCE_ASSET_DIR = ("data", "sources")
+SOURCE_ASSET_CATALOG_KIND = "audio"
+
+
+def _settle_source_ids(project, nodes, *, register: bool) -> list[tuple[Path, str]]:
+    """Set the planned source-media nodes' ``artifact_id``; return what to register.
+
+    - A stored node of the same identity and path keeps its content id whatever
+      ``register`` says: an ingest without the flag (a connector's ``save_script``, a
+      plain re-ingest) adds nothing, and removes nothing either, so it neither
+      rewrites the node (re-staling its extractions) nor drops the id a moved project
+      needs.
+    - With ``register``, each source is hashed once (however many beats cut from it)
+      and returned as ``(path, id)`` for :func:`_register_assets`. A source whose
+      file is gone (a moved project) keeps the stored id when the catalog holds its
+      bytes, else the ingest is refused.
+
+    Raises:
+        RuntimeError: ``register`` and the host's catalog is not the local one (the id
+            would name bytes nothing here can serve).
+        FileNotFoundError: ``register`` and a source is neither on disk nor in the
+            catalog.
+    """
+    import nw
+
+    sources = [n for n in nodes if n.tier == TIER_SOURCE_MEDIA]
+    if not sources:
+        return []
+    stored = {
+        node_identity(a): a.body
+        for a in nw.annotations_at_tier(project.root, TIER_SOURCE_MEDIA)
+    }
+    catalog = None
+    if register:
+        from nw.media_catalog import (
+            CatalogBackendMismatch,
+            HostArtifactCatalog,
+            assert_local_backend,
+        )
+
+        try:
+            assert_local_backend()
+        except CatalogBackendMismatch as exc:
+            raise RuntimeError(
+                f"register_sources=True needs the local artifact catalog: {exc}"
+            ) from exc
+        catalog = HostArtifactCatalog(project.root)
+    hashes: dict[str, str] = {}
+    refs: dict[str, str] = {}
+    for node in sources:
+        path = node.body["asset_id"]
+        prior = stored.get(node.identity) or {}
+        kept = prior.get("artifact_id") if prior.get("asset_id") == path else None
+        if not register:
+            if kept:
+                node.body["artifact_id"] = kept
+            continue
+        if Path(path).is_file():
+            if path not in hashes:
+                hashes[path] = asset_ref(path)[0]
+            node.body["artifact_id"] = refs[path] = hashes[path]
+        elif kept and catalog.blob_path(kept) is not None:
+            node.body["artifact_id"] = kept  # moved: its bytes are already here
+        else:
+            raise FileNotFoundError(
+                f"ingest_script(register_sources=True): segment source {path} is "
+                "missing and the project's catalog holds no copy of it"
+            )
+    return [(Path(path), aid) for path, aid in refs.items()]
+
+
 def _register_structure_assets(project, *, structure, bed) -> None:
     """Make the sting and bed bytes retrievable by their recorded id (braidio#152).
 
@@ -573,7 +670,33 @@ def _register_structure_assets(project, *, structure, bed) -> None:
         for a in (structure.sting if structure else None, bed)
         if a is not None
     ]
-    if not paths:
+    _register_assets(
+        project,
+        [(Path(path), asset_ref(path)[0]) for path in paths],
+        asset_dir=STRUCTURE_ASSET_DIR,
+        kind=STRUCTURE_ASSET_CATALOG_KIND,
+        note="sting or bed of a production-structure",
+        what="the sting and bed",
+        stacklevel=3,  # -> _register_structure_assets -> ingest_script -> its caller
+    )
+
+
+def _register_assets(
+    project, refs, *, asset_dir, kind, note, what, stacklevel: int = 3
+) -> None:
+    """Copy each ``(path, artifact_id)`` of ``refs`` into ``project`` under
+    ``asset_dir`` and register it in the project's artifact catalog under that id
+    (the content hash the graph recorded, not re-hashed here), so a lookup by
+    content hits wherever the project lives.
+
+    The importer's rules: copy first (a catalog blob hardlinks from the file it is
+    given, and sources live in shared trees), never write a ``file://`` url into
+    the row, and leave an id the catalog already answers for alone. When the
+    host's catalog is not the local one nothing is registered and a
+    ``RuntimeWarning`` names ``what`` (the media still renders here, from its
+    recorded path).
+    """
+    if not refs:
         return
     import warnings
 
@@ -588,27 +711,21 @@ def _register_structure_assets(project, *, structure, bed) -> None:
         assert_local_backend()
     except CatalogBackendMismatch as exc:
         warnings.warn(
-            f"the sting and bed were not registered for retrieval: {exc}",
+            f"{what} were not registered for retrieval: {exc}",
             RuntimeWarning,
-            stacklevel=3,
+            stacklevel=stacklevel + 1,
         )
         return
     catalog = HostArtifactCatalog(project.root)
-    for path in paths:
-        artifact_id, _url = asset_ref(path)
+    for path, artifact_id in refs:
         if catalog.has(artifact_id):
             continue
         dest = Path(project.root).joinpath(
-            *STRUCTURE_ASSET_DIR, f"{artifact_id}{Path(path).suffix}"
+            *asset_dir, f"{artifact_id}{Path(path).suffix}"
         )
         dest.parent.mkdir(parents=True, exist_ok=True)
         copy_file_atomic(Path(path), dest)
-        catalog.register(
-            dest,
-            kind=STRUCTURE_ASSET_CATALOG_KIND,
-            artifact_id=artifact_id,
-            note="sting or bed of a production-structure",
-        )
+        catalog.register(dest, kind=kind, artifact_id=artifact_id, note=note)
 
 
 def _knobs(obj, *, drop: str) -> dict:
@@ -645,13 +762,18 @@ def _segment_nodes(
     src = _AuthoringNode(
         tier=TIER_SOURCE_MEDIA,
         identity=beat_id,
+        # ``artifact_id`` is written only when set (by :func:`_settle_source_ids`): a
+        # stored body without it must stay byte-identical (so a re-ingest does not
+        # rewrite every source node and re-stale its extractions), and an older
+        # build, whose body model forbids extra fields, must still read it.
         body=_json(
             SourceMediaBodyV1(
                 label=label,
                 asset_id=str(resolved.asset_path),
                 rights=beat.rights,
                 beat_id=beat_id,
-            )
+            ),
+            omit_none=("artifact_id",),
         ),
         body_schema_uri=SOURCE_MEDIA_V1,
     )
@@ -684,7 +806,7 @@ def _segment_nodes(
     return src, clip
 
 
-def _json(body) -> dict:
+def _json(body, *, omit_none: tuple[str, ...] = ()) -> dict:
     """A body model as the dict that round-trips through the store.
 
     ``mode="json"`` is what comes back from the graph — a tuple field dumps to
@@ -693,7 +815,11 @@ def _json(body) -> dict:
     node as changed and rewrite it (the same reason nw's entity upsert dumps
     in json mode).
     """
-    return body.model_dump(mode="json")
+    dumped = body.model_dump(mode="json")
+    for name in omit_none:  # an additive field left out of the stored dict when unset
+        if dumped.get(name) is None:
+            dumped.pop(name, None)
+    return dumped
 
 
 # --- phase 2: commit ---------------------------------------------------------

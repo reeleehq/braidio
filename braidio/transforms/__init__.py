@@ -352,8 +352,12 @@ def weave_project(
     sound_design=None,
     api_key=None,
     return_receipt: bool = False,
+    register_sources: bool = False,
 ):
     """Ingest ``script`` and run the whole commentary-weave chain, in order.
+
+    ``register_sources`` is :func:`ingest_script`'s: record each segment source
+    by content so a moved project re-extracts from its own catalog (braidio#153).
 
     Returns the completed ``episode-render/v1`` annotation (its body carries
     the assembled audio's ``url`` + ``artifact_id``). A thin synchronous
@@ -483,6 +487,7 @@ def weave_project(
         rights=rights,
         cast=cast,
         sound_design=sound_design,
+        register_sources=register_sources,
     )
     voice = nw.get_transform(VOICE_ASSIGNMENT_TRANSFORM)
     narration = nw.get_transform(NARRATION_RENDER_TRANSFORM)

@@ -28,6 +28,9 @@ Deliberately NOT declared (each is a decision, not an omission):
 - ``source-media/v1.asset_id`` — holds a filesystem path (``_ingest.py`` writes
   ``str(resolved.asset_path)``), not an asset id. Declaring it would make every
   segment extraction raise at plan time.
+- ``source-media/v1.artifact_id`` — a real content id since braidio#153, but only
+  on nodes ingested with ``register_sources=True``; most source nodes lack it, and
+  declaring it is left until a provenance consumer needs the source edge.
 - ``production-structure/v1.sting_url`` / ``bed_url`` — ``file://`` locators.
 - The render bodies' ``artifact_id`` (narration, dialogue, segment-extraction,
   episode-render), ``still/v1.artifact_id`` and ``video-cut/v1``'s

@@ -39,6 +39,8 @@ from braidio.transforms._common import (
     fresh_equivalent,
     audio_artifact,
     file_url,
+    source_media_identity,
+    source_media_path,
 )
 
 NAME = "segment_extraction.ffmpeg"
@@ -75,7 +77,7 @@ class SegmentExtractionFFmpeg(BaseTransform):
         index = graph_index(project)
         source_node_id = uuid.UUID(str(clip.body["source_node_id"]))
         sm = index[source_node_id]
-        asset_path = sm.body["asset_id"]
+        source_identity = source_media_identity(sm.body)
 
         cfg = singleton(project, TIER_WEAVE_CONFIG)
         pads, fades, min_len = _pads_fades(cfg.body.get("config", {}))
@@ -86,7 +88,7 @@ class SegmentExtractionFFmpeg(BaseTransform):
         cache_key = transform_cache_key(
             self,
             "segment",
-            asset_path,
+            source_identity,
             str(start_s),
             str(end_s),
             str(pads),
@@ -147,7 +149,9 @@ class SegmentExtractionFFmpeg(BaseTransform):
         sm = require_tier(parents, TIER_SOURCE_MEDIA)
         cfg = require_tier(parents, TIER_WEAVE_CONFIG)
         pads, fades, min_len = _pads_fades(cfg.body.get("config", {}))
-        asset_path = sm.body["asset_id"]
+        # by content first: a moved project reads its registered source from the
+        # catalog, not from the path recorded on another machine (braidio#153)
+        asset_path = source_media_path(project.root, sm.body)
 
         out_path = project.root / "data" / "clips" / f"{skel.id}.mp3"
         out_path.parent.mkdir(parents=True, exist_ok=True)

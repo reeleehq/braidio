@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../../_static/documentation_options.js?v=628cd971"></script>
+    <script src="../../_static/documentation_options.js?v=c6f45d68"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.136" />
+  <meta name="docsearch:version" content="0.0.137" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -1309,6 +1309,13 @@ window.runMermaid = runMermaid;</script>
         <span class="ow">or</span> <span class="p">(</span><span class="n">turn_overlap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">turn_overlap</span><span class="o">.</span><span class="n">max_s</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="p">)</span>
 
+    <span class="c1"># What the timeline must say about a clip join: the weave overlaps it by the</span>
+    <span class="c1"># configured edge overlap, but the plain concat below crossfades EVERY join</span>
+    <span class="c1"># (clip edges included) by ``crossfade``, so that is what the audio lost there</span>
+    <span class="c1"># and what the timeline has to subtract, or cues drift by one crossfade per</span>
+    <span class="c1"># clip edge (braidio#234). The audio is left exactly as it was.</span>
+    <span class="n">layout_edge_overlap</span> <span class="o">=</span> <span class="n">edge_overlap</span> <span class="k">if</span> <span class="n">woven</span> <span class="k">else</span> <span class="n">crossfade</span>
+
     <span class="k">if</span> <span class="n">woven</span><span class="p">:</span>
         <span class="n">items</span> <span class="o">=</span> <span class="p">[</span>
             <span class="n">TimelineItem</span><span class="p">(</span>
@@ -1353,7 +1360,7 @@ window.runMermaid = runMermaid;</script>
             <span class="n">placements</span><span class="o">=</span><span class="n">placements</span><span class="p">,</span>
             <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
             <span class="n">source_spans</span><span class="o">=</span><span class="n">spans</span><span class="p">,</span>
-            <span class="n">clip_edge_overlap_s</span><span class="o">=</span><span class="n">edge_overlap</span><span class="p">,</span>
+            <span class="n">clip_edge_overlap_s</span><span class="o">=</span><span class="n">layout_edge_overlap</span><span class="p">,</span>
             <span class="n">narration_crossfade_s</span><span class="o">=</span><span class="n">crossfade</span><span class="p">,</span>
             <span class="n">speakers</span><span class="o">=</span><span class="n">speakers</span><span class="p">,</span>
             <span class="n">overlap</span><span class="o">=</span><span class="n">turn_overlap</span><span class="p">,</span>
@@ -1367,7 +1374,7 @@ window.runMermaid = runMermaid;</script>
             <span class="n">settings</span><span class="o">=</span><span class="n">render_settings</span><span class="p">(</span>
                 <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
                 <span class="n">crossfade_s</span><span class="o">=</span><span class="n">crossfade</span><span class="p">,</span>
-                <span class="n">clip_edge_overlap_s</span><span class="o">=</span><span class="n">edge_overlap</span><span class="p">,</span>
+                <span class="n">clip_edge_overlap_s</span><span class="o">=</span><span class="n">layout_edge_overlap</span><span class="p">,</span>
                 <span class="n">target_lufs</span><span class="o">=</span><span class="n">target_lufs</span><span class="p">,</span>
                 <span class="n">duck_db</span><span class="o">=</span><span class="n">duck_db</span><span class="p">,</span>
                 <span class="n">delivery</span><span class="o">=</span><span class="n">delivery</span><span class="p">,</span>

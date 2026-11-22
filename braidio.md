@@ -1,4 +1,4 @@
-> built 2026-11-22 10:40 UTC from 85191ff (main) · braidio 0.0.136. Details: build_info.json
+> built 2026-11-22 11:08 UTC from b34963c (main) · braidio 0.0.137. Details: build_info.json
 
 # index.html.md
 
@@ -6505,16 +6505,18 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-22 10:40 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/85191ff232d0344aa6ba1e1684f5fe7b6c9ece73"><code>85191ff</code></a> on branch <code>main</code>, for **braidio 0.0.136** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-22 11:08 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/b34963c5d419dd971773a88768e2f722752e80ca"><code>b34963c</code></a> on branch <code>main</code>, for **braidio 0.0.137** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.137) is behind the latest release on PyPI (0.0.138): `pip install braidio` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/85191ff232d0344aa6ba1e1684f5fe7b6c9ece73"><code>85191ff232d0344aa6ba1e1684f5fe7b6c9ece73</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/b34963c5d419dd971773a88768e2f722752e80ca"><code>b34963c5d419dd971773a88768e2f722752e80ca</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
 | Tags at this commit | none                                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
@@ -6525,9 +6527,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/45012054503">45012054503</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/45014688149">45014688149</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>85191ff232d0344aa6ba1e1684f5fe7b6c9ece73</code> (in the history of the built commit) |
+| Event commit | <code>37b65991dc26e10a85c47a42c56364a00150e620</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6552,13 +6554,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.136/">0.0.136</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/braidio/0.0.138/">0.0.138</a>, newer than the documented version (0.0.137).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 85191ff232d0344aa6ba1e1684f5fe7b6c9ece73
+git checkout b34963c5d419dd971773a88768e2f722752e80ca
 pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

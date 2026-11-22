@@ -444,6 +444,28 @@ def list_deliverables(email: str, project_id: str = None) -> "list[Deliverable]"
     return out
 
 
+def _is_braidios(root) -> bool:
+    """Whether the project at ``root`` is braidio's to list (braidio#214).
+
+    Where a host shares braidio's data home (reelee's studio wiring), the caller's
+    bucket also holds the host's own projects; a project is braidio's when its
+    recorded genre envelope names a genre braidio registered (the genre's project
+    factory lives in this package) or records none (a project made before genres
+    were recorded). A genre registered by anyone else, or by no one in this
+    process, is not braidio's.
+    """
+    import nw
+
+    envelope = nw.project_genre(root, fallback="graph")
+    slug = (envelope or {}).get("genre")
+    if not slug:
+        return True
+    if slug not in nw.genre_project_factories:
+        return False
+    module = getattr(nw.genre_project_factories[slug], "__module__", "") or ""
+    return module.split(".", 1)[0] == __package__.split(".", 1)[0]
+
+
 def list_projects(email: str) -> list:
     """Every project of this caller's — rendered or not (reelee#333).
 
@@ -468,6 +490,8 @@ def list_projects(email: str) -> list:
     rows = []
     for r in ws.list_projects():
         pid = r["project_id"]
+        if not _is_braidios(ws.project_root(pid)):
+            continue
         episodes = ws.project_root(pid) / "data" / "episodes"
         count = 0
         if episodes.is_dir():

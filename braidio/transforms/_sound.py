@@ -58,6 +58,7 @@ SOUND_DESIGN_DIR = ("data", "sound-design")
 #: Catalog kind of a design's mix (a mastered FLAC).
 SOUND_DESIGN_CATALOG_KIND = "audio"
 
+
 def episode_talk(project, episode: Annotation) -> tuple[list[str], list[float]]:
     """foley's ``(segments, segment_starts)`` for ``episode``: its spoken
     sentences at estimated starts on its own timeline. Refuses an episode with

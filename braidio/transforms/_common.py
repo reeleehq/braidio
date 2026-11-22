@@ -381,6 +381,37 @@ def media_path(project_root, body: dict, *, what: str) -> Path:
     raise FileNotFoundError(f"{what}: missing — looked for {'; '.join(tried)}")
 
 
+def source_media_path(project_root, body: dict) -> Path:
+    """The local file of a ``source-media/v1`` body: its catalog blob when it was
+    registered by content (``artifact_id``, braidio#153), else its recorded path
+    (``asset_id``, which on this tier holds a path, not a content id).
+
+    A registered id the catalog cannot answer for falls back to the path, and the
+    error names both when neither is there.
+    """
+    artifact_id = str(body.get("artifact_id") or "")
+    path = Path(str(body["asset_id"]))
+    if artifact_id:
+        from nw.media_catalog import HostArtifactCatalog
+
+        blob = HostArtifactCatalog(project_root).blob_path(artifact_id)
+        if blob is not None:
+            return blob
+        if not path.exists():
+            raise FileNotFoundError(
+                f"segment source missing — looked for catalog blob "
+                f"{artifact_id[:12]}… and {path}"
+            )
+    return path
+
+
+def source_media_identity(body: dict) -> str:
+    """What a derived cache key names a ``source-media/v1`` body by: its content
+    id when it has one (the same bytes anywhere), else its recorded path (the key
+    every node written before braidio#153 already carries)."""
+    return str(body.get("artifact_id") or body["asset_id"])
+
+
 def graph_index(project) -> dict:
     """``{annotation.id: annotation}`` across the whole project graph.
 

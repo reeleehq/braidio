@@ -352,6 +352,9 @@ PINNED: dict[str, dict] = {
     "SourceMediaBodyV1": {
         "required": frozenset({"asset_id", "label"}),
         "fields": {
+            # additive (braidio#153): the source's content id, written only by
+            # ingest_script(register_sources=True); deploy before opting in.
+            "artifact_id": "string|null = null",
             "beat_id": "string|null = null",
             "asset_id": "string",
             "label": "string",

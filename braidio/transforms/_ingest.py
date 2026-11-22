@@ -193,8 +193,20 @@ def ingest_script(
     rights: RightsPolicy | None = None,
     cast: ConversationCast | None = None,
     sound_design: SoundDesign | None = None,
+    register_sources: bool = False,
 ) -> IngestedScript:
     """Write ``script``'s authoring nodes into ``project``'s graph.
+
+    ``register_sources=True`` also records each segment source by content: its
+    ``source-media/v1`` node gains the bytes' ``artifact_id``, and the source is
+    copied into the project and registered in its artifact catalog, so a project
+    moved to another machine re-extracts its segments from there instead of the
+    recorded path (braidio#153). Off by default: it copies and hashes every
+    source (a whole song or recording) at each ingest, and turning it on for an
+    existing project rewrites its source nodes once, which re-stales the segment
+    extractions derived from them. The field is additive, so **deploy a build
+    that knows it before ingesting with it** (see the agent guide's "Body schemas
+    are a federation contract").
 
     ``config`` defaults to a plain :class:`WeaveConfig`. ``source`` (a
     :class:`~braidio.sources.SegmentSource`) is required iff the script has
@@ -262,10 +274,21 @@ def ingest_script(
         publishable=publishable,
         cast=cast if cast is not None else DEFAULT_CAST,
         sound_design=sound_design,
+        register_sources=register_sources,
     )
     # Phase 2 — commit, by identity.
     committed = _commit_nodes(project, nodes)
     _register_structure_assets(project, structure=structure, bed=bed)
+    if register_sources:
+        _register_assets(
+            project,
+            _source_paths(nodes),
+            asset_dir=SOURCE_ASSET_DIR,
+            kind=SOURCE_ASSET_CATALOG_KIND,
+            note="segment source of a weave",
+            what="the segment sources",
+            stacklevel=2,  # -> ingest_script -> its caller
+        )
 
     ordered = tuple(
         (
@@ -306,6 +329,7 @@ def _plan_nodes(
     publishable: frozenset[str],
     cast: ConversationCast,
     sound_design: SoundDesign | None = None,
+    register_sources: bool = False,
 ) -> list[_AuthoringNode]:
     """Every authoring node this ingest will write, validated, in write order.
 
@@ -355,7 +379,14 @@ def _plan_nodes(
                 )
             )
         elif planned.kind == "clip":
-            nodes.extend(_segment_nodes(orig, beat_id=ident, source=source))
+            nodes.extend(
+                _segment_nodes(
+                    orig,
+                    beat_id=ident,
+                    source=source,
+                    register_sources=register_sources,
+                )
+            )
         elif planned.kind == "dialogue":
             nodes.append(
                 _AuthoringNode(
@@ -554,6 +585,20 @@ STRUCTURE_ASSET_DIR = ("data", "structure")
 STRUCTURE_ASSET_CATALOG_KIND = "audio"
 
 
+#: Where :func:`_register_assets` copies a segment source before registering it.
+SOURCE_ASSET_DIR = ("data", "sources")
+SOURCE_ASSET_CATALOG_KIND = "audio"
+
+
+def _source_paths(nodes) -> list[Path]:
+    """The recorded paths of the planned source-media nodes that carry a content id."""
+    return [
+        Path(n.body["asset_id"])
+        for n in nodes
+        if n.tier == TIER_SOURCE_MEDIA and n.body.get("artifact_id")
+    ]
+
+
 def _register_structure_assets(project, *, structure, bed) -> None:
     """Make the sting and bed bytes retrievable by their recorded id (braidio#152).
 
@@ -573,6 +618,31 @@ def _register_structure_assets(project, *, structure, bed) -> None:
         for a in (structure.sting if structure else None, bed)
         if a is not None
     ]
+    _register_assets(
+        project,
+        paths,
+        asset_dir=STRUCTURE_ASSET_DIR,
+        kind=STRUCTURE_ASSET_CATALOG_KIND,
+        note="sting or bed of a production-structure",
+        what="the sting and bed",
+        stacklevel=3,  # -> _register_structure_assets -> ingest_script -> its caller
+    )
+
+
+def _register_assets(
+    project, paths, *, asset_dir, kind, note, what, stacklevel: int = 3
+) -> None:
+    """Copy each of ``paths`` into ``project`` under ``asset_dir`` and register it
+    in the project's artifact catalog under its content hash (the id the graph
+    recorded), so a lookup by content hits wherever the project lives.
+
+    The importer's rules: copy first (a catalog blob hardlinks from the file it is
+    given, and sources live in shared trees), never write a ``file://`` url into
+    the row, and leave an id the catalog already answers for alone. When the
+    host's catalog is not the local one nothing is registered and a
+    ``RuntimeWarning`` names ``what`` (the media still renders here, from its
+    recorded path).
+    """
     if not paths:
         return
     import warnings
@@ -588,9 +658,9 @@ def _register_structure_assets(project, *, structure, bed) -> None:
         assert_local_backend()
     except CatalogBackendMismatch as exc:
         warnings.warn(
-            f"the sting and bed were not registered for retrieval: {exc}",
+            f"{what} were not registered for retrieval: {exc}",
             RuntimeWarning,
-            stacklevel=3,
+            stacklevel=stacklevel + 1,
         )
         return
     catalog = HostArtifactCatalog(project.root)
@@ -599,16 +669,11 @@ def _register_structure_assets(project, *, structure, bed) -> None:
         if catalog.has(artifact_id):
             continue
         dest = Path(project.root).joinpath(
-            *STRUCTURE_ASSET_DIR, f"{artifact_id}{Path(path).suffix}"
+            *asset_dir, f"{artifact_id}{Path(path).suffix}"
         )
         dest.parent.mkdir(parents=True, exist_ok=True)
         copy_file_atomic(Path(path), dest)
-        catalog.register(
-            dest,
-            kind=STRUCTURE_ASSET_CATALOG_KIND,
-            artifact_id=artifact_id,
-            note="sting or bed of a production-structure",
-        )
+        catalog.register(dest, kind=kind, artifact_id=artifact_id, note=note)
 
 
 def _knobs(obj, *, drop: str) -> dict:
@@ -623,7 +688,7 @@ def _knobs(obj, *, drop: str) -> dict:
 
 
 def _segment_nodes(
-    beat: SegmentBeat, *, beat_id: str, source
+    beat: SegmentBeat, *, beat_id: str, source, register_sources: bool = False
 ) -> tuple[_AuthoringNode, _AuthoringNode]:
     """The source-media + audio-clip pair for one segment beat.
 
@@ -645,13 +710,22 @@ def _segment_nodes(
     src = _AuthoringNode(
         tier=TIER_SOURCE_MEDIA,
         identity=beat_id,
+        # ``artifact_id`` is written only when set: a stored body without it must
+        # stay byte-identical (so a re-ingest does not rewrite every source node
+        # and re-stale its extractions), and an older build, whose body model
+        # forbids extra fields, must still read what this one writes by default.
         body=_json(
             SourceMediaBodyV1(
                 label=label,
                 asset_id=str(resolved.asset_path),
                 rights=beat.rights,
                 beat_id=beat_id,
-            )
+                # hashed in the plan (pure); copied and registered after commit
+                artifact_id=(
+                    asset_ref(resolved.asset_path)[0] if register_sources else None
+                ),
+            ),
+            omit_none=("artifact_id",),
         ),
         body_schema_uri=SOURCE_MEDIA_V1,
     )
@@ -684,7 +758,7 @@ def _segment_nodes(
     return src, clip
 
 
-def _json(body) -> dict:
+def _json(body, *, omit_none: tuple[str, ...] = ()) -> dict:
     """A body model as the dict that round-trips through the store.
 
     ``mode="json"`` is what comes back from the graph — a tuple field dumps to
@@ -693,7 +767,11 @@ def _json(body) -> dict:
     node as changed and rewrite it (the same reason nw's entity upsert dumps
     in json mode).
     """
-    return body.model_dump(mode="json")
+    dumped = body.model_dump(mode="json")
+    for name in omit_none:  # an additive field left out of the stored dict when unset
+        if dumped.get(name) is None:
+            dumped.pop(name, None)
+    return dumped
 
 
 # --- phase 2: commit ---------------------------------------------------------

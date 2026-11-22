@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "built_at": "2026-11-22T09:02:18Z",
+  "built_at": "2026-11-22T09:25:34Z",
   "package": {
     "name": "braidio",
     "version": "0.0.132",
@@ -9,26 +9,24 @@
   },
   "git": {
     "available": true,
-    "commit": "e10ed3a3c0af6a24c643850c19fe1797872f9b63",
-    "short_commit": "e10ed3a",
+    "commit": "3cf9d4c22c85b960201f7edcc5484996d7b5e853",
+    "short_commit": "3cf9d4c",
     "branch": "main",
-    "tags": [
-      "0.0.132"
-    ],
+    "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/reeleehq/braidio",
-    "commit_url": "https://github.com/reeleehq/braidio/commit/e10ed3a3c0af6a24c643850c19fe1797872f9b63",
+    "commit_url": "https://github.com/reeleehq/braidio/commit/3cf9d4c22c85b960201f7edcc5484996d7b5e853",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "reeleehq/braidio",
-    "sha": "8c78c96d16156f72ba2276ece66996809217c83c",
+    "sha": "021a74c1ac81a5dd262a6e4ae82091ed17de0a65",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "45005133475",
-    "run_url": "https://github.com/reeleehq/braidio/actions/runs/45005133475",
+    "run_id": "45006884972",
+    "run_url": "https://github.com/reeleehq/braidio/actions/runs/45006884972",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -66,7 +64,7 @@
     "relation": "same",
     "error": null
   },
-  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout e10ed3a3c0af6a24c643850c19fe1797872f9b63\npip install \"epythet==0.2.23\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/reeleehq/braidio && cd braidio\ngit checkout 3cf9d4c22c85b960201f7edcc5484996d7b5e853\npip install \"epythet==0.2.23\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
     "aligned": true,

@@ -21,6 +21,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+import nw
 from nw.paths import check_path_segment
 
 #: Env var overriding the braidio data root (where per-user projects/renders live).
@@ -84,7 +85,7 @@ class Workspace:
         from braidio import Project
 
         root = self.project_root(project_id)
-        if not (root / "project.json").exists():
+        if not nw.is_project(root):
             raise FileNotFoundError(f"no project {project_id!r} for {self.email}")
         return Project(root)
 
@@ -96,7 +97,7 @@ class Workspace:
         rows = []
         for child in pdir.iterdir():
             spec = child / "project.json"
-            if not (child.is_dir() and spec.exists()):
+            if not (child.is_dir() and nw.is_project(child)):
                 continue
             loaded = None
             try:

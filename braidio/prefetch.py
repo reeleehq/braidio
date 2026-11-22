@@ -60,13 +60,19 @@ class _RecordingVoice:
         out = prepare_pause(_STAND_IN_S, Path(out_path).with_suffix(".mp3"))
         return (out, True) if return_cache_status else out
 
-    def render_dialogue(self, turns, cast, *, out_path, return_cache_status=False, **kw):
+    def render_dialogue(
+        self, turns, cast, *, out_path, return_cache_status=False, **kw
+    ):
         if isinstance(self.real, ElevenLabsVoice):  # one pass: nothing to prefetch
             out = prepare_pause(_STAND_IN_S, Path(out_path).with_suffix(".mp3"))
             return (out, True) if return_cache_status else out
         return SpeakVoice.render_dialogue(
-            self, turns, cast, out_path=out_path,
-            return_cache_status=return_cache_status, **kw,
+            self,
+            turns,
+            cast,
+            out_path=out_path,
+            return_cache_status=return_cache_status,
+            **kw,
         )
 
 

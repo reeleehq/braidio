@@ -10,7 +10,11 @@ seams read it.
 
 - the audio is the episode's mix, found by content first
   (:func:`~braidio.transforms._common.media_path`), named relative to the
-  project so the plan (and its cache key) is not pinned to this machine;
+  project so the plan (and its cache key) is not pinned to this machine. For
+  a production with a music bed it is the episode's **voice stem** (the mix
+  without the bed, braidio#227): a bed in the "voice" reads as speech to
+  foley's aligner and ducking. The bed stem is laid back under the design's
+  mix when the design completes, so the mix a host serves still has its bed;
 - the segments are the episode's spoken sentences, with their starts
   estimated inside each beat's place on the persisted timeline: the same
   :func:`braidio.sound_design.talk_segments` the fast path uses, so both paths
@@ -29,6 +33,7 @@ import json
 import os
 import tempfile
 import warnings
+from contextvars import ContextVar
 from pathlib import Path, PurePath
 
 from lacing import Annotation
@@ -43,9 +48,14 @@ from nw.transforms.sound_design import (
 from braidio.bodies._render_nodes import EPISODE_RENDER_V1
 from braidio.sound_design import spoken_of, talk_segments, talk_spans
 from braidio.transforms._common import (
+    TIER_EPISODE_RENDER,
     TIER_SOUND_DESIGN,
+    TIER_WEAVE_CONFIG,
     annotation_parents,
+    graph_index,
     media_path,
+    require_tier,
+    resolve_parents,
 )
 
 NAME = "episode_to_sound_design.foley"
@@ -56,6 +66,11 @@ SOUND_DESIGN_DIR = ("data", "sound-design")
 
 #: Catalog kind of a design's mix (a mastered FLAC).
 SOUND_DESIGN_CATALOG_KIND = "audio"
+
+#: The project an :class:`EpisodeToSoundDesign` is executing in: completing a
+#: design reads the episode's bed stem from it (nw's completion hook gets no
+#: project).
+_EXECUTING_PROJECT: ContextVar = ContextVar("braidio_sound_design_project", default=None)
 
 
 def episode_talk(project, episode: Annotation) -> tuple[list[str], list[float]]:
@@ -88,20 +103,115 @@ class EpisodeToSoundDesign(NarrationToSoundDesign):
         # text is read exactly when it will be designed
         segments, starts = episode_talk(project, narration)
         return NarrationTrack(
-            segments, self.narration_audio_path(project, narration), starts
+            segments,
+            self.narration_audio_path(project, narration),
+            starts,
+            # the voice stem is not the episode's own audio: name its bytes, so
+            # nw checks the file against them and not the bedded mix's id
+            artifact_id=narration.body.get("voice_artifact_id"),
         )
 
     def narration_audio_path(self, project, narration: Annotation) -> PurePath:
-        audio = media_path(
-            project.root, narration.body, what=f"episode {narration.id}"
-        ).resolve()
+        """The episode's voice stem when it has one (a production with a bed,
+        braidio#227), else its mix; relative to the project."""
+        body = narration.body
+        if body.get("voice_artifact_id") or body.get("voice_url"):
+            ref, what = _stem_ref(body, "voice"), f"episode {narration.id}'s voice stem"
+        else:
+            ref, what = body, f"episode {narration.id}"
+        audio = media_path(project.root, ref, what=what).resolve()
         root = Path(project.root).resolve()
         if not audio.is_relative_to(root):
             raise ValueError(
-                f"{self.name}: episode {narration.id}'s mix {audio} is outside "
-                f"the project ({root}); re-weave it here before designing."
+                f"{self.name}: {what} ({audio}) is outside the project ({root}); "
+                "re-weave it here before designing."
             )
         return PurePath(audio.relative_to(root))
+
+    def execute(self, project, plan, skeleton, **kwargs):
+        token = _EXECUTING_PROJECT.set(project)
+        try:
+            return super().execute(project, plan, skeleton, **kwargs)
+        finally:
+            _EXECUTING_PROJECT.reset(token)
+
+    def _complete_annotation(self, skeleton: Annotation, artifact) -> Annotation:
+        """nw's completed design, with the episode's bed laid back under its mix
+        when the design listened to the voice stem (braidio#227)."""
+        completed = super()._complete_annotation(skeleton, artifact)
+        project = _EXECUTING_PROJECT.get()
+        if project is None:
+            return completed
+        index = graph_index(project)
+        episode = next(
+            (a for a in resolve_parents(skeleton, index) if a.tier == TIER_EPISODE_RENDER),
+            None,
+        )
+        if episode is None or not (
+            episode.body.get("bed_artifact_id") or episode.body.get("bed_url")
+        ):
+            return completed
+        return completed.model_copy(
+            update={"body": _with_bed(project, episode, completed.body, index=index)}
+        )
+
+
+def _stem_ref(body: dict, stem: str) -> dict:
+    """``{"artifact_id", "url"}`` of an episode body's ``stem`` (``"voice"`` /
+    ``"bed"``), the shape :func:`media_path` reads."""
+    return {"artifact_id": body.get(f"{stem}_artifact_id"), "url": body.get(f"{stem}_url")}
+
+
+def _with_bed(project, episode: Annotation, body: dict, *, index: dict) -> dict:
+    """``body`` (a completed ``sound-design/v1``) naming its mix with the
+    episode's bed stem laid back under it, mastered as the episode was.
+
+    The design's own mix (without the bed) stays in falaw's content store and is
+    named in ``notes``; ``master_report`` is still foley's, of that mix.
+    """
+    from falaw.content import default_content_store
+    from nw.bodies.sound_design import SoundDesignBodyV1
+
+    from braidio.weave import lay_bed
+    from braidio.weave_config import WeaveConfig
+
+    store = default_content_store()
+    designed_id = body["artifact_id"]
+    bed = media_path(
+        project.root, _stem_ref(episode.body, "bed"), what=f"episode {episode.id}'s bed stem"
+    )
+    cfg = require_tier(resolve_parents(episode, index), TIER_WEAVE_CONFIG)
+    weave = WeaveConfig.from_snapshot(cfg.body.get("config", {}))
+    with tempfile.TemporaryDirectory(prefix="braidio-bed-") as work:
+        designed = store.blob_path(designed_id)
+        if designed is None:  # an opaque blob backend: spool the bytes
+            designed = Path(work) / "design.flac"
+            designed.write_bytes(store.get_blob(designed_id))
+        out = lay_bed(
+            designed,
+            bed,
+            Path(work) / "design-with-bed.flac",
+            target_lufs=weave.target_lufs,
+            true_peak=weave.true_peak_dbtp,
+            sample_rate=weave.sample_rate,
+        )
+        import braidio
+
+        duration = float(braidio.duration_s(out))
+        bedded_id = store.put_blob(out.read_bytes())
+    note = (
+        f"the episode's music bed was laid back under the design and the sum "
+        f"mastered to {weave.target_lufs:g} LUFS; the design without the bed is "
+        f"{designed_id}, which master_report measures (braidio#227)"
+    )
+    return SoundDesignBodyV1.model_validate(
+        {
+            **body,
+            "artifact_id": bedded_id,
+            "duration_s": duration,
+            "notes": [*body.get("notes", []), note],
+        }
+    ).model_dump(mode="json")
 
 
 def sound_design_of(project, episode: Annotation) -> Annotation | None:

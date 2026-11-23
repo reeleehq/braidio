@@ -33,6 +33,9 @@ from pathlib import Path
 _MASTER_ENCODE_ARGS = ("-b:a", "192k")
 #: The unmastered mix is float, so a sum above full scale survives to the limiter.
 _UNMASTERED_CODEC = "pcm_f32le"
+#: The codec of an unmastered stem, by its file suffix (FLAC otherwise): lossless,
+#: so a stem laid back under a mix brings no second encode's loss.
+_STEM_CODECS = {".wav": _UNMASTERED_CODEC, ".flac": "flac"}
 
 #: Upper bound of the intelligible range for a speaker interruption: past it two
 #: voices talking over each other stop being understood (Hamilton#22).
@@ -400,6 +403,8 @@ def weave_timeline(
     sample_rate: int = 44100,
     bed=None,  # optional braidio.music.MusicBed — instrumental underscore under all
     overlap: TurnOverlap | None = None,
+    voice_out_path: str | Path | None = None,
+    bed_out_path: str | Path | None = None,
 ) -> Path:
     """Place items on a timeline and mix. Clips overlap neighbours by
     ``clip_edge_overlap_s`` (their faded edges tuck under narration); narration
@@ -420,6 +425,14 @@ def weave_timeline(
     The mix is mastered with one measured gain to ``target_lufs`` (LUFS) and a
     true-peak limit at ``true_peak`` (dBTP), so it keeps its own dynamics: a
     quiet passage stays quiet relative to its loud neighbours.
+
+    With a ``bed``, two stems of the same layout can be written in the same call
+    (braidio#227), each sample-aligned with ``out`` from time 0:
+    ``voice_out_path`` gets the mix without the bed, mastered like ``out`` (what
+    a sound designer should listen to: a bed in the "voice" reads as speech to
+    an aligner), and ``bed_out_path`` gets the bed alone, unmastered, at the
+    level it has inside the mix (what :func:`lay_bed` puts back under a designed
+    voice). Without a bed neither is written: ``out`` already is the voice.
     """
     _require_ffmpeg()
     if not items:
@@ -467,62 +480,155 @@ def weave_timeline(
         labels.append(f"[{lbl}]")
 
     # Optional music bed: prepare it to cover the timeline, then mix it in posted.
+    item_inputs, item_filters, item_labels = list(inputs), list(filters), list(labels)
+    bed_filters: list[str] = []
+    bed_labels: list[str] = []
     if bed is not None:
-        from braidio.music import bed_regions, prepare_bed, prepare_bed_regions
-
-        total_s = max(s + d for s, d in zip(starts, durs))
-        spotlights = [
-            (s, s + d) for s, d, it in zip(starts, durs, items) if it.spotlight
-        ]
-        if not spotlights:
-            # one whole-span bed file, posted by its lead-in (the plain path)
-            bed_spans = [
-                (
-                    prepare_bed(
-                        bed,
-                        total_s,
-                        out.parent / f"_bed_{out.stem}.mp3",
-                        sample_rate=sample_rate,
-                    ),
-                    bed.lead_in_s,
-                )
-            ]
-        else:
-            # fade-to-spotlight: the bed as the regions around the spotlit parts
-            bed_spans = prepare_bed_regions(
-                bed,
-                bed_regions(bed, total_s, spotlights),
-                out.parent,
-                stem=f"_bed_{out.stem}",
-                sample_rate=sample_rate,
-            )
-        for k, (bed_path, start_s) in enumerate(bed_spans):
+        spans = bed_spans(
+            bed,
+            starts,
+            durs,
+            items,
+            work_dir=out.parent,
+            stem=f"_bed_{out.stem}",
+            sample_rate=sample_rate,
+        )
+        for k, (bed_path, start_s) in enumerate(spans):
             idx = len(items) + k
             inputs += ["-i", str(bed_path)]
             start_ms = int(round(start_s * 1000))
-            filters.append(
+            bed_filters.append(
                 f"[{idx}:a]aformat=sample_rates={sample_rate}:channel_layouts=stereo,"
                 f"adelay={start_ms}:all=1[bed{k}]"
             )
-            labels.append(f"[bed{k}]")
+            bed_labels.append(f"[bed{k}]")
 
-    n_inputs = len(labels)
+    master = dict(target_lufs=target_lufs, true_peak=true_peak)
+    _mix_to(
+        inputs,
+        filters + bed_filters,
+        labels + bed_labels,
+        out,
+        sample_rate=sample_rate,
+        master=master,
+    )
+    if bed is not None and voice_out_path is not None:
+        voice_out = Path(voice_out_path)
+        voice_out.parent.mkdir(parents=True, exist_ok=True)
+        _mix_to(
+            item_inputs,
+            item_filters,
+            item_labels,
+            voice_out,
+            sample_rate=sample_rate,
+            master=master,
+        )
+    if bed is not None and bed_out_path is not None:
+        bed_out = Path(bed_out_path)
+        bed_out.parent.mkdir(parents=True, exist_ok=True)
+        # the bed inputs keep the indices they have in ``inputs``
+        _mix_to(
+            inputs, bed_filters, bed_labels, bed_out, sample_rate=sample_rate
+        )
+    return out
+
+
+def bed_spans(
+    bed,
+    starts,
+    durs,
+    items,
+    *,
+    work_dir: str | Path,
+    stem: str,
+    sample_rate: int = 44100,
+) -> list[tuple[Path, float]]:
+    """The bed's files and their start times (seconds) under a laid-out timeline.
+
+    One whole-span file posted by ``bed.lead_in_s`` when no item is spotlit (the
+    plain path); else, fade-to-spotlight, the regions around the spotlit items
+    (:func:`braidio.music.bed_regions`). ``starts``/``durs`` are the items'
+    positions (:func:`layout_placed`); the files are written in ``work_dir``,
+    named from ``stem``.
+    """
+    from braidio.music import bed_regions, prepare_bed, prepare_bed_regions
+
+    work_dir = Path(work_dir)
+    total_s = max(s + d for s, d in zip(starts, durs))
+    spotlights = [(s, s + d) for s, d, it in zip(starts, durs, items) if it.spotlight]
+    if not spotlights:
+        return [
+            (
+                prepare_bed(bed, total_s, work_dir / f"{stem}.mp3", sample_rate=sample_rate),
+                bed.lead_in_s,
+            )
+        ]
+    return prepare_bed_regions(
+        bed,
+        bed_regions(bed, total_s, spotlights),
+        work_dir,
+        stem=stem,
+        sample_rate=sample_rate,
+    )
+
+
+def lay_bed(
+    mix_path: str | Path,
+    bed_path: str | Path,
+    out_path: str | Path,
+    *,
+    target_lufs: float = -16.0,
+    true_peak: float = -1.0,
+    sample_rate: int = 44100,
+) -> Path:
+    """Put a bed stem back under a mix, both from time 0, and master the sum.
+
+    ``bed_path`` is what :func:`weave_timeline` wrote to ``bed_out_path``: the
+    bed at the level it had in the episode, so laying it under the voice the
+    episode was woven from (or a sound design of that voice, braidio#227) gives
+    the episode's balance back. Mastered as :func:`weave_timeline` masters.
+    Returns ``out_path``.
+    """
+    _require_ffmpeg()
+    out = Path(out_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    filters = [
+        f"[{i}:a]aformat=sample_rates={sample_rate}:channel_layouts=stereo[s{i}]"
+        for i in range(2)
+    ]
+    _mix_to(
+        ["-i", str(mix_path), "-i", str(bed_path)],
+        filters,
+        ["[s0]", "[s1]"],
+        out,
+        sample_rate=sample_rate,
+        master=dict(target_lufs=target_lufs, true_peak=true_peak),
+    )
+    return out
+
+
+def _mix_to(
+    inputs: list[str],
+    filters: list[str],
+    labels: list[str],
+    out: Path,
+    *,
+    sample_rate: int,
+    master: dict | None = None,
+) -> None:
+    """Sum ``labels`` (the outputs of ``filters`` over ``inputs``) into ``out``.
+
+    With ``master`` (``target_lufs``, ``true_peak``), the sum is mastered as
+    :func:`weave_timeline` describes; without, it is written as it is (a stem:
+    lossless when ``out`` is FLAC or WAV).
+    """
     mix = (
-        "".join(labels) + f"amix=inputs={n_inputs}:normalize=0:dropout_transition=0[m]"
+        "".join(labels)
+        + f"amix=inputs={len(labels)}:normalize=0:dropout_transition=0[m]"
     )
     filtergraph = ";".join(filters + [mix])
 
-    # Mix, then master: one measured gain to ``target_lufs`` and a true-peak limit
-    # at ``true_peak``. One-pass ``loudnorm`` would ride the gain through the mix
-    # and pull a quiet passage between two loud ones up (braidio#130). The
-    # intermediate is float on disk and ``level_file`` streams it, so memory does
-    # not grow with the episode. Imported here: the mix engine stays free of the
-    # mixing/TTS layers at import (tests/test_turn_overlap.py guards that).
-    from mixing.loudness import level_file
-
-    with tempfile.TemporaryDirectory(prefix="braidio-mix-") as work:
-        # named after ``out``: a GainCappedWarning names this file
-        unmastered = Path(work) / f"{out.stem}.wav"
+    def _ffmpeg(dest: Path, codec: str) -> None:
         subprocess.run(
             [
                 "ffmpeg",
@@ -537,18 +643,34 @@ def weave_timeline(
                 "-ac",
                 "2",
                 "-c:a",
-                _UNMASTERED_CODEC,
-                str(unmastered),
+                codec,
+                str(dest),
             ],
             check=True,
             capture_output=True,
         )
+
+    if master is None:
+        _ffmpeg(out, _STEM_CODECS.get(out.suffix.lower(), "flac"))
+        return
+
+    # Mix, then master: one measured gain to ``target_lufs`` and a true-peak limit
+    # at ``true_peak``. One-pass ``loudnorm`` would ride the gain through the mix
+    # and pull a quiet passage between two loud ones up (braidio#130). The
+    # intermediate is float on disk and ``level_file`` streams it, so memory does
+    # not grow with the episode. Imported here: the mix engine stays free of the
+    # mixing/TTS layers at import (tests/test_turn_overlap.py guards that).
+    from mixing.loudness import level_file
+
+    with tempfile.TemporaryDirectory(prefix="braidio-mix-") as work:
+        # named after ``out``: a GainCappedWarning names this file
+        unmastered = Path(work) / f"{out.stem}.wav"
+        _ffmpeg(unmastered, _UNMASTERED_CODEC)
         level_file(
             unmastered,
             out,
-            target_lufs=target_lufs,
-            ceiling_db=true_peak,
+            target_lufs=master["target_lufs"],
+            ceiling_db=master["true_peak"],
             sample_rate=sample_rate,
             encode_args=_MASTER_ENCODE_ARGS,
         )
-    return out

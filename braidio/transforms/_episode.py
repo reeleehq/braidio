@@ -727,6 +727,17 @@ class WeaveToEpisode(BaseTransform):
         # it was for a project that never set it (the absence rule, as above).
         overlap = weave.turn_overlap()  # also what member_timeline laid out
         overlap_kw = {"overlap": overlap} if overlap.is_on else {}
+        # With a bed, the voice and the bed are also written as stems of the same
+        # layout (braidio#227); without one the call is exactly what it was.
+        stems = (
+            {}
+            if bed is None
+            else {
+                "voice": out_path.with_name(f"{skel.id}.voice.mp3"),
+                "bed": out_path.with_name(f"{skel.id}.bed.flac"),
+            }
+        )
+        stem_kw = {f"{k}_out_path": v for k, v in stems.items()}
         braidio.weave_timeline(
             items,
             out_path,
@@ -737,6 +748,7 @@ class WeaveToEpisode(BaseTransform):
             sample_rate=weave.sample_rate,
             bed=bed,
             **overlap_kw,
+            **stem_kw,
         )
         duration = safe_duration(out_path)
         artifact = audio_artifact(
@@ -745,6 +757,23 @@ class WeaveToEpisode(BaseTransform):
             derived_from=skel.provenance.was_derived_from,
             duration_s=duration,
         )
+        stem_artifacts = {
+            k: audio_artifact(
+                path,
+                transform_name=self.name,
+                derived_from=skel.provenance.was_derived_from,
+                duration_s=safe_duration(path),
+            )
+            for k, path in stems.items()
+        }
+        stem_fields = {
+            field: value
+            for k, path in stems.items()
+            for field, value in (
+                (f"{k}_artifact_id", stem_artifacts[k].asset_id),
+                (f"{k}_url", file_url(path)),
+            )
+        }
         completed = skel.model_copy(
             update={
                 "body": {
@@ -753,13 +782,14 @@ class WeaveToEpisode(BaseTransform):
                     "url": file_url(out_path),
                     "duration_s": duration,
                     "timeline": timeline.to_dict(),
+                    **stem_fields,
                 }
             }
         )
         project.graph.add_annotation(completed)
         return TransformResult(
             annotations=(completed,),
-            artifacts=(artifact,),
+            artifacts=(artifact, *stem_artifacts.values()),
             cost_usd_actual=0.0,
             cache_hit_savings_usd=0.0,
         )

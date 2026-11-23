@@ -44,7 +44,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../_static/documentation_options.js?v=8792eeec"></script>
+    <script src="../_static/documentation_options.js?v=cbf0c937"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.146" />
+  <meta name="docsearch:version" content="0.0.148" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -466,6 +466,12 @@ bring its own and the tests run without foley.</p>
 <p class="rubric">Functions</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#braidio.sound_design.level_change_db" title="braidio.sound_design.level_change_db"><code class="xref py py-obj docutils literal notranslate"><span class="pre">level_change_db</span></code></a>(before, after)</p></td>
+<td><p>How much louder <code class="docutils literal notranslate"><span class="pre">after</span></code> is than <code class="docutils literal notranslate"><span class="pre">before</span></code> (integrated loudness, dB); <code class="docutils literal notranslate"><span class="pre">0.0</span></code> when either is silent, so a silent voice moves no bed.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#braidio.sound_design.master_levels" title="braidio.sound_design.master_levels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">master_levels</span></code></a>(master, *[, default_lufs, ...])</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">(target</span> <span class="pre">LUFS,</span> <span class="pre">true-peak</span> <span class="pre">ceiling</span> <span class="pre">dBTP)</span></code> of a designer's delivery profile (<code class="docutils literal notranslate"><span class="pre">&quot;podcast&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;streaming&quot;</span></code>.</p></td>
+</tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#braidio.sound_design.score_mix" title="braidio.sound_design.score_mix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">score_mix</span></code></a>(audio, spans, *, design, profile, ...)</p></td>
 <td><p>Sound-design the mix at <code class="docutils literal notranslate"><span class="pre">audio</span></code> and write the result to <code class="docutils literal notranslate"><span class="pre">out_path</span></code>.</p></td>
 </tr>
@@ -674,6 +680,37 @@ lasts, and what is said in it.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="braidio.sound_design.level_change_db">
+<span class="sig-prename descclassname"><span class="pre">braidio.sound_design.</span></span><span class="sig-name descname"><span class="pre">level_change_db</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">before</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">after</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/sound_design.html#level_change_db"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.sound_design.level_change_db" title="Link to this definition">#</a></dt>
+<dd><p>How much louder <code class="docutils literal notranslate"><span class="pre">after</span></code> is than <code class="docutils literal notranslate"><span class="pre">before</span></code> (integrated loudness, dB);
+<code class="docutils literal notranslate"><span class="pre">0.0</span></code> when either is silent, so a silent voice moves no bed.</p>
+<p>What a designer’s mastering did to the voice it was handed: the gain a bed
+stem laid back under the design needs to keep the episode’s balance
+(<a class="reference internal" href="braidio.weave.html#braidio.weave.lay_bed" title="braidio.weave.lay_bed"><code class="xref py py-func docutils literal notranslate"><span class="pre">braidio.weave.lay_bed()</span></code></a>, braidio#227).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="braidio.sound_design.master_levels">
+<span class="sig-prename descclassname"><span class="pre">braidio.sound_design.</span></span><span class="sig-name descname"><span class="pre">master_levels</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">master</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_lufs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-16.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_peak</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/sound_design.html#master_levels"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.sound_design.master_levels" title="Link to this definition">#</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">(target</span> <span class="pre">LUFS,</span> <span class="pre">true-peak</span> <span class="pre">ceiling</span> <span class="pre">dBTP)</span></code> of a designer’s delivery profile
+(<code class="docutils literal notranslate"><span class="pre">&quot;podcast&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;streaming&quot;</span></code>… or a foley <code class="docutils literal notranslate"><span class="pre">MasterProfile</span></code>), for a mix
+re-mastered after the design (a bed laid back under it, braidio#262), so it
+lands where the design asked. Read through <code class="docutils literal notranslate"><span class="pre">foley.resolve_master</span></code>; when
+foley is not installed (a host’s own designer) or does not know the name,
+the defaults (the render’s own level).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>, <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="braidio.sound_design.score_mix">
 <span class="sig-prename descclassname"><span class="pre">braidio.sound_design.</span></span><span class="sig-name descname"><span class="pre">score_mix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">audio</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spans</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">design</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/sound_design.html#score_mix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.sound_design.score_mix" title="Link to this definition">#</a></dt>
 <dd><p>Sound-design the mix at <code class="docutils literal notranslate"><span class="pre">audio</span></code> and write the result to <code class="docutils literal notranslate"><span class="pre">out_path</span></code>.</p>
@@ -833,6 +870,8 @@ beat’s start stays inside its window:</p>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sound_design.TalkSpan"><code class="docutils literal notranslate"><span class="pre">TalkSpan</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sound_design.level_change_db"><code class="docutils literal notranslate"><span class="pre">level_change_db()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sound_design.master_levels"><code class="docutils literal notranslate"><span class="pre">master_levels()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sound_design.score_mix"><code class="docutils literal notranslate"><span class="pre">score_mix()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sound_design.spoken_of"><code class="docutils literal notranslate"><span class="pre">spoken_of()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sound_design.spoken_text"><code class="docutils literal notranslate"><span class="pre">spoken_text()</span></code></a></li>

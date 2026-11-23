@@ -18,6 +18,8 @@ braidio.sound\_design
 
    .. autosummary::
    
+      level_change_db
+      master_levels
       score_mix
       spoken_of
       spoken_text

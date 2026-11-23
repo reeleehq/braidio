@@ -1,4 +1,4 @@
-> built 2026-11-23 11:42 UTC from f276af9 (main) · braidio 0.0.146. Details: build_info.json
+> built 2026-11-23 23:05 UTC from 62df972 (main) · braidio 0.0.148. Details: build_info.json
 
 # index.html.md
 
@@ -4333,12 +4333,14 @@ bring its own and the tests run without foley.
 
 ### Functions
 
-| [`score_mix`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.score_mix)(audio, spans, \*, design, profile, ...)   | Sound-design the mix at `audio` and write the result to `out_path`.                                                                                                                         |
-|------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`spoken_of`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.spoken_of)(beat)                                     | What a script beat says aloud: a narration's text, a dialogue's turns, `""` for anything else (a clip's words are the source's; a scene break says nothing).                                |
-| [`spoken_text`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.spoken_text)(text)                                   | `text` without its audio tags, whitespace collapsed.                                                                                                                                        |
-| [`talk_segments`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.talk_segments)(spans)                                | foley's `(segments, segment_starts)` for the talk on a timeline.                                                                                                                            |
-| [`talk_spans`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.talk_spans)(beats, texts)                            | The spoken [`TalkSpan`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.TalkSpan) of a timeline: its beat spans (anything with `start` and `duration`) zipped with what each says, silent ones left out. |
+| [`level_change_db`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.level_change_db)(before, after)                    | How much louder `after` is than `before` (integrated loudness, dB); `0.0` when either is silent, so a silent voice moves no bed.                                                            |
+|----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`master_levels`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.master_levels)(master, \*[, default_lufs, ...])    | `(target LUFS, true-peak ceiling dBTP)` of a designer's delivery profile (`"podcast"`, `"streaming"`.                                                                                       |
+| [`score_mix`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.score_mix)(audio, spans, \*, design, profile, ...) | Sound-design the mix at `audio` and write the result to `out_path`.                                                                                                                         |
+| [`spoken_of`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.spoken_of)(beat)                                   | What a script beat says aloud: a narration's text, a dialogue's turns, `""` for anything else (a clip's words are the source's; a scene break says nothing).                                |
+| [`spoken_text`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.spoken_text)(text)                                 | `text` without its audio tags, whitespace collapsed.                                                                                                                                        |
+| [`talk_segments`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.talk_segments)(spans)                              | foley's `(segments, segment_starts)` for the talk on a timeline.                                                                                                                            |
+| [`talk_spans`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.talk_spans)(beats, texts)                          | The spoken [`TalkSpan`](_autosummary/braidio.sound_design.html.md#braidio.sound_design.TalkSpan) of a timeline: its beat spans (anything with `start` and `duration`) zipped with what each says, silent ones left out. |
 
 ### Classes
 
@@ -4476,6 +4478,30 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One spoken beat on the episode timeline: where it starts, how long it
 lasts, and what is said in it.
+
+### braidio.sound_design.level_change_db(before, after)
+
+How much louder `after` is than `before` (integrated loudness, dB);
+`0.0` when either is silent, so a silent voice moves no bed.
+
+What a designer’s mastering did to the voice it was handed: the gain a bed
+stem laid back under the design needs to keep the episode’s balance
+([`braidio.weave.lay_bed()`](_autosummary/braidio.weave.html.md#braidio.weave.lay_bed), braidio#227).
+
+* **Return type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float)
+
+### braidio.sound_design.master_levels(master, , default_lufs=-16.0, default_peak=-1.0)
+
+`(target LUFS, true-peak ceiling dBTP)` of a designer’s delivery profile
+(`"podcast"`, `"streaming"`… or a foley `MasterProfile`), for a mix
+re-mastered after the design (a bed laid back under it, braidio#262), so it
+lands where the design asked. Read through `foley.resolve_master`; when
+foley is not installed (a host’s own designer) or does not know the name,
+the defaults (the render’s own level).
+
+* **Return type:**
+  [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`float`](https://docs.python.org/3/builtins/functions.html#float), [`float`](https://docs.python.org/3/builtins/functions.html#float)]
 
 ### braidio.sound_design.score_mix(audio, spans, , design, profile, out_path)
 
@@ -6662,20 +6688,18 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-23 11:42 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/f276af908c6e0fbe79383e13f6295ede10d8e307"><code>f276af9</code></a> on branch <code>main</code>, for **braidio 0.0.146** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-23 23:05 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/62df9726b1475e824681a88d18bfe160992844af"><code>62df972</code></a> on branch <code>main</code>, for **braidio 0.0.148** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.0.146) is behind the latest release on PyPI (0.0.147): `pip install braidio` gives newer code than these docs describe.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/f276af908c6e0fbe79383e13f6295ede10d8e307"><code>f276af908c6e0fbe79383e13f6295ede10d8e307</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/62df9726b1475e824681a88d18bfe160992844af"><code>62df9726b1475e824681a88d18bfe160992844af</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | none                                                                                                                                                    |
+| Tags at this commit | <code>0.0.148</code>                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -6684,9 +6708,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/45166593703">45166593703</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/45284513812">45284513812</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>f276af908c6e0fbe79383e13f6295ede10d8e307</code> (in the history of the built commit) |
+| Event commit | <code>8fc76be9f78e2ca4ad86fa88043331d4fa4c63c8</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6711,13 +6735,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.147/">0.0.147</a>, newer than the documented version (0.0.146).
+Latest release: <a href="https://pypi.org/project/braidio/0.0.148/">0.0.148</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout f276af908c6e0fbe79383e13f6295ede10d8e307
+git checkout 62df9726b1475e824681a88d18bfe160992844af
 pip install "epythet==0.2.25"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

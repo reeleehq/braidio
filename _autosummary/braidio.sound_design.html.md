@@ -38,12 +38,14 @@ bring its own and the tests run without foley.
 
 ### Functions
 
-| [`score_mix`](#braidio.sound_design.score_mix)(audio, spans, \*, design, profile, ...)   | Sound-design the mix at `audio` and write the result to `out_path`.                                                                                                                         |
-|------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`spoken_of`](#braidio.sound_design.spoken_of)(beat)                                     | What a script beat says aloud: a narration's text, a dialogue's turns, `""` for anything else (a clip's words are the source's; a scene break says nothing).                                |
-| [`spoken_text`](#braidio.sound_design.spoken_text)(text)                                   | `text` without its audio tags, whitespace collapsed.                                                                                                                                        |
-| [`talk_segments`](#braidio.sound_design.talk_segments)(spans)                                | foley's `(segments, segment_starts)` for the talk on a timeline.                                                                                                                            |
-| [`talk_spans`](#braidio.sound_design.talk_spans)(beats, texts)                            | The spoken [`TalkSpan`](#braidio.sound_design.TalkSpan) of a timeline: its beat spans (anything with `start` and `duration`) zipped with what each says, silent ones left out. |
+| [`level_change_db`](#braidio.sound_design.level_change_db)(before, after)                    | How much louder `after` is than `before` (integrated loudness, dB); `0.0` when either is silent, so a silent voice moves no bed.                                                            |
+|----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`master_levels`](#braidio.sound_design.master_levels)(master, \*[, default_lufs, ...])    | `(target LUFS, true-peak ceiling dBTP)` of a designer's delivery profile (`"podcast"`, `"streaming"`.                                                                                       |
+| [`score_mix`](#braidio.sound_design.score_mix)(audio, spans, \*, design, profile, ...) | Sound-design the mix at `audio` and write the result to `out_path`.                                                                                                                         |
+| [`spoken_of`](#braidio.sound_design.spoken_of)(beat)                                   | What a script beat says aloud: a narration's text, a dialogue's turns, `""` for anything else (a clip's words are the source's; a scene break says nothing).                                |
+| [`spoken_text`](#braidio.sound_design.spoken_text)(text)                                 | `text` without its audio tags, whitespace collapsed.                                                                                                                                        |
+| [`talk_segments`](#braidio.sound_design.talk_segments)(spans)                              | foley's `(segments, segment_starts)` for the talk on a timeline.                                                                                                                            |
+| [`talk_spans`](#braidio.sound_design.talk_spans)(beats, texts)                          | The spoken [`TalkSpan`](#braidio.sound_design.TalkSpan) of a timeline: its beat spans (anything with `start` and `duration`) zipped with what each says, silent ones left out. |
 
 ### Classes
 
@@ -181,6 +183,30 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One spoken beat on the episode timeline: where it starts, how long it
 lasts, and what is said in it.
+
+### braidio.sound_design.level_change_db(before, after)
+
+How much louder `after` is than `before` (integrated loudness, dB);
+`0.0` when either is silent, so a silent voice moves no bed.
+
+What a designer’s mastering did to the voice it was handed: the gain a bed
+stem laid back under the design needs to keep the episode’s balance
+([`braidio.weave.lay_bed()`](braidio.weave.html.md#braidio.weave.lay_bed), braidio#227).
+
+* **Return type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float)
+
+### braidio.sound_design.master_levels(master, , default_lufs=-16.0, default_peak=-1.0)
+
+`(target LUFS, true-peak ceiling dBTP)` of a designer’s delivery profile
+(`"podcast"`, `"streaming"`… or a foley `MasterProfile`), for a mix
+re-mastered after the design (a bed laid back under it, braidio#262), so it
+lands where the design asked. Read through `foley.resolve_master`; when
+foley is not installed (a host’s own designer) or does not know the name,
+the defaults (the render’s own level).
+
+* **Return type:**
+  [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`float`](https://docs.python.org/3/builtins/functions.html#float), [`float`](https://docs.python.org/3/builtins/functions.html#float)]
 
 ### braidio.sound_design.score_mix(audio, spans, , design, profile, out_path)
 

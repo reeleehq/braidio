@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../../_static/documentation_options.js?v=8792eeec"></script>
+    <script src="../../_static/documentation_options.js?v=cbf0c937"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.146" />
+  <meta name="docsearch:version" content="0.0.148" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -735,6 +735,7 @@ window.runMermaid = runMermaid;</script>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">replace</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
@@ -1316,78 +1317,110 @@ window.runMermaid = runMermaid;</script>
     <span class="c1"># clip edge (braidio#234). The audio is left exactly as it was.</span>
     <span class="n">layout_edge_overlap</span> <span class="o">=</span> <span class="n">edge_overlap</span> <span class="k">if</span> <span class="n">woven</span> <span class="k">else</span> <span class="n">crossfade</span>
 
-    <span class="k">if</span> <span class="n">woven</span><span class="p">:</span>
-        <span class="n">items</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">TimelineItem</span><span class="p">(</span>
-                <span class="n">k</span><span class="p">,</span>
-                <span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">),</span>
-                <span class="n">placement</span><span class="o">=</span><span class="n">pl</span><span class="p">,</span>
-                <span class="n">duck_db</span><span class="o">=</span><span class="p">(</span><span class="n">duck_db</span> <span class="k">if</span> <span class="n">pl</span> <span class="o">==</span> <span class="s2">"under"</span> <span class="k">else</span> <span class="mf">0.0</span><span class="p">),</span>
-                <span class="n">spotlight</span><span class="o">=</span><span class="n">sp</span><span class="p">,</span>
-                <span class="n">speaker</span><span class="o">=</span><span class="n">spk</span><span class="p">,</span>
-            <span class="p">)</span>
-            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">pl</span><span class="p">,</span> <span class="n">sp</span><span class="p">,</span> <span class="n">spk</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">kinds</span><span class="p">,</span> <span class="n">parts</span><span class="p">,</span> <span class="n">placements</span><span class="p">,</span> <span class="n">spotlights</span><span class="p">,</span> <span class="n">speakers</span><span class="p">)</span>
-        <span class="p">]</span>
-        <span class="n">weave_timeline</span><span class="p">(</span>
-            <span class="n">items</span><span class="p">,</span>
-            <span class="n">out</span><span class="p">,</span>
-            <span class="n">clip_edge_overlap_s</span><span class="o">=</span><span class="n">edge_overlap</span><span class="p">,</span>
-            <span class="n">narration_crossfade_s</span><span class="o">=</span><span class="n">crossfade</span><span class="p">,</span>
-            <span class="n">target_lufs</span><span class="o">=</span><span class="n">target_lufs</span><span class="p">,</span>
-            <span class="n">bed</span><span class="o">=</span><span class="n">music_bed</span><span class="p">,</span>
-            <span class="n">overlap</span><span class="o">=</span><span class="n">turn_overlap</span><span class="p">,</span>
-        <span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="c1"># `crossfade`, not `crossfade_s`: the config's crossfade was read by the</span>
-        <span class="c1"># woven branch and by the returned TimelineBreakdown, but NOT here — so a</span>
-        <span class="c1"># narration-only render used the function default while the breakdown</span>
-        <span class="c1"># reported the config's value. Same value at the shared default (0.12),</span>
-        <span class="c1"># so this only starts honouring a crossfade a caller explicitly set.</span>
-        <span class="n">concatenate_audio</span><span class="p">(</span>
-            <span class="o">*</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">],</span> <span class="n">output</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">out</span><span class="p">),</span> <span class="n">crossfade</span><span class="o">=</span><span class="n">crossfade</span>
-        <span class="p">)</span>
-    <span class="c1"># soft landing so the production doesn't cut dead on the last word</span>
-    <span class="k">if</span> <span class="n">end_silence_s</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">end_fade_s</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="n">_end_tail</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">fade_s</span><span class="o">=</span><span class="n">end_fade_s</span><span class="p">,</span> <span class="n">silence_s</span><span class="o">=</span><span class="n">end_silence_s</span><span class="p">)</span>
-
-    <span class="k">if</span> <span class="n">return_timeline</span> <span class="ow">or</span> <span class="n">sound_design</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.timeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_timeline</span><span class="p">,</span> <span class="n">render_settings</span>
-
-        <span class="n">durs</span> <span class="o">=</span> <span class="p">[</span><span class="n">duration_s</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">]</span>
-        <span class="n">tl</span> <span class="o">=</span> <span class="n">build_timeline</span><span class="p">(</span>
-            <span class="n">kinds</span><span class="o">=</span><span class="n">roles</span><span class="p">,</span>
-            <span class="n">durations</span><span class="o">=</span><span class="n">durs</span><span class="p">,</span>
-            <span class="n">placements</span><span class="o">=</span><span class="n">placements</span><span class="p">,</span>
-            <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
-            <span class="n">source_spans</span><span class="o">=</span><span class="n">spans</span><span class="p">,</span>
-            <span class="n">clip_edge_overlap_s</span><span class="o">=</span><span class="n">layout_edge_overlap</span><span class="p">,</span>
-            <span class="n">narration_crossfade_s</span><span class="o">=</span><span class="n">crossfade</span><span class="p">,</span>
-            <span class="n">speakers</span><span class="o">=</span><span class="n">speakers</span><span class="p">,</span>
-            <span class="n">overlap</span><span class="o">=</span><span class="n">turn_overlap</span><span class="p">,</span>
-            <span class="n">turns</span><span class="o">=</span><span class="n">turn_spans</span><span class="p">,</span>
-            <span class="n">title</span><span class="o">=</span><span class="n">script</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
-            <span class="c1"># The settings that produced these timings, not the ones asked for:</span>
-            <span class="c1"># `crossfade`/`edge_overlap`/`target_lufs`/`duck_db` are the values</span>
-            <span class="c1"># this render resolved above. Without the record, a re-render months</span>
-            <span class="c1"># later can silently cut differently and nothing says why (#63 made</span>
-            <span class="c1"># the pacing knobs real, which is what opened that hole).</span>
-            <span class="n">settings</span><span class="o">=</span><span class="n">render_settings</span><span class="p">(</span>
-                <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
-                <span class="n">crossfade_s</span><span class="o">=</span><span class="n">crossfade</span><span class="p">,</span>
-                <span class="n">clip_edge_overlap_s</span><span class="o">=</span><span class="n">layout_edge_overlap</span><span class="p">,</span>
+    <span class="c1"># A sound design under a bed listens to the voice, not the bedded mix: the</span>
+    <span class="c1"># weave also writes the two stems, and the bed goes back after (braidio#262)</span>
+    <span class="n">stems</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">_stem_paths</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">woven</span> <span class="ow">and</span> <span class="n">sound_design</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">music_bed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="k">else</span> <span class="kc">None</span>
+    <span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">woven</span><span class="p">:</span>
+            <span class="n">items</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">TimelineItem</span><span class="p">(</span>
+                    <span class="n">k</span><span class="p">,</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">),</span>
+                    <span class="n">placement</span><span class="o">=</span><span class="n">pl</span><span class="p">,</span>
+                    <span class="n">duck_db</span><span class="o">=</span><span class="p">(</span><span class="n">duck_db</span> <span class="k">if</span> <span class="n">pl</span> <span class="o">==</span> <span class="s2">"under"</span> <span class="k">else</span> <span class="mf">0.0</span><span class="p">),</span>
+                    <span class="n">spotlight</span><span class="o">=</span><span class="n">sp</span><span class="p">,</span>
+                    <span class="n">speaker</span><span class="o">=</span><span class="n">spk</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">pl</span><span class="p">,</span> <span class="n">sp</span><span class="p">,</span> <span class="n">spk</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+                    <span class="n">kinds</span><span class="p">,</span> <span class="n">parts</span><span class="p">,</span> <span class="n">placements</span><span class="p">,</span> <span class="n">spotlights</span><span class="p">,</span> <span class="n">speakers</span>
+                <span class="p">)</span>
+            <span class="p">]</span>
+            <span class="n">weave_timeline</span><span class="p">(</span>
+                <span class="n">items</span><span class="p">,</span>
+                <span class="n">out</span><span class="p">,</span>
+                <span class="n">clip_edge_overlap_s</span><span class="o">=</span><span class="n">edge_overlap</span><span class="p">,</span>
+                <span class="n">narration_crossfade_s</span><span class="o">=</span><span class="n">crossfade</span><span class="p">,</span>
                 <span class="n">target_lufs</span><span class="o">=</span><span class="n">target_lufs</span><span class="p">,</span>
-                <span class="n">duck_db</span><span class="o">=</span><span class="n">duck_db</span><span class="p">,</span>
-                <span class="n">delivery</span><span class="o">=</span><span class="n">delivery</span><span class="p">,</span>
-                <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span>
-                <span class="n">normalize</span><span class="o">=</span><span class="n">normalize</span><span class="p">,</span>
-                <span class="n">tts</span><span class="o">=</span><span class="n">voice</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-            <span class="p">),</span>
-        <span class="p">)</span>
-        <span class="k">if</span> <span class="n">sound_design</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">tl</span> <span class="o">=</span> <span class="n">_sound_design</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">tl</span><span class="p">,</span> <span class="n">spoken</span><span class="p">,</span> <span class="n">design</span><span class="o">=</span><span class="n">sound_design</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">return_timeline</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">out</span><span class="p">,</span> <span class="n">tl</span>
-    <span class="k">return</span> <span class="n">out</span></div>
+                <span class="n">bed</span><span class="o">=</span><span class="n">music_bed</span><span class="p">,</span>
+                <span class="n">overlap</span><span class="o">=</span><span class="n">turn_overlap</span><span class="p">,</span>
+                <span class="o">**</span><span class="p">(</span>
+                    <span class="p">{}</span>
+                    <span class="k">if</span> <span class="n">stems</span> <span class="ow">is</span> <span class="kc">None</span>
+                    <span class="k">else</span> <span class="p">{</span><span class="s2">"voice_out_path"</span><span class="p">:</span> <span class="n">stems</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">"bed_out_path"</span><span class="p">:</span> <span class="n">stems</span><span class="p">[</span><span class="mi">1</span><span class="p">]}</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># `crossfade`, not `crossfade_s`: the config's crossfade was read by the</span>
+            <span class="c1"># woven branch and by the returned TimelineBreakdown, but NOT here — so a</span>
+            <span class="c1"># narration-only render used the function default while the breakdown</span>
+            <span class="c1"># reported the config's value. Same value at the shared default (0.12),</span>
+            <span class="c1"># so this only starts honouring a crossfade a caller explicitly set.</span>
+            <span class="n">concatenate_audio</span><span class="p">(</span>
+                <span class="o">*</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">],</span> <span class="n">output</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">out</span><span class="p">),</span> <span class="n">crossfade</span><span class="o">=</span><span class="n">crossfade</span>
+            <span class="p">)</span>
+        <span class="c1"># soft landing so the production doesn't cut dead on the last word</span>
+        <span class="c1"># (with stems the design replaces this mix and applies the tail itself)</span>
+        <span class="k">if</span> <span class="n">stems</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="p">(</span><span class="n">end_silence_s</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">end_fade_s</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="n">_end_tail</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">fade_s</span><span class="o">=</span><span class="n">end_fade_s</span><span class="p">,</span> <span class="n">silence_s</span><span class="o">=</span><span class="n">end_silence_s</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">return_timeline</span> <span class="ow">or</span> <span class="n">sound_design</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.timeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_timeline</span><span class="p">,</span> <span class="n">render_settings</span>
+
+            <span class="n">durs</span> <span class="o">=</span> <span class="p">[</span><span class="n">duration_s</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">]</span>
+            <span class="n">tl</span> <span class="o">=</span> <span class="n">build_timeline</span><span class="p">(</span>
+                <span class="n">kinds</span><span class="o">=</span><span class="n">roles</span><span class="p">,</span>
+                <span class="n">durations</span><span class="o">=</span><span class="n">durs</span><span class="p">,</span>
+                <span class="n">placements</span><span class="o">=</span><span class="n">placements</span><span class="p">,</span>
+                <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
+                <span class="n">source_spans</span><span class="o">=</span><span class="n">spans</span><span class="p">,</span>
+                <span class="n">clip_edge_overlap_s</span><span class="o">=</span><span class="n">layout_edge_overlap</span><span class="p">,</span>
+                <span class="n">narration_crossfade_s</span><span class="o">=</span><span class="n">crossfade</span><span class="p">,</span>
+                <span class="n">speakers</span><span class="o">=</span><span class="n">speakers</span><span class="p">,</span>
+                <span class="n">overlap</span><span class="o">=</span><span class="n">turn_overlap</span><span class="p">,</span>
+                <span class="n">turns</span><span class="o">=</span><span class="n">turn_spans</span><span class="p">,</span>
+                <span class="n">title</span><span class="o">=</span><span class="n">script</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+                <span class="c1"># The settings that produced these timings, not the ones asked for:</span>
+                <span class="c1"># `crossfade`/`edge_overlap`/`target_lufs`/`duck_db` are the values</span>
+                <span class="c1"># this render resolved above. Without the record, a re-render months</span>
+                <span class="c1"># later can silently cut differently and nothing says why (#63 made</span>
+                <span class="c1"># the pacing knobs real, which is what opened that hole).</span>
+                <span class="n">settings</span><span class="o">=</span><span class="n">render_settings</span><span class="p">(</span>
+                    <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
+                    <span class="n">crossfade_s</span><span class="o">=</span><span class="n">crossfade</span><span class="p">,</span>
+                    <span class="n">clip_edge_overlap_s</span><span class="o">=</span><span class="n">layout_edge_overlap</span><span class="p">,</span>
+                    <span class="n">target_lufs</span><span class="o">=</span><span class="n">target_lufs</span><span class="p">,</span>
+                    <span class="n">duck_db</span><span class="o">=</span><span class="n">duck_db</span><span class="p">,</span>
+                    <span class="n">delivery</span><span class="o">=</span><span class="n">delivery</span><span class="p">,</span>
+                    <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span>
+                    <span class="n">normalize</span><span class="o">=</span><span class="n">normalize</span><span class="p">,</span>
+                    <span class="n">tts</span><span class="o">=</span><span class="n">voice</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">sound_design</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">tl</span> <span class="o">=</span> <span class="n">_sound_design</span><span class="p">(</span>
+                    <span class="n">out</span><span class="p">,</span>
+                    <span class="n">tl</span><span class="p">,</span>
+                    <span class="n">spoken</span><span class="p">,</span>
+                    <span class="n">design</span><span class="o">=</span><span class="n">sound_design</span><span class="p">,</span>
+                    <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span>
+                    <span class="n">stems</span><span class="o">=</span><span class="n">stems</span><span class="p">,</span>
+                    <span class="n">target_lufs</span><span class="o">=</span><span class="n">target_lufs</span><span class="p">,</span>
+                    <span class="n">tail</span><span class="o">=</span><span class="p">(</span>
+                        <span class="p">{</span><span class="s2">"fade_s"</span><span class="p">:</span> <span class="n">end_fade_s</span><span class="p">,</span> <span class="s2">"silence_s"</span><span class="p">:</span> <span class="n">end_silence_s</span><span class="p">}</span>
+                        <span class="k">if</span> <span class="n">end_silence_s</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">end_fade_s</span> <span class="o">&gt;</span> <span class="mi">0</span>
+                        <span class="k">else</span> <span class="kc">None</span>
+                    <span class="p">),</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">return_timeline</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">out</span><span class="p">,</span> <span class="n">tl</span>
+        <span class="k">return</span> <span class="n">out</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">stems</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># the design removes it; this covers a failure before</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">stems</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
 
 
 
@@ -1403,7 +1436,24 @@ window.runMermaid = runMermaid;</script>
     <span class="k">return</span> <span class="s2">""</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_sound_design</span><span class="p">(</span><span class="n">out</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">tl</span><span class="p">,</span> <span class="n">spoken</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">design</span><span class="p">:</span> <span class="n">SoundDesign</span><span class="p">,</span> <span class="n">profile</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_stem_paths</span><span class="p">(</span><span class="n">out</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="n">Path</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Where a render's voice and bed stems go while it is sound-designed: a</span>
+<span class="sd">    private temporary folder, removed once the bed is back under the design."""</span>
+    <span class="n">work</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="sa">f</span><span class="s2">"braidio-stems-</span><span class="si">{</span><span class="n">out</span><span class="o">.</span><span class="n">stem</span><span class="si">}</span><span class="s2">-"</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">work</span> <span class="o">/</span> <span class="s2">"voice.mp3"</span><span class="p">,</span> <span class="n">work</span> <span class="o">/</span> <span class="s2">"bed.flac"</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_sound_design</span><span class="p">(</span>
+    <span class="n">out</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">tl</span><span class="p">,</span>
+    <span class="n">spoken</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">design</span><span class="p">:</span> <span class="n">SoundDesign</span><span class="p">,</span>
+    <span class="n">profile</span><span class="p">,</span>
+    <span class="n">stems</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">target_lufs</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">16.0</span><span class="p">,</span>
+    <span class="n">tail</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Sound-design the finished mix in place; record it on the timeline.</span>
 
 <span class="sd">    Only spoken beats are segments (:func:`braidio.sound_design.talk_segments`),</span>
@@ -1413,17 +1463,71 @@ window.runMermaid = runMermaid;</script>
 <span class="sd">    timeline back. foley masters the result to ``design.master``, so the</span>
 <span class="sd">    record's resolved block says so (its ``target_lufs`` is the level the mix</span>
 <span class="sd">    had before the design).</span>
+
+<span class="sd">    With ``stems`` (the voice and bed stems of a production with a music bed,</span>
+<span class="sd">    braidio#262), the designer hears the voice stem, not the bedded mix (a bed in</span>
+<span class="sd">    the "voice" reads as speech to an aligner), and the bed stem is laid back</span>
+<span class="sd">    under the design, moved by the designer's own level change and mastered to</span>
+<span class="sd">    the design's ``master`` profile (``target_lufs`` when it cannot be read);</span>
+<span class="sd">    ``tail`` (``_end_tail``'s keywords) is then applied again,</span>
+<span class="sd">    since the mix it was applied to is replaced. The stems' folder is removed.</span>
 <span class="sd">    """</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">replace</span>
 
     <span class="n">spans</span> <span class="o">=</span> <span class="n">talk_spans</span><span class="p">(</span><span class="n">tl</span><span class="o">.</span><span class="n">beats</span><span class="p">,</span> <span class="n">spoken</span><span class="p">)</span>
-    <span class="n">scored</span> <span class="o">=</span> <span class="n">score_mix</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">spans</span><span class="p">,</span> <span class="n">design</span><span class="o">=</span><span class="n">design</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span> <span class="n">out_path</span><span class="o">=</span><span class="n">out</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">stems</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">scored</span> <span class="o">=</span> <span class="n">score_mix</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">spans</span><span class="p">,</span> <span class="n">design</span><span class="o">=</span><span class="n">design</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span> <span class="n">out_path</span><span class="o">=</span><span class="n">out</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">scored</span> <span class="o">=</span> <span class="n">_design_under_bed</span><span class="p">(</span>
+            <span class="n">out</span><span class="p">,</span>
+            <span class="n">spans</span><span class="p">,</span>
+            <span class="n">stems</span><span class="p">,</span>
+            <span class="n">design</span><span class="o">=</span><span class="n">design</span><span class="p">,</span>
+            <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span>
+            <span class="n">target_lufs</span><span class="o">=</span><span class="n">target_lufs</span><span class="p">,</span>
+            <span class="n">tail</span><span class="o">=</span><span class="n">tail</span><span class="p">,</span>
+        <span class="p">)</span>
     <span class="n">record</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"design"</span><span class="p">:</span> <span class="n">design</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(),</span> <span class="o">**</span><span class="n">scored</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()}</span>
+    <span class="k">if</span> <span class="n">stems</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">record</span><span class="p">[</span><span class="s2">"bed"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"the music bed was laid back under the design and the sum mastered "</span>
+            <span class="sa">f</span><span class="s2">"to the design's </span><span class="si">{</span><span class="n">design</span><span class="o">.</span><span class="n">master</span><span class="si">!s}</span><span class="s2"> profile (braidio#262)"</span>
+        <span class="p">)</span>
     <span class="n">out</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="n">SOUND_SIDECAR_SUFFIX</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
     <span class="n">settings</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">tl</span><span class="o">.</span><span class="n">settings</span> <span class="ow">or</span> <span class="p">{})</span>
     <span class="n">settings</span><span class="p">[</span><span class="s2">"resolved"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"resolved"</span><span class="p">,</span> <span class="p">{}),</span> <span class="s2">"master"</span><span class="p">:</span> <span class="n">design</span><span class="o">.</span><span class="n">master</span><span class="p">}</span>
     <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="n">tl</span><span class="p">,</span> <span class="n">settings</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">settings</span><span class="p">,</span> <span class="s2">"sound_design"</span><span class="p">:</span> <span class="n">record</span><span class="p">})</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_design_under_bed</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">spans</span><span class="p">,</span> <span class="n">stems</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">design</span><span class="p">,</span> <span class="n">profile</span><span class="p">,</span> <span class="n">target_lufs</span><span class="p">,</span> <span class="n">tail</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Design the voice stem, lay the bed stem back under it into ``out`` (and</span>
+<span class="sd">    its tail after); the stems' folder is removed whatever happens."""</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">replace</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.sound_design</span><span class="w"> </span><span class="kn">import</span> <span class="n">level_change_db</span><span class="p">,</span> <span class="n">master_levels</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">braidio.weave</span><span class="w"> </span><span class="kn">import</span> <span class="n">lay_bed</span>
+
+    <span class="n">voice</span><span class="p">,</span> <span class="n">bed</span> <span class="o">=</span> <span class="n">stems</span>
+    <span class="n">lufs</span><span class="p">,</span> <span class="n">peak</span> <span class="o">=</span> <span class="n">master_levels</span><span class="p">(</span><span class="n">design</span><span class="o">.</span><span class="n">master</span><span class="p">,</span> <span class="n">default_lufs</span><span class="o">=</span><span class="n">target_lufs</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">designed</span> <span class="o">=</span> <span class="n">voice</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="s2">"designed.flac"</span><span class="p">)</span>
+        <span class="n">scored</span> <span class="o">=</span> <span class="n">score_mix</span><span class="p">(</span>
+            <span class="n">voice</span><span class="p">,</span> <span class="n">spans</span><span class="p">,</span> <span class="n">design</span><span class="o">=</span><span class="n">design</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span> <span class="n">out_path</span><span class="o">=</span><span class="n">designed</span>
+        <span class="p">)</span>
+        <span class="n">lay_bed</span><span class="p">(</span>
+            <span class="n">designed</span><span class="p">,</span>
+            <span class="n">bed</span><span class="p">,</span>
+            <span class="n">out</span><span class="p">,</span>
+            <span class="n">bed_gain_db</span><span class="o">=</span><span class="n">level_change_db</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="n">designed</span><span class="p">),</span>
+            <span class="n">target_lufs</span><span class="o">=</span><span class="n">lufs</span><span class="p">,</span>
+            <span class="n">true_peak</span><span class="o">=</span><span class="n">peak</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">tail</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">_end_tail</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="o">**</span><span class="n">tail</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="n">scored</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">out</span><span class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">voice</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 
                 </article>

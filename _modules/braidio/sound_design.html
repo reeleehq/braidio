@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=75c7c72ae941e8b558d8" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=75c7c72ae941e8b558d8" />
 
-    <script src="../../_static/documentation_options.js?v=8792eeec"></script>
+    <script src="../../_static/documentation_options.js?v=cbf0c937"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -411,7 +411,7 @@ window.runMermaid = runMermaid;</script>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.0.146" />
+  <meta name="docsearch:version" content="0.0.148" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -1062,6 +1062,52 @@ window.runMermaid = runMermaid;</script>
         <span class="n">kwargs</span><span class="p">[</span><span class="s2">"budget"</span><span class="p">]</span> <span class="o">=</span> <span class="n">foley</span><span class="o">.</span><span class="n">Budget</span><span class="p">(</span><span class="n">max_usd</span><span class="o">=</span><span class="n">kwargs</span><span class="p">[</span><span class="s2">"max_usd"</span><span class="p">])</span>
     <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"max_usd"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">foley</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">segments</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="master_levels">
+<a class="viewcode-back" href="../../_autosummary/braidio.sound_design.html#braidio.master_levels">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">master_levels</span><span class="p">(</span>
+    <span class="n">master</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">default_lufs</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">16.0</span><span class="p">,</span> <span class="n">default_peak</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""``(target LUFS, true-peak ceiling dBTP)`` of a designer's delivery profile</span>
+<span class="sd">    (``"podcast"``, ``"streaming"``... or a foley ``MasterProfile``), for a mix</span>
+<span class="sd">    re-mastered after the design (a bed laid back under it, braidio#262), so it</span>
+<span class="sd">    lands where the design asked. Read through ``foley.resolve_master``; when</span>
+<span class="sd">    foley is not installed (a host's own designer) or does not know the name,</span>
+<span class="sd">    the defaults (the render's own level)."""</span>
+    <span class="k">if</span> <span class="n">master</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">master</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">lufs</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">master</span><span class="p">,</span> <span class="s2">"target_lufs"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">peak</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">master</span><span class="p">,</span> <span class="s2">"true_peak_db"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">lufs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">peak</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">lufs</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">peak</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">foley</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_master</span>
+
+        <span class="n">profile</span> <span class="o">=</span> <span class="n">resolve_master</span><span class="p">(</span><span class="n">master</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">ImportError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">default_lufs</span><span class="p">,</span> <span class="n">default_peak</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">profile</span><span class="o">.</span><span class="n">target_lufs</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">profile</span><span class="o">.</span><span class="n">true_peak_db</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="level_change_db">
+<a class="viewcode-back" href="../../_autosummary/braidio.sound_design.html#braidio.level_change_db">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">level_change_db</span><span class="p">(</span><span class="n">before</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span> <span class="n">after</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""How much louder ``after`` is than ``before`` (integrated loudness, dB);</span>
+<span class="sd">    ``0.0`` when either is silent, so a silent voice moves no bed.</span>
+
+<span class="sd">    What a designer's mastering did to the voice it was handed: the gain a bed</span>
+<span class="sd">    stem laid back under the design needs to keep the episode's balance</span>
+<span class="sd">    (:func:`braidio.weave.lay_bed`, braidio#227)."""</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">mixing.loudness</span><span class="w"> </span><span class="kn">import</span> <span class="n">file_loudness</span>
+
+    <span class="n">change</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">file_loudness</span><span class="p">(</span><span class="n">after</span><span class="p">)</span><span class="o">.</span><span class="n">integrated_lufs</span> <span class="o">-</span> <span class="n">file_loudness</span><span class="p">(</span><span class="n">before</span><span class="p">)</span><span class="o">.</span><span class="n">integrated_lufs</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">change</span> <span class="k">if</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">change</span><span class="p">)</span> <span class="k">else</span> <span class="mf">0.0</span></div>
+
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_save_mix</span><span class="p">(</span><span class="n">woven</span><span class="p">,</span> <span class="n">dst</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>

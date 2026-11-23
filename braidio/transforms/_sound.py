@@ -46,7 +46,7 @@ from nw.transforms.sound_design import (
 )
 
 from braidio.bodies._render_nodes import EPISODE_RENDER_V1
-from braidio.sound_design import spoken_of, talk_segments, talk_spans
+from braidio.sound_design import level_change_db, spoken_of, talk_segments, talk_spans
 from braidio.transforms._common import (
     TIER_EPISODE_RENDER,
     TIER_SOUND_DESIGN,
@@ -169,19 +169,6 @@ class EpisodeToSoundDesign(NarrationToSoundDesign):
         )
 
 
-def _level_change_db(before, after) -> float:
-    """How much louder ``after`` is than ``before`` (integrated loudness, dB);
-    ``0.0`` when either is silent, so a silent voice moves no bed."""
-    import math
-
-    from mixing.loudness import file_loudness
-
-    change = (
-        file_loudness(after).integrated_lufs - file_loudness(before).integrated_lufs
-    )
-    return change if math.isfinite(change) else 0.0
-
-
 def _stem_ref(body: dict, stem: str) -> dict:
     """``{"artifact_id", "url"}`` of an episode body's ``stem`` (``"voice"`` /
     ``"bed"``), the shape :func:`media_path` reads."""
@@ -231,7 +218,7 @@ def _with_bed(project, episode: Annotation, body: dict, *, index: dict) -> dict:
             designed,
             bed,
             Path(work) / "design-with-bed.flac",
-            bed_gain_db=_level_change_db(voice, designed),
+            bed_gain_db=level_change_db(voice, designed),
             target_lufs=weave.target_lufs,
             true_peak=weave.true_peak_dbtp,
             sample_rate=weave.sample_rate,

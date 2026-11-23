@@ -272,3 +272,59 @@ def test_a_missing_extra_is_refused_before_anything_is_spent(
     assert spoken == []
     assert SoundDesign(designer=_Designer(), writer=_mark).missing_dependencies() == []
     assert render_mod  # the fast path module stays importable without foley
+
+
+@needs_ffmpeg
+def test_under_a_bed_the_designer_hears_the_voice_and_the_bed_comes_back(
+    tmp_path, tone_voices
+):
+    """braidio#262: the fast path matches the graph path (#227). With a music
+    bed the designer is handed the voice stem, not the bedded episode, and the
+    bed is laid back under its design. The stand-in design is silence as long as
+    what it heard, so any sound in the episode is the bed laid back; the stems'
+    temporary folder is gone afterwards."""
+    import subprocess
+
+    from _audio import AUDIBLE_RMS, decode, rms
+
+    heard = []
+
+    class _SilentDesigner(_Designer):
+        def __call__(self, segments, **kwargs):
+            heard.append(Path(kwargs["audio"]))
+            design = super().__call__(segments, **kwargs)
+            design.weave.audio = kwargs["audio"]  # the writer silences this file
+            return design
+
+    def _silence_of(woven, dst):
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", woven.audio, "-af", "volume=0", str(dst)],
+            check=True,
+            capture_output=True,
+        )
+
+    bed = braidio.MusicBed(
+        str(tone(tmp_path / "bed.wav", 110, 20.0)),
+        gain_db=0.0,
+        lead_in_s=0.0,
+        fade_in_s=0.05,
+        fade_out_s=0.05,
+    )
+    song = tone(tmp_path / "song.mp3", 660, 3.0)
+    out = braidio.render_production(
+        braidio.Script(title="t", id_slug="bed", beats=[braidio.Narration("Rain fell.")]),
+        source=_ToneSource(song),
+        out_path=tmp_path / "ep.mp3",
+        normalize=False,
+        end_fade_s=0.0,
+        end_silence_s=0.0,
+        music_bed=bed,
+        sound_design=SoundDesign(designer=_SilentDesigner(), writer=_silence_of),
+        tts_dir=tmp_path / "tts",
+    )
+    (voice,) = heard
+    assert voice.name == "voice.mp3" and voice != out
+    assert not voice.parent.exists()  # the stems' folder is removed
+    assert rms(decode(out), 0.1, 0.9) > AUDIBLE_RMS  # the bed is back
+    record = json.loads(out.with_suffix(SOUND_SIDECAR_SUFFIX).read_text())
+    assert "braidio#262" in record["bed"]

@@ -308,6 +308,21 @@ def _foley_score(segments, **kwargs):
     return foley.score(segments, **kwargs)
 
 
+def level_change_db(before: str | Path, after: str | Path) -> float:
+    """How much louder ``after`` is than ``before`` (integrated loudness, dB);
+    ``0.0`` when either is silent, so a silent voice moves no bed.
+
+    What a designer's mastering did to the voice it was handed: the gain a bed
+    stem laid back under the design needs to keep the episode's balance
+    (:func:`braidio.weave.lay_bed`, braidio#227)."""
+    import math
+
+    from mixing.loudness import file_loudness
+
+    change = file_loudness(after).integrated_lufs - file_loudness(before).integrated_lufs
+    return change if math.isfinite(change) else 0.0
+
+
 def _save_mix(woven, dst: Path) -> None:
     """Write a designer's mastered array (``woven.audio`` at ``woven.sr``) to
     ``dst``, an MP3 through ffmpeg. Needs soundfile, not foley, so a host's own

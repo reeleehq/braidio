@@ -2,32 +2,24 @@
 
 # braidio
 
-**Weave *commentary* — solo, duo, panel, debate, interview, documentary — with
-source clips into a production.**
+**Weave *commentary* — solo, duo, panel, debate, interview, documentary — with source clips into a production.**
 
-`braidio` braids the strands of a piece that talks *about* something (a song, a
-book, a film, an event) into one rendered production. The **talk is the spine** —
-a single presenter, two hosts, a panel, a narrator — and **source clips and
-narration bridges are the “illustration” layers** woven onto it. Audio today,
-with visual support to follow (it braids A/V — *braid-io*, and it sounds like
-*radio*).
+`braidio` braids the strands of a piece that talks *about* something (a song, a book, a film, an event) into one rendered production. The **talk is the spine** — a single presenter, two hosts, a panel, a narrator — and **source clips and narration bridges are the “illustration” layers** woven onto it. Audio today, with visual support to follow (it braids A/V — *braid-io*, and it sounds like *radio*).
 
 Two things braidio gives you:
 
-1. **Ready-made format templates** under the standard, industry names people
-   already recognize — *Deep Dive*, *Song Exploder-style*, *Panel*, *Debate*,
-   *Documentary VO* — each a high-quality bundle of defaults you can render in one
-   call.
-2. **Full parametrization** underneath, so any style is expressible: a `Script`
-   of beats, cast via a `ConversationCast`, tuned by `WeaveConfig` + `Delivery`,
-   with per-beat voice/delivery overrides.
+1. **Ready-made format templates** under the standard, industry names people already recognize — *Deep Dive*, *Song Exploder-style*, *Panel*, *Debate*, *Documentary VO* — each a high-quality bundle of defaults you can render in one call.
+2. **Full parametrization** underneath, so any style is expressible: a `Script` of beats, cast via a `ConversationCast`, tuned by `WeaveConfig` + `Delivery`, with per-beat voice/delivery overrides.
 
-> `braidio` was extracted from the
-> [Hamilton lyrics-podcast](https://github.com/thorwhalen/Hamilton) (its first
-> application) into a reusable engine. It is now live infrastructure: released
-> on PyPI, served as a multi-tool MCP connector, and imported in production by
-> [`reelee`](https://github.com/thorwhalen/reelee). Treat a signature change
-> here as having downstream blast radius.
+> `braidio` was extracted from the [Hamilton lyrics-podcast](https://github.com/thorwhalen/Hamilton) (its first application) into a reusable engine. It is now live infrastructure: released on PyPI, served as a multi-tool MCP connector, and imported in production by [`reelee`](https://github.com/thorwhalen/reelee). Treat a signature change here as having downstream blast radius.
+
+## Install
+
+```bash
+pip install braidio
+```
+
+ElevenLabs credentials are needed for TTS; `ffmpeg` must be on PATH for everything else.
 
 ## The model
 
@@ -40,16 +32,11 @@ A production is a **`Script`** — an ordered list of **beats**:
 | `SegmentBeat(reference)`                      | a span of source media to cut and weave in (resolved by a pluggable `SegmentSource` — quote → `[start, end]`). `spotlight=True` drops the music bed out under it.                        |
 | `SceneBreak(label?)`                          | a structural boundary — “a new section starts here”. Renders as a short musical **sting** (your asset) or a beat of silence; costs nothing.                                              |
 
-`WeaveConfig` holds every editing knob (casting, turns, pacing, clip pre/post-roll,
-duck, crossfades, loudness). `Delivery` presets bundle the TTS model + voice
-settings (e.g. `V2_PRESENTER` lively vs `V2_NARRATOR` grave). The renderer
-loudness-normalizes every part, tucks clips under the speech (speech stays
-dominant), and masters the result.
+`WeaveConfig` holds every editing knob (casting, turns, pacing, clip pre/post-roll, duck, crossfades, loudness). `Delivery` presets bundle the TTS model + voice settings (e.g. `V2_PRESENTER` lively vs `V2_NARRATOR` grave). The renderer loudness-normalizes every part, tucks clips under the speech (speech stays dominant), and masters the result.
 
 ## Ready-made formats
 
-Pick a standard format and render it — the template supplies the cast, voices,
-delivery and mix defaults:
+Pick a standard format and render it — the template supplies the cast, voices, delivery and mix defaults:
 
 ```python
 from braidio import DEEP_DIVE, render_format
@@ -67,43 +54,13 @@ render_format(DEEP_DIVE, script, source=my_source, out_path="episode.mp3")
 | `debate`                 | Debate (Oxford-style)                                               | proposition / opposition / moderator, phased                                            |
 | `documentary_vo`         | Documentary Voice-Over ( *“Voice of God”*, This American Life)      | narrator on top; interviews + clips + actuality beneath                                 |
 
-**Narration bridges** and **source clips** are optional *illustration layers*
-usable with any format. The taxonomy, weaving grammar, exemplar recipes and the
-full template specs are in
-[`misc/docs/research/commentary-formats-and-styles.md`]().
+**Narration bridges** and **source clips** are optional *illustration layers* usable with any format. The taxonomy, weaving grammar, exemplar recipes and the full template specs are in [`misc/docs/research/commentary-formats-and-styles.md`]().
 
-*Render support note:* the cast, per-role voices, narration deliveries, loudness
-master, **per-clip placement** — `SegmentBeat(placement="before" | "under" | "after")`, where `under` lays the clip concurrently beneath the talk, ducked —
-a **music bed** (`MusicBed`, an app-supplied instrumental laid under the whole
-production) and the **structural music** are all applied. Structure is a
-`SceneBreak` beat in the Script — “a new section starts here” — which renders as
-a short **sting** when you pass `render_format(..., sting_asset=…)` (or a beat of
-silence when you don’t), and `SegmentBeat(spotlight=True)` for
-**fade-to-spotlight**: the bed drops out before that exhibit and resumes after
-it. Each format’s `structure` (`MusicStructure`) sets the defaults — whether a
-break stings, whether every clip is spotlit — and a beat overrides them. As with
-the bed, braidio ships no music: the sting is your asset. Both render paths carry
-this: the graph path takes the same `structure=` / `bed=` (or a `fmt=`, whose
-declared structure it uses) on `weave_project`, records the decision as a
-`production-structure/v1` node, and re-renders only the episode when you swap the
-sting. Calling `weave_project` again on the same project **re-ingests**: beats are
-matched by position, unchanged ones reuse their renders, and a changed config,
-structure, rights profile or dialogue cast is rewritten under its existing node so
-everything derived from it reads stale through provenance — the only correct way
-to change a profile after the first weave. Every beat type takes the graph path,
-`Dialogue` included: an exchange is one `dialogue-beat/v1` rendered in one
-Text-to-Dialogue pass, and the cast (`cast=`, else the format’s, else the
-default) is one `dialogue-cast/v1` node every dialogue render derives from — so
-recasting re-renders the exchanges and nothing else. Design history in
-[braidio#25](https://github.com/thorwhalen/braidio/issues/25),
-[braidio#39](https://github.com/thorwhalen/braidio/issues/39),
-[braidio#46](https://github.com/thorwhalen/braidio/issues/46) and
-[braidio#51](https://github.com/thorwhalen/braidio/issues/51).
+*Render support note:* the cast, per-role voices, narration deliveries, loudness master, **per-clip placement** — `SegmentBeat(placement="before" | "under" | "after")`, where `under` lays the clip concurrently beneath the talk, ducked — a **music bed** (`MusicBed`, an app-supplied instrumental laid under the whole production) and the **structural music** are all applied. Structure is a `SceneBreak` beat in the Script — “a new section starts here” — which renders as a short **sting** when you pass `render_format(..., sting_asset=…)` (or a beat of silence when you don’t), and `SegmentBeat(spotlight=True)` for **fade-to-spotlight**: the bed drops out before that exhibit and resumes after it. Each format’s `structure` (`MusicStructure`) sets the defaults — whether a break stings, whether every clip is spotlit — and a beat overrides them. As with the bed, braidio ships no music: the sting is your asset. Both render paths carry this: the graph path takes the same `structure=` / `bed=` (or a `fmt=`, whose declared structure it uses) on `weave_project`, records the decision as a `production-structure/v1` node, and re-renders only the episode when you swap the sting. Calling `weave_project` again on the same project **re-ingests**: beats are matched by position, unchanged ones reuse their renders, and a changed config, structure, rights profile or dialogue cast is rewritten under its existing node so everything derived from it reads stale through provenance — the only correct way to change a profile after the first weave. Every beat type takes the graph path, `Dialogue` included: an exchange is one `dialogue-beat/v1` rendered in one Text-to-Dialogue pass, and the cast (`cast=`, else the format’s, else the default) is one `dialogue-cast/v1` node every dialogue render derives from — so recasting re-renders the exchanges and nothing else. Design history in [braidio#25](https://github.com/thorwhalen/braidio/issues/25), [braidio#39](https://github.com/thorwhalen/braidio/issues/39), [braidio#46](https://github.com/thorwhalen/braidio/issues/46) and [braidio#51](https://github.com/thorwhalen/braidio/issues/51).
 
 ## Parametrize anything
 
-The templates are just good defaults over the primitives — compose directly for
-full control:
+The templates are just good defaults over the primitives — compose directly for full control:
 
 ```python
 from braidio import Script, Dialogue, Narration, SegmentBeat, WeaveConfig
@@ -190,10 +147,7 @@ braidio orchestrates these; it never reimplements the DSP or the graph.
 
 ## Video: a commentary episode you can watch
 
-`braidio[video]` turns a rendered episode into a **Ken Burns film over still
-images** — the one video case that stays here rather than going to `reelee`,
-because reelee imports braidio and the cuts have to land on braidio’s own beat
-timeline. `burns` owns the motion; braidio owns only where the picture changes.
+`braidio[video]` turns a rendered episode into a **Ken Burns film over still images** — the one video case that stays here rather than going to `reelee`, because reelee imports braidio and the cuts have to land on braidio’s own beat timeline. `burns` owns the motion; braidio owns only where the picture changes.
 
 ```python
 import braidio
@@ -206,16 +160,9 @@ panels = assign_stills(plan_spans(timeline), ["a.jpg", "b.jpg", "c.jpg"])
 render_video(panels, audio_path="ep.mp3", out_path="ep.mp4")
 ```
 
-`plan_spans` cuts on beat boundaries — splitting a long passage so no photograph
-stalls on screen, merging a short beat so none flickers. Each `Span` carries the
-beat’s `label` and `kind`, because *which* picture belongs over a sentence needs
-to know what the sentence says; `assign_stills` is the mechanical default for when
-the images are interchangeable texture. Motion is content-aware by default, so a
-slow push stays on the subject. braidio fetches **no images** — supply them, as
-with `SegmentSource`.
+`plan_spans` cuts on beat boundaries — splitting a long passage so no photograph stalls on screen, merging a short beat so none flickers. Each `Span` carries the beat’s `label` and `kind`, because *which* picture belongs over a sentence needs to know what the sentence says; `assign_stills` is the mechanical default for when the images are interchangeable texture. Motion is content-aware by default, so a slow push stays on the subject. braidio fetches **no images** — supply them, as with `SegmentSource`.
 
-Subtitles need no ASR: you authored the words and the timeline says when they
-play.
+Subtitles need no ASR: you authored the words and the timeline says when they play.
 
 ```python
 Path("ep.srt").write_text(braidio.captions_for(script, timeline, max_chars=42))
@@ -223,11 +170,7 @@ Path("ep.srt").write_text(braidio.captions_for(script, timeline, max_chars=42))
 
 `braidio.captions` is part of the core (pure, no extra dependencies).
 
-For narration braidio did **not** render (another TTS, a hand recording) there is
-no timeline, so measure one: `braidio.align_script(script_or_text, words)` walks the
-authored text against the word times of any word-level transcript, and returns the
-`timeline` (for `plan_spans`) and `cues` carrying your words at the measured
-times, never the recogniser’s. It is free and offline.
+For narration braidio did **not** render (another TTS, a hand recording) there is no timeline, so measure one: `braidio.align_script(script_or_text, words)` walks the authored text against the word times of any word-level transcript, and returns the `timeline` (for `plan_spans`) and `cues` carrying your words at the measured times, never the recogniser’s. It is free and offline.
 
 ```python
 a = braidio.align_script(script, scribe_words, duration_s=mix_seconds)
@@ -235,39 +178,19 @@ Path("ep.srt").write_text(braidio.captions_from_cues(a.cues, max_chars=42))
 spans = braidio.video.plan_spans(a.timeline)
 ```
 
-For a production you will **reopen and re-edit** — swap a still, change a
-move, re-render — the picture track lives in the project graph instead: four
-`lacing` bodies (`still/v1`, `video-panel/v1`, `video-cut/v1`,
-`label-track/v1`) and three free transforms on the `commentary_weave` genre
-(`video_panels.plan`, `video_cut.render`, `video_cut.finish`). The episode
-persists its timeline, a panel pins its still to a span of the audio with an
-authored camera move, and a label edit re-runs the cheap text pass, not the
-frames. The `braidio-commentary-video` skill has the walkthrough.
+For a production you will **reopen and re-edit** — swap a still, change a move, re-render — the picture track lives in the project graph instead: four `lacing` bodies (`still/v1`, `video-panel/v1`, `video-cut/v1`, `label-track/v1`) and three free transforms on the `commentary_weave` genre (`video_panels.plan`, `video_cut.render`, `video_cut.finish`). The episode persists its timeline, a panel pins its still to a span of the audio with an authored camera move, and a label edit re-runs the cheap text pass, not the frames. The `braidio-commentary-video` skill has the walkthrough.
 
 ### Where a commentary project lives
 
-A `commentary_weave` project is created by braidio’s registered `nw` project
-factory, and **where it lands is the caller’s decision, not braidio’s** (nw#84).
-Called with no placement — braidio’s own connector — it goes in braidio’s per-user
-workspace under `BRAIDIO_DATA_HOME`, exactly as before. Called with a
-`projects_dir`, it is created there instead, which is how a *host* that will serve
-the project (reelee) puts it beside that caller’s other projects rather than under
-braidio’s data home, where the host’s router and lister would never find it.
+A `commentary_weave` project is created by braidio’s registered `nw` project factory, and **where it lands is the caller’s decision, not braidio’s** (nw#84). Called with no placement — braidio’s own connector — it goes in braidio’s per-user workspace under `BRAIDIO_DATA_HOME`, exactly as before. Called with a `projects_dir`, it is created there instead, which is how a *host* that will serve the project (reelee) puts it beside that caller’s other projects rather than under braidio’s data home, where the host’s router and lister would never find it.
 
-`braidio.project.create_project_at(projects_dir, project_id)` is the host-placed
-create on its own. It is deliberately outside `braidio.mcp`, so placing a project
-never pulls the `[mcp]` extra. `open_or_create_project_at(projects_dir, project_id, title=...)`
-opens the project when it is there and creates it otherwise: what a host keeping
-one project per production calls each time.
+`braidio.project.create_project_at(projects_dir, project_id)` is the host-placed create on its own. It is deliberately outside `braidio.mcp`, so placing a project never pulls the `[mcp]` extra. `open_or_create_project_at(projects_dir, project_id, title=...)` opens the project when it is there and creates it otherwise: what a host keeping one project per production calls each time.
 
-`braidio.video`’s dependencies are imported inside the functions that use them, so
-`import braidio.video` works on a bare install and the planners stay usable —
-`braidio.HAS_VIDEO` reports whether the render path is available.
+`braidio.video`’s dependencies are imported inside the functions that use them, so `import braidio.video` works on a bare install and the planners stay usable — `braidio.HAS_VIDEO` reports whether the render path is available.
 
 ## Agent skills
 
-braidio ships skills that install with it, so an agent host can use them without
-cloning the repo:
+braidio ships skills that install with it, so an agent host can use them without cloning the repo:
 
 | Skill                      | For                                                                  |
 |----------------------------|----------------------------------------------------------------------|
@@ -279,21 +202,7 @@ ln -s "$(python -c 'import braidio; print(braidio.skills_dir())')/braidio" ~/.cl
 
 ## Ecosystem
 
-`braidio` is a **production kind** on top of `nw` — a reusable definition of
-“commentary that weaves talk with extracted media” — the way a music video is
-another production kind. It sits on `lacing` (graph) + `nw` (workflow /
-provenance) + `mixing`/`falaw` (audio/TTS), and will use `reelee` for video. The
-optional nw-app layer (`braidio.HAS_GRAPH` / `HAS_NW`) records render choices as
-provenance so a change re-renders only the affected parts.
-
-## Install
-
-```bash
-pip install braidio
-```
-
-ElevenLabs credentials are needed for TTS; `ffmpeg` must be on PATH for
-everything else.
+`braidio` is a **production kind** on top of `nw` — a reusable definition of “commentary that weaves talk with extracted media” — the way a music video is another production kind. It sits on `lacing` (graph) + `nw` (workflow / provenance) + `mixing`/`falaw` (audio/TTS), and will use `reelee` for video. The optional nw-app layer (`braidio.HAS_GRAPH` / `HAS_NW`) records render choices as provenance so a change re-renders only the affected parts.
 
 ## License
 

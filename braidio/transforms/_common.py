@@ -143,6 +143,11 @@ RENDER_OUTPUT_KEYS = frozenset(
         "height",
         "fps",
         "captions_artifact_id",
+        # an episode's stems, written with its mix when it has a bed (braidio#227)
+        "voice_artifact_id",
+        "voice_url",
+        "bed_artifact_id",
+        "bed_url",
         # NOT a narration take's ``source``: whether a beat is spoken by a
         # person's recording is decided by the plan (a take-override node,
         # braidio#86), so it is part of the planned value, and a TTS skeleton

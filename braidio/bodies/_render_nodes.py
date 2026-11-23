@@ -305,6 +305,21 @@ class EpisodeRenderBodyV1(BaseModel):
     timeline: Optional[dict[str, Any]] = Field(
         None, description="TimelineBreakdown.to_dict() of the assembled mix."
     )
+    # Additive (default None), written only for a production with a music bed
+    # (braidio#227): the two stems of the same layout, sample-aligned with the
+    # mix. A sound design listens to the voice (a bed in it reads as speech to
+    # foley's aligner) and lays the bed back under its result.
+    voice_artifact_id: Optional[str] = Field(
+        None, description="lacing Artifact of the mix without the bed (mastered)."
+    )
+    voice_url: Optional[str] = Field(
+        None, description="file:// URL of the mix without the bed."
+    )
+    bed_artifact_id: Optional[str] = Field(
+        None,
+        description="lacing Artifact of the bed alone, unmastered, at its level in the mix.",
+    )
+    bed_url: Optional[str] = Field(None, description="file:// URL of the bed stem.")
 
 
 class TakeOverrideBodyV1(BaseModel):

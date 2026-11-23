@@ -42,6 +42,10 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One beat’s place on the timeline.
 
+#### *property* end *: [float](https://docs.python.org/3/builtins/functions.html#float)*
+
+The end time in seconds (`start + duration`).
+
 ### *class* braidio.timeline.TimelineBreakdown(beats=tuple(), title='', settings=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
@@ -68,7 +72,7 @@ Total timeline length (s) — the max beat end, accounting for overlaps.
 
 #### *classmethod* from_dict(d)
 
-Rebuild a breakdown from `to_dict()` output (the persisted form).
+Rebuild a breakdown from [`to_dict()`](#braidio.timeline.TimelineBreakdown.to_dict) output (the persisted form).
 
 `totals` and `duration` are derived, so they are recomputed rather
 than read back — the beats are the record.
@@ -89,6 +93,13 @@ Fraction of spoken+clip time per `kind` (sums to 1).
 
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`float`](https://docs.python.org/3/builtins/functions.html#float)]
+
+#### to_dict()
+
+The timeline as a JSON-serialisable dict.
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
 #### to_html(title=None, subtitle='')
 

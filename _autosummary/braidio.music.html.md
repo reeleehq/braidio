@@ -45,6 +45,10 @@ One stretch of the timeline the bed plays over, with its own fades.
 already applied). The bed keeps its place in the asset across a gap: a
 region seeks into the asset to where the music *would* have been.
 
+#### *property* length_s *: [float](https://docs.python.org/3/builtins/functions.html#float)*
+
+Length in seconds (`end_s - start_s`).
+
 ### *class* braidio.music.MusicBed(asset_path, gain_db=-22.0, fade_in_s=1.5, fade_out_s=2.0, lead_in_s=2.0, start_s=0.0, loop=True, spotlight_fade_s=0.6)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)

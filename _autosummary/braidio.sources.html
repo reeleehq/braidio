@@ -527,6 +527,17 @@ default) makes an unprefixed reference an error.</p></li>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="braidio.sources.NamespacedSegmentSource.resolve">
+<span class="sig-name descname"><span class="pre">resolve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reference</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/sources.html#NamespacedSegmentSource.resolve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.sources.NamespacedSegmentSource.resolve" title="Link to this definition">#</a></dt>
+<dd><p>Resolve <code class="docutils literal notranslate"><span class="pre">reference</span></code> to a segment, or <code class="docutils literal notranslate"><span class="pre">None</span></code> when it names nothing known.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#braidio.sources.ResolvedSegment" title="braidio.sources.ResolvedSegment"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResolvedSegment</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="braidio.sources.NamespacedSegmentSource.split">
 <span class="sig-name descname"><span class="pre">split</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reference</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/sources.html#NamespacedSegmentSource.split"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.sources.NamespacedSegmentSource.split" title="Link to this definition">#</a></dt>
 <dd><p>Split <code class="docutils literal notranslate"><span class="pre">reference</span></code> into <code class="docutils literal notranslate"><span class="pre">(namespace,</span> <span class="pre">body)</span></code>, applying the default.</p>
@@ -546,6 +557,12 @@ default) makes an unprefixed reference an error.</p></li>
 <p>A cuttable span of a source asset — what a <a class="reference internal" href="#braidio.sources.SegmentSource" title="braidio.sources.SegmentSource"><code class="xref py py-class docutils literal notranslate"><span class="pre">SegmentSource</span></code></a> returns.</p>
 <dl class="field-list simple">
 </dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="braidio.sources.ResolvedSegment.duration_s">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">duration_s</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></span><a class="headerlink" href="#braidio.sources.ResolvedSegment.duration_s" title="Link to this definition">#</a></dt>
+<dd><p>Length in seconds (<code class="docutils literal notranslate"><span class="pre">end_s</span> <span class="pre">-</span> <span class="pre">start_s</span></code>, rounded to ms).</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -555,6 +572,12 @@ default) makes an unprefixed reference an error.</p></li>
 <p>A resolved window for a reference, with the matched line span.</p>
 <dl class="field-list simple">
 </dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="braidio.sources.Segment.duration_s">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">duration_s</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></span><a class="headerlink" href="#braidio.sources.Segment.duration_s" title="Link to this definition">#</a></dt>
+<dd><p>Length in seconds (<code class="docutils literal notranslate"><span class="pre">end_s</span> <span class="pre">-</span> <span class="pre">start_s</span></code>, rounded to ms).</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -562,6 +585,17 @@ default) makes an unprefixed reference an error.</p></li>
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">braidio.sources.</span></span><span class="sig-name descname"><span class="pre">SegmentSource</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/sources.html#SegmentSource"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.sources.SegmentSource" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Protocol" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Protocol</span></code></a></p>
 <p>Resolve an opaque <code class="docutils literal notranslate"><span class="pre">reference</span></code> to a <a class="reference internal" href="#braidio.sources.ResolvedSegment" title="braidio.sources.ResolvedSegment"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResolvedSegment</span></code></a> (or None).</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="braidio.sources.SegmentSource.resolve">
+<span class="sig-name descname"><span class="pre">resolve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reference</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/sources.html#SegmentSource.resolve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.sources.SegmentSource.resolve" title="Link to this definition">#</a></dt>
+<dd><p>Resolve <code class="docutils literal notranslate"><span class="pre">reference</span></code> to a segment, or <code class="docutils literal notranslate"><span class="pre">None</span></code> when it names nothing known.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#braidio.sources.ResolvedSegment" title="braidio.sources.ResolvedSegment"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResolvedSegment</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span></p>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -584,6 +618,17 @@ negative or non-numeric times), resolves to <code class="docutils literal notran
 unresolved-reference handling reports it.</p>
 <dl class="field-list simple">
 </dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="braidio.sources.SpanSource.resolve">
+<span class="sig-name descname"><span class="pre">resolve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reference</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/sources.html#SpanSource.resolve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.sources.SpanSource.resolve" title="Link to this definition">#</a></dt>
+<dd><p>Resolve <code class="docutils literal notranslate"><span class="pre">reference</span></code> to a segment, or <code class="docutils literal notranslate"><span class="pre">None</span></code> when it names nothing known.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#braidio.sources.ResolvedSegment" title="braidio.sources.ResolvedSegment"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResolvedSegment</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span></p>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -604,6 +649,17 @@ unresolved-reference handling reports it.</p>
 weave engine can <code class="docutils literal notranslate"><span class="pre">resolve(reference)</span> <span class="pre">-&gt;</span> <span class="pre">ResolvedSegment</span></code>.</p>
 <dl class="field-list simple">
 </dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="braidio.sources.TimedLineSegmentSource.resolve">
+<span class="sig-name descname"><span class="pre">resolve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reference</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/sources.html#TimedLineSegmentSource.resolve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.sources.TimedLineSegmentSource.resolve" title="Link to this definition">#</a></dt>
+<dd><p>Resolve <code class="docutils literal notranslate"><span class="pre">reference</span></code> to a segment, or <code class="docutils literal notranslate"><span class="pre">None</span></code> when it names nothing known.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#braidio.sources.ResolvedSegment" title="braidio.sources.ResolvedSegment"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResolvedSegment</span></code></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code></a></span></span></p>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py function">
@@ -696,15 +752,31 @@ against the reference’s tokens and returns the highest-scoring run clearing
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.NamespacedSegmentSource"><code class="docutils literal notranslate"><span class="pre">NamespacedSegmentSource</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.NamespacedSegmentSource.namespaces"><code class="docutils literal notranslate"><span class="pre">NamespacedSegmentSource.namespaces</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.NamespacedSegmentSource.resolve"><code class="docutils literal notranslate"><span class="pre">NamespacedSegmentSource.resolve()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.NamespacedSegmentSource.split"><code class="docutils literal notranslate"><span class="pre">NamespacedSegmentSource.split()</span></code></a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.ResolvedSegment"><code class="docutils literal notranslate"><span class="pre">ResolvedSegment</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.Segment"><code class="docutils literal notranslate"><span class="pre">Segment</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.SegmentSource"><code class="docutils literal notranslate"><span class="pre">SegmentSource</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.SpanSource"><code class="docutils literal notranslate"><span class="pre">SpanSource</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.ResolvedSegment"><code class="docutils literal notranslate"><span class="pre">ResolvedSegment</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.ResolvedSegment.duration_s"><code class="docutils literal notranslate"><span class="pre">ResolvedSegment.duration_s</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.Segment"><code class="docutils literal notranslate"><span class="pre">Segment</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.Segment.duration_s"><code class="docutils literal notranslate"><span class="pre">Segment.duration_s</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.SegmentSource"><code class="docutils literal notranslate"><span class="pre">SegmentSource</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.SegmentSource.resolve"><code class="docutils literal notranslate"><span class="pre">SegmentSource.resolve()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.SpanSource"><code class="docutils literal notranslate"><span class="pre">SpanSource</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.SpanSource.resolve"><code class="docutils literal notranslate"><span class="pre">SpanSource.resolve()</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.TimedLine"><code class="docutils literal notranslate"><span class="pre">TimedLine</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.TimedLineSegmentSource"><code class="docutils literal notranslate"><span class="pre">TimedLineSegmentSource</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.TimedLineSegmentSource"><code class="docutils literal notranslate"><span class="pre">TimedLineSegmentSource</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.TimedLineSegmentSource.resolve"><code class="docutils literal notranslate"><span class="pre">TimedLineSegmentSource.resolve()</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.cut_quote"><code class="docutils literal notranslate"><span class="pre">cut_quote()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.find_segment"><code class="docutils literal notranslate"><span class="pre">find_segment()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.sources.load_timing"><code class="docutils literal notranslate"><span class="pre">load_timing()</span></code></a></li>

@@ -31,7 +31,7 @@ This is the audio counterpart of a video timeline; it consumes plain file paths
 
 | [`duck_regions`](#braidio.weave.duck_regions)(starts, durs, kinds, ...)          | Per part, the `(from_s, to_s)` span *within its own audio* to duck.    |
 |--------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
-| `duration_s`(path)                                                                               |                                                                        |
+| [`duration_s`](#braidio.weave.duration_s)(path)                                | The media duration in seconds, read with `ffprobe`.                    |
 | [`extract_padded`](#braidio.weave.extract_padded)(asset_path, start_s, end_s, ...) | Extract `[start_s-pre_roll, end_s+post_roll]` with in/out fades.       |
 | [`interrupting_boundaries`](#braidio.weave.interrupting_boundaries)(kinds, placements, ...) | The `(prev, cur)` sequential-part pairs where `cur` interrupts `prev`. |
 | [`layout_placed`](#braidio.weave.layout_placed)(kinds, durs, placements, \*, ...) | Start offset (s) of each part, placement-aware.                        |
@@ -115,6 +115,13 @@ from the laid-out starts.
 
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`float`](https://docs.python.org/3/builtins/functions.html#float), [`float`](https://docs.python.org/3/builtins/functions.html#float)]]
+
+### braidio.weave.duration_s(path)
+
+The media duration in seconds, read with `ffprobe`.
+
+* **Return type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float)
 
 ### braidio.weave.extract_padded(asset_path, start_s, end_s, out_path, , pre_roll_s=0.4, post_roll_s=0.3, fade_in_s=0.5, fade_out_s=0.8, min_len_s=2.2)
 

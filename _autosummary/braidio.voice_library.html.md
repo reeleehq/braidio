@@ -40,6 +40,13 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One shared-library voice, with the fields curation needs.
 
+#### *classmethod* from_api(d)
+
+Build a voice from an API payload, keeping unknown fields in `extra`.
+
+* **Return type:**
+  [`SharedVoice`](#braidio.voice_library.SharedVoice)
+
 #### to_voice()
 
 As a [`Voice`](braidio.multivoice.html.md#braidio.multivoice.Voice) (gender `M`/`F`/`N`).

@@ -85,6 +85,13 @@ SegmentBeat("1981: and in the naked light I saw")  # → the live master
 
 The namespaces this source routes, in insertion order.
 
+#### resolve(reference)
+
+Resolve `reference` to a segment, or `None` when it names nothing known.
+
+* **Return type:**
+  [`ResolvedSegment`](#braidio.sources.ResolvedSegment) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### split(reference)
 
 Split `reference` into `(namespace, body)`, applying the default.
@@ -98,17 +105,32 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 A cuttable span of a source asset — what a [`SegmentSource`](#braidio.sources.SegmentSource) returns.
 
+#### *property* duration_s *: [float](https://docs.python.org/3/builtins/functions.html#float)*
+
+Length in seconds (`end_s - start_s`, rounded to ms).
+
 ### *class* braidio.sources.Segment(start_s, end_s, score, line_start, line_end, matched_text)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 A resolved window for a reference, with the matched line span.
 
+#### *property* duration_s *: [float](https://docs.python.org/3/builtins/functions.html#float)*
+
+Length in seconds (`end_s - start_s`, rounded to ms).
+
 ### *class* braidio.sources.SegmentSource(\*args, \*\*kwargs)
 
 Bases: [`Protocol`](https://docs.python.org/3/library/typing.html#typing.Protocol)
 
 Resolve an opaque `reference` to a [`ResolvedSegment`](#braidio.sources.ResolvedSegment) (or None).
+
+#### resolve(reference)
+
+Resolve `reference` to a segment, or `None` when it names nothing known.
+
+* **Return type:**
+  [`ResolvedSegment`](#braidio.sources.ResolvedSegment) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 ### *class* braidio.sources.SpanSource(assets)
 
@@ -133,6 +155,13 @@ An unknown asset, or a span that is malformed or empty (`end <= start`,
 negative or non-numeric times), resolves to `None` — the caller’s
 unresolved-reference handling reports it.
 
+#### resolve(reference)
+
+Resolve `reference` to a segment, or `None` when it names nothing known.
+
+* **Return type:**
+  [`ResolvedSegment`](#braidio.sources.ResolvedSegment) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 ### *class* braidio.sources.TimedLine(index, start_s, end_s, text)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
@@ -147,6 +176,13 @@ A [`SegmentSource`](#braidio.sources.SegmentSource) over time-aligned lines + on
 
 Binds the generic [`find_segment()`](#braidio.sources.find_segment) matcher to a concrete asset so the
 weave engine can `resolve(reference) -> ResolvedSegment`.
+
+#### resolve(reference)
+
+Resolve `reference` to a segment, or `None` when it names nothing known.
+
+* **Return type:**
+  [`ResolvedSegment`](#braidio.sources.ResolvedSegment) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 ### braidio.sources.cut_quote(audio_path, lines, quote, out_path, , pad_pre_s=0.15, pad_post_s=0.35, fade_s=0.04, min_score=0.5, song_end_s=None)
 

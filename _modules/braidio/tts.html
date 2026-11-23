@@ -986,16 +986,23 @@ window.runMermaid = runMermaid;</script>
 
     <span class="n">name</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">DEFAULT_TTS</span>
 
+<div class="viewcode-block" id="ElevenLabsVoice.narrate">
+<a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.ElevenLabsVoice.narrate">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">narrate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">return_cache_status</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Narrate ``text`` to ``out_path``; with ``return_cache_status`` also say whether the cache served it."""</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">braidio</span>
 
         <span class="k">if</span> <span class="n">return_cache_status</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">braidio</span><span class="o">.</span><span class="n">narrate</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="n">return_cache_status</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">braidio</span><span class="o">.</span><span class="n">narrate</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">braidio</span><span class="o">.</span><span class="n">narrate</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span></div>
 
+
+<div class="viewcode-block" id="ElevenLabsVoice.render_dialogue">
+<a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.ElevenLabsVoice.render_dialogue">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">render_dialogue</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">turns</span><span class="p">,</span> <span class="n">cast</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="n">return_cache_status</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span>
     <span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Render the dialogue ``turns`` with the ``cast`` to ``out_path``."""</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">braidio</span>
 
         <span class="k">if</span> <span class="n">return_cache_status</span><span class="p">:</span>
@@ -1003,6 +1010,7 @@ window.runMermaid = runMermaid;</script>
                 <span class="n">turns</span><span class="p">,</span> <span class="n">cast</span><span class="p">,</span> <span class="n">out_path</span><span class="o">=</span><span class="n">out_path</span><span class="p">,</span> <span class="n">return_cache_status</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">braidio</span><span class="o">.</span><span class="n">render_dialogue</span><span class="p">(</span><span class="n">turns</span><span class="p">,</span> <span class="n">cast</span><span class="p">,</span> <span class="n">out_path</span><span class="o">=</span><span class="n">out_path</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span></div>
+</div>
 
 
 
@@ -1023,13 +1031,20 @@ window.runMermaid = runMermaid;</script>
         <span class="c1"># built once: a paced beat calls narrate once per turn</span>
         <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"_narrator"</span><span class="p">,</span> <span class="n">narrator_from_speak</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">speak</span><span class="p">))</span>
 
+<div class="viewcode-block" id="SpeakVoice.narrate">
+<a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.SpeakVoice.narrate">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">narrate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">return_cache_status</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Narrate ``text`` to ``out_path``; with ``return_cache_status`` also say whether the cache served it."""</span>
         <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_narrator</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="k">if</span> <span class="n">return_cache_status</span> <span class="k">else</span> <span class="n">path</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="k">if</span> <span class="n">return_cache_status</span> <span class="k">else</span> <span class="n">path</span></div>
 
+
+<div class="viewcode-block" id="SpeakVoice.render_dialogue">
+<a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.SpeakVoice.render_dialogue">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">render_dialogue</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">turns</span><span class="p">,</span> <span class="n">cast</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="n">return_cache_status</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span>
     <span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Render the dialogue ``turns`` with the ``cast`` to ``out_path``."""</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
 
@@ -1052,6 +1067,7 @@ window.runMermaid = runMermaid;</script>
         <span class="k">finally</span><span class="p">:</span>
             <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">work</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="k">if</span> <span class="n">return_cache_status</span> <span class="k">else</span> <span class="n">path</span></div>
+</div>
 
 
 
@@ -1105,9 +1121,12 @@ window.runMermaid = runMermaid;</script>
     <span class="k">def</span><span class="w"> </span><span class="nf">_voice</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">voice_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">voice_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">voice_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">voice</span><span class="p">)</span> <span class="k">if</span> <span class="n">voice_id</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">voice</span>
 
+<div class="viewcode-block" id="VoxyVoice.narrate">
+<a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.VoxyVoice.narrate">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">narrate</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">voice_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">return_cache_status</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">_</span>
     <span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Narrate ``text`` to ``out_path``; with ``return_cache_status`` also say whether the cache served it."""</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">voxy</span>
 
         <span class="n">options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">)</span>
@@ -1128,11 +1147,15 @@ window.runMermaid = runMermaid;</script>
         <span class="n">out</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">out_path</span><span class="p">)</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">"."</span> <span class="o">+</span> <span class="n">speech</span><span class="o">.</span><span class="n">format</span><span class="p">)</span>
         <span class="n">out</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">out</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">speech</span><span class="o">.</span><span class="n">audio</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">speech</span><span class="o">.</span><span class="n">cached</span><span class="p">)</span> <span class="k">if</span> <span class="n">return_cache_status</span> <span class="k">else</span> <span class="n">out</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">speech</span><span class="o">.</span><span class="n">cached</span><span class="p">)</span> <span class="k">if</span> <span class="n">return_cache_status</span> <span class="k">else</span> <span class="n">out</span></div>
 
+
+<div class="viewcode-block" id="VoxyVoice.render_dialogue">
+<a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.VoxyVoice.render_dialogue">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">render_dialogue</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">turns</span><span class="p">,</span> <span class="n">cast</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="n">return_cache_status</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span>
     <span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Render the dialogue ``turns`` with the ``cast`` to ``out_path``."""</span>
         <span class="c1"># no one-pass dialogue: turn by turn, exactly as SpeakVoice does</span>
         <span class="k">return</span> <span class="n">SpeakVoice</span><span class="o">.</span><span class="n">render_dialogue</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
@@ -1142,6 +1165,7 @@ window.runMermaid = runMermaid;</script>
             <span class="n">return_cache_status</span><span class="o">=</span><span class="n">return_cache_status</span><span class="p">,</span>
             <span class="o">**</span><span class="n">kw</span><span class="p">,</span>
         <span class="p">)</span></div>
+</div>
 
 
 
@@ -1200,11 +1224,21 @@ window.runMermaid = runMermaid;</script>
 
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">narrate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">return_cache_status</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span> <span class="o">...</span>
+<div class="viewcode-block" id="VoiceBackend.narrate">
+<a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.VoiceBackend.narrate">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">narrate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">return_cache_status</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Narrate ``text`` to ``out_path``; with ``return_cache_status`` also say whether the cache served it."""</span>
+        <span class="o">...</span></div>
 
+
+<div class="viewcode-block" id="VoiceBackend.render_dialogue">
+<a class="viewcode-back" href="../../_autosummary/braidio.tts.html#braidio.VoiceBackend.render_dialogue">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">render_dialogue</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">turns</span><span class="p">,</span> <span class="n">cast</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="n">return_cache_status</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span>
-    <span class="p">):</span> <span class="o">...</span></div>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Render the dialogue ``turns`` with the ``cast`` to ``out_path``."""</span>
+        <span class="o">...</span></div>
+</div>
 
 
     <span class="c1"># Both return the file they wrote (it must exist), at ``out_path`` or with</span>

@@ -61,6 +61,10 @@ knob existed); a key that is not a field is ignored.
 * **Return type:**
   [`WeaveConfig`](#braidio.weave_config.WeaveConfig)
 
+#### *property* is_multivoice *: [bool](https://docs.python.org/3/builtins/functions.html#bool)*
+
+Whether more than one voice is configured.
+
 #### *property* paces_narration *: [bool](https://docs.python.org/3/builtins/functions.html#bool)*
 
 Whether a render cuts each narration beat into separately-spoken turns.

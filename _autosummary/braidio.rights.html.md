@@ -37,11 +37,11 @@ Not legal advice.
 
 ### Classes
 
-| [`PlannedBeat`](#braidio.rights.PlannedBeat)(kind, content, from_index[, ...])   | A beat resolved for a profile — what the renderer actually plays.   |
-|--------------------------------------------------------------------------------------------------|---------------------------------------------------------------------|
-| [`Profile`](#braidio.rights.Profile)(\*values)                               | Which projection of the production we render.                       |
-| [`RenderPlan`](#braidio.rights.RenderPlan)(profile[, beats, dropped, ...])      |                                                                     |
-| [`RightsPolicy`](#braidio.rights.RightsPolicy)([forbidden_texts, ...])            | Injected rights configuration for the published profile.            |
+| [`PlannedBeat`](#braidio.rights.PlannedBeat)(kind, content, from_index[, ...])   | A beat resolved for a profile — what the renderer actually plays.                                    |
+|--------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
+| [`Profile`](#braidio.rights.Profile)(\*values)                               | Which projection of the production we render.                                                        |
+| [`RenderPlan`](#braidio.rights.RenderPlan)(profile[, beats, dropped, ...])      | What a render will do under a rights profile: the planned beats and what was dropped or substituted. |
+| [`RightsPolicy`](#braidio.rights.RightsPolicy)([forbidden_texts, ...])            | Injected rights configuration for the published profile.                                             |
 
 ### Exceptions
 
@@ -79,6 +79,8 @@ Which projection of the production we render.
 ### *class* braidio.rights.RenderPlan(profile, beats=list(), dropped=list(), substituted=list())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+What a render will do under a rights profile: the planned beats and what was dropped or substituted.
 
 ### *class* braidio.rights.RightsPolicy(forbidden_texts=<function RightsPolicy.<lambda>>, publishable_clip_rights=frozenset({'public-domain'}))
 

@@ -816,6 +816,7 @@ window.runMermaid = runMermaid;</script>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">end</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The end time in seconds (``start + duration``)."""</span>
         <span class="k">return</span> <span class="nb">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">duration</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span></div>
 
 
@@ -869,7 +870,10 @@ window.runMermaid = runMermaid;</script>
         <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="o">/</span> <span class="n">tot</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">t</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span></div>
 
 
+<div class="viewcode-block" id="TimelineBreakdown.to_dict">
+<a class="viewcode-back" href="../../_autosummary/braidio.timeline.html#braidio.TimelineBreakdown.to_dict">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The timeline as a JSON-serialisable dict."""</span>
         <span class="k">return</span> <span class="p">{</span>
             <span class="s2">"title"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
             <span class="s2">"duration"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">duration</span><span class="p">,</span>
@@ -904,7 +908,8 @@ window.runMermaid = runMermaid;</script>
                 <span class="p">}</span>
                 <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">beats</span>
             <span class="p">],</span>
-        <span class="p">}</span>
+        <span class="p">}</span></div>
+
 
 <div class="viewcode-block" id="TimelineBreakdown.from_dict">
 <a class="viewcode-back" href="../../_autosummary/braidio.timeline.html#braidio.TimelineBreakdown.from_dict">[docs]</a>

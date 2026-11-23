@@ -54,6 +54,10 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One subtitle: `[start_s, end_s)` and the text shown.
 
+#### *property* duration_s *: [float](https://docs.python.org/3/builtins/functions.html#float)*
+
+Length in seconds (`end_s - start_s`).
+
 ### braidio.captions.captions_for(script, timeline, , max_chars=0)
 
 The SRT document for `script` as laid out by `timeline`.

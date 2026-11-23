@@ -1,4 +1,4 @@
-> built 2026-11-22 23:07 UTC from 6c4237f (main) · braidio 0.0.145. Details: build_info.json
+> built 2026-11-23 01:31 UTC from 8ddc83e (main) · braidio 0.0.145. Details: build_info.json
 
 # index.html.md
 
@@ -493,6 +493,10 @@ Two.
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One subtitle: `[start_s, end_s)` and the text shown.
+
+#### *property* duration_s *: [float](https://docs.python.org/3/builtins/functions.html#float)*
+
+Length in seconds (`end_s - start_s`).
 
 ### braidio.captions.captions_for(script, timeline, , max_chars=0)
 
@@ -1540,7 +1544,7 @@ in the *Hamilton* repo — braidio has its own #18 about something else.
 | [`tts_cost_usd`](_autosummary/braidio.html.md#braidio.tts_cost_usd)(text, \*[, model_id])                 | Estimated USD to synthesize `text`; `0.0` for empty, `None` if unpriced.                                                |
 | [`billable_chars`](_autosummary/braidio.html.md#braidio.billable_chars)(text)                               | Characters ElevenLabs bills for `text` (the whole submitted string).                                                    |
 | [`usd_per_1k_chars`](_autosummary/braidio.html.md#braidio.usd_per_1k_chars)([model_id])                       | Resolved USD-per-1000-characters rate (most specific source first).                                                     |
-| `strip_markup`(text)                                                                                |                                                                                                                         |
+| [`strip_markup`](_autosummary/braidio.html.md#braidio.strip_markup)(text)                                 | `text` with its markup replaced by spaces.                                                                              |
 | [`split_segments`](_autosummary/braidio.html.md#braidio.split_segments)(text)                               | Split narration into sentence-level segments (markup removed).                                                          |
 | [`assign_voices`](_autosummary/braidio.html.md#braidio.assign_voices)(n, pool, \*[, seed, avoid_repeats])  | Assign a voice to each of `n` turns — random, seeded, no immediate repeats (so it isn't a rigid round-robin).           |
 | [`group_turns`](_autosummary/braidio.html.md#braidio.group_turns)(segments, \*[, min_turn, ...])         | Group consecutive segments into *turns* of `min_turn..max_turn` segments.                                               |
@@ -1552,7 +1556,7 @@ in the *Hamilton* repo — braidio has its own #18 about something else.
 | [`extract_padded`](_autosummary/braidio.html.md#braidio.extract_padded)(asset_path, start_s, end_s, ...)    | Extract `[start_s-pre_roll, end_s+post_roll]` with in/out fades.                                                        |
 | [`weave_timeline`](_autosummary/braidio.html.md#braidio.weave_timeline)(items, out_path, \*[, ...])         | Place items on a timeline and mix.                                                                                      |
 | [`layout_starts`](_autosummary/braidio.html.md#braidio.layout_starts)(kinds, durs, \*, ...)                | Start offset (s) of each part (all sequential).                                                                         |
-| `duration_s`(path)                                                                                  |                                                                                                                         |
+| [`duration_s`](_autosummary/braidio.html.md#braidio.duration_s)(path)                                   | The media duration in seconds, read with `ffprobe`.                                                                     |
 | [`build_timeline`](_autosummary/braidio.html.md#braidio.build_timeline)(\*, kinds, durations[, ...])        | Assemble a [`TimelineBreakdown`](_autosummary/braidio.html.md#braidio.TimelineBreakdown) from per-beat render data (pure).         |
 | [`render_settings`](_autosummary/braidio.html.md#braidio.render_settings)(\*, config, crossfade_s, ...)      | The record of *how* a production was rendered, as plain JSON types.                                                     |
 | [`clean_ocr`](_autosummary/braidio.html.md#braidio.clean_ocr)(text, \*[, collapse_whitespace])         | Normalize OCR/PDF-extracted text for clean narration.                                                                   |
@@ -1586,7 +1590,7 @@ in the *Hamilton* repo — braidio has its own #18 about something else.
 | [`MusicStructure`](_autosummary/braidio.html.md#braidio.MusicStructure)([sting, scene_marker, ...])        | How a production marks its structure with music — the render seam.                                                 |
 | [`Profile`](_autosummary/braidio.html.md#braidio.Profile)(\*values)                                 | Which projection of the production we render.                                                                      |
 | [`RightsPolicy`](_autosummary/braidio.html.md#braidio.RightsPolicy)([forbidden_texts, ...])              | Injected rights configuration for the published profile.                                                           |
-| [`RenderPlan`](_autosummary/braidio.html.md#braidio.RenderPlan)(profile[, beats, dropped, ...])        |                                                                                                                    |
+| [`RenderPlan`](_autosummary/braidio.html.md#braidio.RenderPlan)(profile[, beats, dropped, ...])        | What a render will do under a rights profile: the planned beats and what was dropped or substituted.               |
 | [`PlannedBeat`](_autosummary/braidio.html.md#braidio.PlannedBeat)(kind, content, from_index[, ...])     | A beat resolved for a profile — what the renderer actually plays.                                                  |
 | [`SoundDesign`](_autosummary/braidio.html.md#braidio.SoundDesign)([max_events, master, max_usd, ...])   | Sound design is on, with these knobs (foley's defaults throughout).                                                |
 | [`SegmentSource`](_autosummary/braidio.html.md#braidio.SegmentSource)(\*args, \*\*kwargs)                 | Resolve an opaque `reference` to a [`ResolvedSegment`](_autosummary/braidio.html.md#braidio.ResolvedSegment) (or None).     |
@@ -1634,6 +1638,10 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One beat’s place on the timeline.
 
+#### *property* end *: [float](https://docs.python.org/3/builtins/functions.html#float)*
+
+The end time in seconds (`start + duration`).
+
 ### *class* braidio.CostLine(label, kind, characters, usd, model_id)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
@@ -1680,6 +1688,10 @@ One-line human summary (handy for a CLI/MCP preview).
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One subtitle: `[start_s, end_s)` and the text shown.
+
+#### *property* duration_s *: [float](https://docs.python.org/3/builtins/functions.html#float)*
+
+Length in seconds (`end_s - start_s`).
 
 ### *class* braidio.Delivery(name, model_id, voice_settings=dict(), supports_audio_tags=False, supports_speed=True, note='', language_code=None)
 
@@ -1855,6 +1867,13 @@ SegmentBeat("1981: and in the naked light I saw")  # → the live master
 
 The namespaces this source routes, in insertion order.
 
+#### resolve(reference)
+
+Resolve `reference` to a segment, or `None` when it names nothing known.
+
+* **Return type:**
+  [`ResolvedSegment`](_autosummary/braidio.sources.html.md#braidio.sources.ResolvedSegment) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### split(reference)
 
 Split `reference` into `(namespace, body)`, applying the default.
@@ -1916,11 +1935,17 @@ Which projection of the production we render.
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
+What a render will do under a rights profile: the planned beats and what was dropped or substituted.
+
 ### *class* braidio.ResolvedSegment(asset_path, start_s, end_s, score=1.0, matched_text='')
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 A cuttable span of a source asset — what a [`SegmentSource`](_autosummary/braidio.html.md#braidio.SegmentSource) returns.
+
+#### *property* duration_s *: [float](https://docs.python.org/3/builtins/functions.html#float)*
+
+Length in seconds (`end_s - start_s`, rounded to ms).
 
 ### *class* braidio.RightsPolicy(forbidden_texts=<function RightsPolicy.<lambda>>, publishable_clip_rights=frozenset({'public-domain'}))
 
@@ -1974,6 +1999,10 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 A resolved window for a reference, with the matched line span.
 
+#### *property* duration_s *: [float](https://docs.python.org/3/builtins/functions.html#float)*
+
+Length in seconds (`end_s - start_s`, rounded to ms).
+
 ### *class* braidio.SegmentBeat(reference, label='', rights='owned-local', published_substitute=None, placement='before', spotlight=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
@@ -2006,6 +2035,13 @@ bed the flag is inert.
 Bases: [`Protocol`](https://docs.python.org/3/library/typing.html#typing.Protocol)
 
 Resolve an opaque `reference` to a [`ResolvedSegment`](_autosummary/braidio.html.md#braidio.ResolvedSegment) (or None).
+
+#### resolve(reference)
+
+Resolve `reference` to a segment, or `None` when it names nothing known.
+
+* **Return type:**
+  [`ResolvedSegment`](_autosummary/braidio.sources.html.md#braidio.sources.ResolvedSegment) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 ### *class* braidio.SoundDesign(max_events=6, master='podcast', max_usd=None, allow_generate=True, designer=None, writer=None)
 
@@ -2101,6 +2137,13 @@ An unknown asset, or a span that is malformed or empty (`end <= start`,
 negative or non-numeric times), resolves to `None` — the caller’s
 unresolved-reference handling reports it.
 
+#### resolve(reference)
+
+Resolve `reference` to a segment, or `None` when it names nothing known.
+
+* **Return type:**
+  [`ResolvedSegment`](_autosummary/braidio.sources.html.md#braidio.sources.ResolvedSegment) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 ### *class* braidio.Sting(asset_path, gain_db=-6.0, max_len_s=3.0, fade_out_s=0.5, gap_after_s=0.3)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
@@ -2137,6 +2180,13 @@ A [`SegmentSource`](_autosummary/braidio.html.md#braidio.SegmentSource) over tim
 Binds the generic [`find_segment()`](_autosummary/braidio.html.md#braidio.find_segment) matcher to a concrete asset so the
 weave engine can `resolve(reference) -> ResolvedSegment`.
 
+#### resolve(reference)
+
+Resolve `reference` to a segment, or `None` when it names nothing known.
+
+* **Return type:**
+  [`ResolvedSegment`](_autosummary/braidio.sources.html.md#braidio.sources.ResolvedSegment) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 ### *class* braidio.TimelineBreakdown(beats=tuple(), title='', settings=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
@@ -2163,7 +2213,7 @@ Total timeline length (s) — the max beat end, accounting for overlaps.
 
 #### *classmethod* from_dict(d)
 
-Rebuild a breakdown from `to_dict()` output (the persisted form).
+Rebuild a breakdown from [`to_dict()`](_autosummary/braidio.html.md#braidio.TimelineBreakdown.to_dict) output (the persisted form).
 
 `totals` and `duration` are derived, so they are recomputed rather
 than read back — the beats are the record.
@@ -2184,6 +2234,13 @@ Fraction of spoken+clip time per `kind` (sums to 1).
 
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`float`](https://docs.python.org/3/builtins/functions.html#float)]
+
+#### to_dict()
+
+The timeline as a JSON-serialisable dict.
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
 #### to_html(title=None, subtitle='')
 
@@ -2254,6 +2311,10 @@ knob existed); a key that is not a field is ignored.
 
 * **Return type:**
   [`WeaveConfig`](_autosummary/braidio.weave_config.html.md#braidio.weave_config.WeaveConfig)
+
+#### *property* is_multivoice *: [bool](https://docs.python.org/3/builtins/functions.html#bool)*
+
+Whether more than one voice is configured.
 
 #### *property* paces_narration *: [bool](https://docs.python.org/3/builtins/functions.html#bool)*
 
@@ -2622,6 +2683,13 @@ commonest cause is a config file they forgot they wrote.
 
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### braidio.duration_s(path)
+
+The media duration in seconds, read with `ffprobe`.
+
+* **Return type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float)
 
 ### braidio.estimate_cost(source, , model_id=None, dialogue_model_id=None, profile=None)
 
@@ -3020,6 +3088,13 @@ so connected clauses stay with one speaker.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 
+### braidio.strip_markup(text)
+
+`text` with its markup replaced by spaces.
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
 ### braidio.strip_speaker_labels(text)
 
 Remove a leading speaker-label prefix (e.g. `"Chris: "`) if present.
@@ -3373,7 +3448,7 @@ those need curation — the premade pools below are the safe default.
 | [`group_turns`](_autosummary/braidio.multivoice.html.md#braidio.multivoice.group_turns)(segments, \*[, min_turn, ...])          | Group consecutive segments into *turns* of `min_turn..max_turn` segments.                                       |
 | [`render_multivoice`](_autosummary/braidio.multivoice.html.md#braidio.multivoice.render_multivoice)(segments, pool, \*, out_path)     | Render `segments` cycling `pool` → `out_path`.                                                                  |
 | [`split_segments`](_autosummary/braidio.multivoice.html.md#braidio.multivoice.split_segments)(text)                                | Split narration into sentence-level segments (markup removed).                                                  |
-| `strip_markup`(text)                                                                                 |                                                                                                                 |
+| [`strip_markup`](_autosummary/braidio.multivoice.html.md#braidio.multivoice.strip_markup)(text)                                  | `text` with its markup replaced by spaces.                                                                      |
 
 ### Classes
 
@@ -3438,6 +3513,13 @@ so connected clauses stay with one speaker.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 
+### braidio.multivoice.strip_markup(text)
+
+`text` with its markup replaced by spaces.
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
 
 # _autosummary/braidio.music.html.md
 
@@ -3487,6 +3569,10 @@ One stretch of the timeline the bed plays over, with its own fades.
 `start_s` / `end_s` are timeline offsets (the bed’s own `lead_in_s` is
 already applied). The bed keeps its place in the asset across a gap: a
 region seeks into the asset to where the music *would* have been.
+
+#### *property* length_s *: [float](https://docs.python.org/3/builtins/functions.html#float)*
+
+Length in seconds (`end_s - start_s`).
 
 ### *class* braidio.music.MusicBed(asset_path, gain_db=-22.0, fade_in_s=1.5, fade_out_s=2.0, lead_in_s=2.0, start_s=0.0, loop=True, spotlight_fade_s=0.6)
 
@@ -4027,11 +4113,11 @@ Not legal advice.
 
 ### Classes
 
-| [`PlannedBeat`](_autosummary/braidio.rights.html.md#braidio.rights.PlannedBeat)(kind, content, from_index[, ...])   | A beat resolved for a profile — what the renderer actually plays.   |
-|--------------------------------------------------------------------------------------------------|---------------------------------------------------------------------|
-| [`Profile`](_autosummary/braidio.rights.html.md#braidio.rights.Profile)(\*values)                               | Which projection of the production we render.                       |
-| [`RenderPlan`](_autosummary/braidio.rights.html.md#braidio.rights.RenderPlan)(profile[, beats, dropped, ...])      |                                                                     |
-| [`RightsPolicy`](_autosummary/braidio.rights.html.md#braidio.rights.RightsPolicy)([forbidden_texts, ...])            | Injected rights configuration for the published profile.            |
+| [`PlannedBeat`](_autosummary/braidio.rights.html.md#braidio.rights.PlannedBeat)(kind, content, from_index[, ...])   | A beat resolved for a profile — what the renderer actually plays.                                    |
+|--------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
+| [`Profile`](_autosummary/braidio.rights.html.md#braidio.rights.Profile)(\*values)                               | Which projection of the production we render.                                                        |
+| [`RenderPlan`](_autosummary/braidio.rights.html.md#braidio.rights.RenderPlan)(profile[, beats, dropped, ...])      | What a render will do under a rights profile: the planned beats and what was dropped or substituted. |
+| [`RightsPolicy`](_autosummary/braidio.rights.html.md#braidio.rights.RightsPolicy)([forbidden_texts, ...])            | Injected rights configuration for the published profile.                                             |
 
 ### Exceptions
 
@@ -4069,6 +4155,8 @@ Which projection of the production we render.
 ### *class* braidio.rights.RenderPlan(profile, beats=list(), dropped=list(), substituted=list())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+What a render will do under a rights profile: the planned beats and what was dropped or substituted.
 
 ### *class* braidio.rights.RightsPolicy(forbidden_texts=<function RightsPolicy.<lambda>>, publishable_clip_rights=frozenset({'public-domain'}))
 
@@ -4640,6 +4728,13 @@ SegmentBeat("1981: and in the naked light I saw")  # → the live master
 
 The namespaces this source routes, in insertion order.
 
+#### resolve(reference)
+
+Resolve `reference` to a segment, or `None` when it names nothing known.
+
+* **Return type:**
+  [`ResolvedSegment`](_autosummary/braidio.sources.html.md#braidio.sources.ResolvedSegment) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 #### split(reference)
 
 Split `reference` into `(namespace, body)`, applying the default.
@@ -4653,17 +4748,32 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 A cuttable span of a source asset — what a [`SegmentSource`](_autosummary/braidio.sources.html.md#braidio.sources.SegmentSource) returns.
 
+#### *property* duration_s *: [float](https://docs.python.org/3/builtins/functions.html#float)*
+
+Length in seconds (`end_s - start_s`, rounded to ms).
+
 ### *class* braidio.sources.Segment(start_s, end_s, score, line_start, line_end, matched_text)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 A resolved window for a reference, with the matched line span.
 
+#### *property* duration_s *: [float](https://docs.python.org/3/builtins/functions.html#float)*
+
+Length in seconds (`end_s - start_s`, rounded to ms).
+
 ### *class* braidio.sources.SegmentSource(\*args, \*\*kwargs)
 
 Bases: [`Protocol`](https://docs.python.org/3/library/typing.html#typing.Protocol)
 
 Resolve an opaque `reference` to a [`ResolvedSegment`](_autosummary/braidio.sources.html.md#braidio.sources.ResolvedSegment) (or None).
+
+#### resolve(reference)
+
+Resolve `reference` to a segment, or `None` when it names nothing known.
+
+* **Return type:**
+  [`ResolvedSegment`](_autosummary/braidio.sources.html.md#braidio.sources.ResolvedSegment) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 ### *class* braidio.sources.SpanSource(assets)
 
@@ -4688,6 +4798,13 @@ An unknown asset, or a span that is malformed or empty (`end <= start`,
 negative or non-numeric times), resolves to `None` — the caller’s
 unresolved-reference handling reports it.
 
+#### resolve(reference)
+
+Resolve `reference` to a segment, or `None` when it names nothing known.
+
+* **Return type:**
+  [`ResolvedSegment`](_autosummary/braidio.sources.html.md#braidio.sources.ResolvedSegment) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 ### *class* braidio.sources.TimedLine(index, start_s, end_s, text)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
@@ -4702,6 +4819,13 @@ A [`SegmentSource`](_autosummary/braidio.sources.html.md#braidio.sources.Segment
 
 Binds the generic [`find_segment()`](_autosummary/braidio.sources.html.md#braidio.sources.find_segment) matcher to a concrete asset so the
 weave engine can `resolve(reference) -> ResolvedSegment`.
+
+#### resolve(reference)
+
+Resolve `reference` to a segment, or `None` when it names nothing known.
+
+* **Return type:**
+  [`ResolvedSegment`](_autosummary/braidio.sources.html.md#braidio.sources.ResolvedSegment) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 ### braidio.sources.cut_quote(audio_path, lines, quote, out_path, , pad_pre_s=0.15, pad_post_s=0.35, fade_s=0.04, min_score=0.5, song_end_s=None)
 
@@ -5125,6 +5249,10 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One beat’s place on the timeline.
 
+#### *property* end *: [float](https://docs.python.org/3/builtins/functions.html#float)*
+
+The end time in seconds (`start + duration`).
+
 ### *class* braidio.timeline.TimelineBreakdown(beats=tuple(), title='', settings=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
@@ -5151,7 +5279,7 @@ Total timeline length (s) — the max beat end, accounting for overlaps.
 
 #### *classmethod* from_dict(d)
 
-Rebuild a breakdown from `to_dict()` output (the persisted form).
+Rebuild a breakdown from [`to_dict()`](_autosummary/braidio.timeline.html.md#braidio.timeline.TimelineBreakdown.to_dict) output (the persisted form).
 
 `totals` and `duration` are derived, so they are recomputed rather
 than read back — the beats are the record.
@@ -5172,6 +5300,13 @@ Fraction of spoken+clip time per `kind` (sums to 1).
 
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`float`](https://docs.python.org/3/builtins/functions.html#float)]
+
+#### to_dict()
+
+The timeline as a JSON-serialisable dict.
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
 #### to_html(title=None, subtitle='')
 
@@ -5353,6 +5488,14 @@ replaces the ElevenLabs synthesis. `return_cache_status` is forwarded
 only when asked for, so the plain `narrate` shape still works as the
 replacement.
 
+#### narrate(text, out_path, , return_cache_status=False, \*\*kw)
+
+Narrate `text` to `out_path`; with `return_cache_status` also say whether the cache served it.
+
+#### render_dialogue(turns, cast, , out_path, return_cache_status=False, \*\*kw)
+
+Render the dialogue `turns` with the `cast` to `out_path`.
+
 ### braidio.tts.Speak
 
 `speak(text, *, voice) -> (audio_bytes, format)`,
@@ -5372,6 +5515,14 @@ Any other voice: a [`Speak`](_autosummary/braidio.tts.html.md#braidio.tts.Speak)
 model, a test). Never cached, and with no one-pass dialogue, so a dialogue
 is spoken turn by turn ([`braidio.conversation.render_turns_sequential()`](_autosummary/braidio.conversation.html.md#braidio.conversation.render_turns_sequential)),
 its per-turn parts removed once the exchange is assembled.
+
+#### narrate(text, out_path, , return_cache_status=False, \*\*kw)
+
+Narrate `text` to `out_path`; with `return_cache_status` also say whether the cache served it.
+
+#### render_dialogue(turns, cast, , out_path, return_cache_status=False, \*\*kw)
+
+Render the dialogue `turns` with the `cast` to `out_path`.
 
 ### *class* braidio.tts.TTSBackend(speak=None, usd_per_1k_chars=None, voice=None)
 
@@ -5415,6 +5566,14 @@ one-pass dialogue renders it turn by turn through its own `narrate`
 (Not [`braidio.multivoice.Voice`](_autosummary/braidio.multivoice.html.md#braidio.multivoice.Voice), `braidio.Voice`: that is one
 voice of a narration pool, an ElevenLabs id and name.)
 
+#### narrate(text, out_path, , return_cache_status=False, \*\*kw)
+
+Narrate `text` to `out_path`; with `return_cache_status` also say whether the cache served it.
+
+#### render_dialogue(turns, cast, , out_path, return_cache_status=False, \*\*kw)
+
+Render the dialogue `turns` with the `cast` to `out_path`.
+
 ### *class* braidio.tts.VoxyVoice(name, backend, voice=None, model_id=None, instruction=None, voice_map=dict(), options=dict(), cache=True, validate='rate')
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
@@ -5449,6 +5608,14 @@ register_voxy_voice("seed-tim", backend="fal", voice="tim_en",
                     usd_per_1k_chars=0.03)
 render_format(fmt, script, source=None, config=fmt.weave.with_(tts="seed-tim"))
 ```
+
+#### narrate(text, out_path, , voice_id=None, return_cache_status=False, \*\*\_)
+
+Narrate `text` to `out_path`; with `return_cache_status` also say whether the cache served it.
+
+#### render_dialogue(turns, cast, , out_path, return_cache_status=False, \*\*kw)
+
+Render the dialogue `turns` with the `cast` to `out_path`.
 
 #### validate *: [Any](https://docs.python.org/3/library/typing.html#typing.Any)* *= 'rate'*
 
@@ -5749,6 +5916,10 @@ With `footage` set, the panel plays that video over its span and
 `still`/`style`/`zoom` are not rendered: `still` stays the panel’s
 poster (what a storyboard or a picker shows for it).
 
+#### *property* duration *: [float](https://docs.python.org/3/builtins/functions.html#float)*
+
+Length in seconds (`end - start`).
+
 ### *class* braidio.video.Span(start, end, beat_index, kind='', label='')
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
@@ -5757,6 +5928,10 @@ A stretch of screen time, before any image is chosen for it.
 
 `beat_index` / `kind` / `label` carry the beat this came from, so a
 caller assigning pictures can see what is being said over each span.
+
+#### *property* duration *: [float](https://docs.python.org/3/builtins/functions.html#float)*
+
+Length in seconds (`end - start`).
 
 ### braidio.video.assign_stills(spans, stills, , zoom=1.18)
 
@@ -6063,6 +6238,13 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One shared-library voice, with the fields curation needs.
 
+#### *classmethod* from_api(d)
+
+Build a voice from an API payload, keeping unknown fields in `extra`.
+
+* **Return type:**
+  [`SharedVoice`](_autosummary/braidio.voice_library.html.md#braidio.voice_library.SharedVoice)
+
 #### to_voice()
 
 As a [`Voice`](_autosummary/braidio.multivoice.html.md#braidio.multivoice.Voice) (gender `M`/`F`/`N`).
@@ -6162,7 +6344,7 @@ This is the audio counterpart of a video timeline; it consumes plain file paths
 
 | [`duck_regions`](_autosummary/braidio.weave.html.md#braidio.weave.duck_regions)(starts, durs, kinds, ...)          | Per part, the `(from_s, to_s)` span *within its own audio* to duck.    |
 |--------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
-| `duration_s`(path)                                                                               |                                                                        |
+| [`duration_s`](_autosummary/braidio.weave.html.md#braidio.weave.duration_s)(path)                                | The media duration in seconds, read with `ffprobe`.                    |
 | [`extract_padded`](_autosummary/braidio.weave.html.md#braidio.weave.extract_padded)(asset_path, start_s, end_s, ...) | Extract `[start_s-pre_roll, end_s+post_roll]` with in/out fades.       |
 | [`interrupting_boundaries`](_autosummary/braidio.weave.html.md#braidio.weave.interrupting_boundaries)(kinds, placements, ...) | The `(prev, cur)` sequential-part pairs where `cur` interrupts `prev`. |
 | [`layout_placed`](_autosummary/braidio.weave.html.md#braidio.weave.layout_placed)(kinds, durs, placements, \*, ...) | Start offset (s) of each part, placement-aware.                        |
@@ -6246,6 +6428,13 @@ from the laid-out starts.
 
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`float`](https://docs.python.org/3/builtins/functions.html#float), [`float`](https://docs.python.org/3/builtins/functions.html#float)]]
+
+### braidio.weave.duration_s(path)
+
+The media duration in seconds, read with `ffprobe`.
+
+* **Return type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float)
 
 ### braidio.weave.extract_padded(asset_path, start_s, end_s, out_path, , pre_roll_s=0.4, post_roll_s=0.3, fade_in_s=0.5, fade_out_s=0.8, min_len_s=2.2)
 
@@ -6417,6 +6606,10 @@ knob existed); a key that is not a field is ignored.
 * **Return type:**
   [`WeaveConfig`](_autosummary/braidio.weave_config.html.md#braidio.weave_config.WeaveConfig)
 
+#### *property* is_multivoice *: [bool](https://docs.python.org/3/builtins/functions.html#bool)*
+
+Whether more than one voice is configured.
+
 #### *property* paces_narration *: [bool](https://docs.python.org/3/builtins/functions.html#bool)*
 
 Whether a render cuts each narration beat into separately-spoken turns.
@@ -6506,7 +6699,7 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-22 23:07 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/6c4237fdccff3c62d2fb7bc8b51955126b6275e5"><code>6c4237f</code></a> on branch <code>main</code>, for **braidio 0.0.145** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-23 01:31 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/8ddc83eaeb83f0f3ff52b15cd12398041e14fb4c"><code>8ddc83e</code></a> on branch <code>main</code>, for **braidio 0.0.145** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -6515,9 +6708,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/6c4237fdccff3c62d2fb7bc8b51955126b6275e5"><code>6c4237fdccff3c62d2fb7bc8b51955126b6275e5</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/8ddc83eaeb83f0f3ff52b15cd12398041e14fb4c"><code>8ddc83eaeb83f0f3ff52b15cd12398041e14fb4c</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | <code>0.0.145</code>                                                                                                                                    |
+| Tags at this commit | none                                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -6526,9 +6719,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/45080841030">45080841030</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/45094437597">45094437597</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>b91aff562b5874e01e6ba167e9cc3daefd9bb7e8</code> (in the history of the built commit) |
+| Event commit | <code>8ddc83eaeb83f0f3ff52b15cd12398041e14fb4c</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6559,7 +6752,7 @@ Latest release: <a href="https://pypi.org/project/braidio/0.0.145/">0.0.145</a>,
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 6c4237fdccff3c62d2fb7bc8b51955126b6275e5
+git checkout 8ddc83eaeb83f0f3ff52b15cd12398041e14fb4c
 pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

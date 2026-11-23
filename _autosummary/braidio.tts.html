@@ -555,6 +555,22 @@ only when asked for, so the plain <code class="docutils literal notranslate"><sp
 replacement.</p>
 <dl class="field-list simple">
 </dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="braidio.tts.ElevenLabsVoice.narrate">
+<span class="sig-name descname"><span class="pre">narrate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_path</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_cache_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kw</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/tts.html#ElevenLabsVoice.narrate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.tts.ElevenLabsVoice.narrate" title="Link to this definition">#</a></dt>
+<dd><p>Narrate <code class="docutils literal notranslate"><span class="pre">text</span></code> to <code class="docutils literal notranslate"><span class="pre">out_path</span></code>; with <code class="docutils literal notranslate"><span class="pre">return_cache_status</span></code> also say whether the cache served it.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="braidio.tts.ElevenLabsVoice.render_dialogue">
+<span class="sig-name descname"><span class="pre">render_dialogue</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">turns</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cast</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_cache_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kw</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/tts.html#ElevenLabsVoice.render_dialogue"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.tts.ElevenLabsVoice.render_dialogue" title="Link to this definition">#</a></dt>
+<dd><p>Render the dialogue <code class="docutils literal notranslate"><span class="pre">turns</span></code> with the <code class="docutils literal notranslate"><span class="pre">cast</span></code> to <code class="docutils literal notranslate"><span class="pre">out_path</span></code>.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py data">
@@ -581,6 +597,22 @@ is spoken turn by turn (<a class="reference internal" href="braidio.conversation
 its per-turn parts removed once the exchange is assembled.</p>
 <dl class="field-list simple">
 </dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="braidio.tts.SpeakVoice.narrate">
+<span class="sig-name descname"><span class="pre">narrate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_path</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_cache_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kw</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/tts.html#SpeakVoice.narrate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.tts.SpeakVoice.narrate" title="Link to this definition">#</a></dt>
+<dd><p>Narrate <code class="docutils literal notranslate"><span class="pre">text</span></code> to <code class="docutils literal notranslate"><span class="pre">out_path</span></code>; with <code class="docutils literal notranslate"><span class="pre">return_cache_status</span></code> also say whether the cache served it.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="braidio.tts.SpeakVoice.render_dialogue">
+<span class="sig-name descname"><span class="pre">render_dialogue</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">turns</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cast</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_cache_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kw</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/tts.html#SpeakVoice.render_dialogue"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.tts.SpeakVoice.render_dialogue" title="Link to this definition">#</a></dt>
+<dd><p>Render the dialogue <code class="docutils literal notranslate"><span class="pre">turns</span></code> with the <code class="docutils literal notranslate"><span class="pre">cast</span></code> to <code class="docutils literal notranslate"><span class="pre">out_path</span></code>.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -632,6 +664,22 @@ one-pass dialogue renders it turn by turn through its own <code class="docutils 
 <a class="reference internal" href="#braidio.tts.SpeakVoice" title="braidio.tts.SpeakVoice"><code class="xref py py-class docutils literal notranslate"><span class="pre">SpeakVoice</span></code></a> are the two shipped; pass your own as <code class="docutils literal notranslate"><span class="pre">voice=</span></code>.
 (Not <a class="reference internal" href="braidio.multivoice.html#braidio.multivoice.Voice" title="braidio.multivoice.Voice"><code class="xref py py-class docutils literal notranslate"><span class="pre">braidio.multivoice.Voice</span></code></a>, <code class="docutils literal notranslate"><span class="pre">braidio.Voice</span></code>: that is one
 voice of a narration pool, an ElevenLabs id and name.)</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="braidio.tts.VoiceBackend.narrate">
+<span class="sig-name descname"><span class="pre">narrate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_path</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_cache_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kw</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/tts.html#VoiceBackend.narrate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.tts.VoiceBackend.narrate" title="Link to this definition">#</a></dt>
+<dd><p>Narrate <code class="docutils literal notranslate"><span class="pre">text</span></code> to <code class="docutils literal notranslate"><span class="pre">out_path</span></code>; with <code class="docutils literal notranslate"><span class="pre">return_cache_status</span></code> also say whether the cache served it.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="braidio.tts.VoiceBackend.render_dialogue">
+<span class="sig-name descname"><span class="pre">render_dialogue</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">turns</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cast</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_cache_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kw</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/tts.html#VoiceBackend.render_dialogue"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.tts.VoiceBackend.render_dialogue" title="Link to this definition">#</a></dt>
+<dd><p>Render the dialogue <code class="docutils literal notranslate"><span class="pre">turns</span></code> with the <code class="docutils literal notranslate"><span class="pre">cast</span></code> to <code class="docutils literal notranslate"><span class="pre">out_path</span></code>.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -666,6 +714,22 @@ before caching (<code class="docutils literal notranslate"><span class="pre">val
 </div>
 <dl class="field-list simple">
 </dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="braidio.tts.VoxyVoice.narrate">
+<span class="sig-name descname"><span class="pre">narrate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_path</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_cache_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">_</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/tts.html#VoxyVoice.narrate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.tts.VoxyVoice.narrate" title="Link to this definition">#</a></dt>
+<dd><p>Narrate <code class="docutils literal notranslate"><span class="pre">text</span></code> to <code class="docutils literal notranslate"><span class="pre">out_path</span></code>; with <code class="docutils literal notranslate"><span class="pre">return_cache_status</span></code> also say whether the cache served it.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="braidio.tts.VoxyVoice.render_dialogue">
+<span class="sig-name descname"><span class="pre">render_dialogue</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">turns</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cast</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_cache_status</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kw</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/braidio/tts.html#VoxyVoice.render_dialogue"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#braidio.tts.VoxyVoice.render_dialogue" title="Link to this definition">#</a></dt>
+<dd><p>Render the dialogue <code class="docutils literal notranslate"><span class="pre">turns</span></code> with the <code class="docutils literal notranslate"><span class="pre">cast</span></code> to <code class="docutils literal notranslate"><span class="pre">out_path</span></code>.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
 <dl class="py attribute">
 <dt class="sig sig-object py" id="braidio.tts.VoxyVoice.validate">
 <span class="sig-name descname"><span class="pre">validate</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'rate'</span></span><a class="headerlink" href="#braidio.tts.VoxyVoice.validate" title="Link to this definition">#</a></dt>
@@ -967,16 +1031,30 @@ Any other voice: none, so every break becomes real silence between turns.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.DEFAULT_MODEL_ID"><code class="docutils literal notranslate"><span class="pre">DEFAULT_MODEL_ID</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.DEFAULT_TTS"><code class="docutils literal notranslate"><span class="pre">DEFAULT_TTS</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.DialogueSegment"><code class="docutils literal notranslate"><span class="pre">DialogueSegment</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.ElevenLabsVoice"><code class="docutils literal notranslate"><span class="pre">ElevenLabsVoice</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.ElevenLabsVoice"><code class="docutils literal notranslate"><span class="pre">ElevenLabsVoice</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.ElevenLabsVoice.narrate"><code class="docutils literal notranslate"><span class="pre">ElevenLabsVoice.narrate()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.ElevenLabsVoice.render_dialogue"><code class="docutils literal notranslate"><span class="pre">ElevenLabsVoice.render_dialogue()</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.Speak"><code class="docutils literal notranslate"><span class="pre">Speak</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.SpeakVoice"><code class="docutils literal notranslate"><span class="pre">SpeakVoice</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.SpeakVoice"><code class="docutils literal notranslate"><span class="pre">SpeakVoice</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.SpeakVoice.narrate"><code class="docutils literal notranslate"><span class="pre">SpeakVoice.narrate()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.SpeakVoice.render_dialogue"><code class="docutils literal notranslate"><span class="pre">SpeakVoice.render_dialogue()</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.TTSBackend"><code class="docutils literal notranslate"><span class="pre">TTSBackend</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.TTSBackend.cost_usd"><code class="docutils literal notranslate"><span class="pre">TTSBackend.cost_usd()</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.TTS_BACKENDS"><code class="docutils literal notranslate"><span class="pre">TTS_BACKENDS</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.VoiceBackend"><code class="docutils literal notranslate"><span class="pre">VoiceBackend</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.VoiceBackend"><code class="docutils literal notranslate"><span class="pre">VoiceBackend</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.VoiceBackend.narrate"><code class="docutils literal notranslate"><span class="pre">VoiceBackend.narrate()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.VoiceBackend.render_dialogue"><code class="docutils literal notranslate"><span class="pre">VoiceBackend.render_dialogue()</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.VoxyVoice"><code class="docutils literal notranslate"><span class="pre">VoxyVoice</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.VoxyVoice.narrate"><code class="docutils literal notranslate"><span class="pre">VoxyVoice.narrate()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.VoxyVoice.render_dialogue"><code class="docutils literal notranslate"><span class="pre">VoxyVoice.render_dialogue()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.tts.VoxyVoice.validate"><code class="docutils literal notranslate"><span class="pre">VoxyVoice.validate</span></code></a></li>
 </ul>
 </li>

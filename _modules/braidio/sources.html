@@ -791,6 +791,7 @@ window.runMermaid = runMermaid;</script>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">duration_s</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Length in seconds (``end_s - start_s``, rounded to ms)."""</span>
         <span class="k">return</span> <span class="nb">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">end_s</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_s</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span></div>
 
 
@@ -809,6 +810,7 @@ window.runMermaid = runMermaid;</script>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">duration_s</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Length in seconds (``end_s - start_s``, rounded to ms)."""</span>
         <span class="k">return</span> <span class="nb">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">end_s</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_s</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span></div>
 
 
@@ -819,7 +821,12 @@ window.runMermaid = runMermaid;</script>
 <span class="k">class</span><span class="w"> </span><span class="nc">SegmentSource</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Resolve an opaque ``reference`` to a :class:`ResolvedSegment` (or None)."""</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reference</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ResolvedSegment</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span></div>
+<div class="viewcode-block" id="SegmentSource.resolve">
+<a class="viewcode-back" href="../../_autosummary/braidio.sources.html#braidio.SegmentSource.resolve">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reference</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ResolvedSegment</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Resolve ``reference`` to a segment, or ``None`` when it names nothing known."""</span>
+        <span class="o">...</span></div>
+</div>
 
 
 
@@ -923,7 +930,10 @@ window.runMermaid = runMermaid;</script>
         <span class="bp">self</span><span class="o">.</span><span class="n">_song_end</span> <span class="o">=</span> <span class="n">song_end_s</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_min_score</span> <span class="o">=</span> <span class="n">min_score</span>
 
+<div class="viewcode-block" id="TimedLineSegmentSource.resolve">
+<a class="viewcode-back" href="../../_autosummary/braidio.sources.html#braidio.TimedLineSegmentSource.resolve">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reference</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ResolvedSegment</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Resolve ``reference`` to a segment, or ``None`` when it names nothing known."""</span>
         <span class="n">seg</span> <span class="o">=</span> <span class="n">find_segment</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_lines</span><span class="p">,</span> <span class="n">reference</span><span class="p">,</span> <span class="n">min_score</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_min_score</span><span class="p">,</span> <span class="n">song_end_s</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_song_end</span>
         <span class="p">)</span>
@@ -936,6 +946,7 @@ window.runMermaid = runMermaid;</script>
             <span class="n">score</span><span class="o">=</span><span class="n">seg</span><span class="o">.</span><span class="n">score</span><span class="p">,</span>
             <span class="n">matched_text</span><span class="o">=</span><span class="n">seg</span><span class="o">.</span><span class="n">matched_text</span><span class="p">,</span>
         <span class="p">)</span></div>
+</div>
 
 
 
@@ -963,7 +974,10 @@ window.runMermaid = runMermaid;</script>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">assets</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_assets</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">assets</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
 
+<div class="viewcode-block" id="SpanSource.resolve">
+<a class="viewcode-back" href="../../_autosummary/braidio.sources.html#braidio.SpanSource.resolve">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reference</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ResolvedSegment</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Resolve ``reference`` to a segment, or ``None`` when it names nothing known."""</span>
         <span class="n">asset</span><span class="p">,</span> <span class="n">at</span><span class="p">,</span> <span class="n">span</span> <span class="o">=</span> <span class="n">reference</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">rpartition</span><span class="p">(</span><span class="s2">"@"</span><span class="p">)</span>
         <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assets</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">asset</span><span class="p">)</span> <span class="k">if</span> <span class="n">at</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="n">start</span><span class="p">,</span> <span class="n">dash</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">span</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)</span>
@@ -976,6 +990,7 @@ window.runMermaid = runMermaid;</script>
         <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">start_s</span> <span class="o">&lt;</span> <span class="n">end_s</span> <span class="ow">or</span> <span class="n">end_s</span> <span class="o">==</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"inf"</span><span class="p">):</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="k">return</span> <span class="n">ResolvedSegment</span><span class="p">(</span><span class="n">asset_path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">start_s</span><span class="o">=</span><span class="n">start_s</span><span class="p">,</span> <span class="n">end_s</span><span class="o">=</span><span class="n">end_s</span><span class="p">)</span></div>
+</div>
 
 
 
@@ -1111,9 +1126,13 @@ window.runMermaid = runMermaid;</script>
         <span class="p">)</span></div>
 
 
+<div class="viewcode-block" id="NamespacedSegmentSource.resolve">
+<a class="viewcode-back" href="../../_autosummary/braidio.sources.html#braidio.NamespacedSegmentSource.resolve">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reference</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ResolvedSegment</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Resolve ``reference`` to a segment, or ``None`` when it names nothing known."""</span>
         <span class="n">key</span><span class="p">,</span> <span class="n">body</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">reference</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sources</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">body</span><span class="p">)</span></div>
+</div>
 
 </pre></div>
 

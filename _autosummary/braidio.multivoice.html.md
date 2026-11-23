@@ -22,7 +22,7 @@ those need curation — the premade pools below are the safe default.
 | [`group_turns`](#braidio.multivoice.group_turns)(segments, \*[, min_turn, ...])          | Group consecutive segments into *turns* of `min_turn..max_turn` segments.                                       |
 | [`render_multivoice`](#braidio.multivoice.render_multivoice)(segments, pool, \*, out_path)     | Render `segments` cycling `pool` → `out_path`.                                                                  |
 | [`split_segments`](#braidio.multivoice.split_segments)(text)                                | Split narration into sentence-level segments (markup removed).                                                  |
-| `strip_markup`(text)                                                                                 |                                                                                                                 |
+| [`strip_markup`](#braidio.multivoice.strip_markup)(text)                                  | `text` with its markup replaced by spaces.                                                                      |
 
 ### Classes
 
@@ -86,3 +86,10 @@ so connected clauses stay with one speaker.
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+### braidio.multivoice.strip_markup(text)
+
+`text` with its markup replaced by spaces.
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)

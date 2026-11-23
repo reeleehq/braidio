@@ -85,6 +85,14 @@ replaces the ElevenLabs synthesis. `return_cache_status` is forwarded
 only when asked for, so the plain `narrate` shape still works as the
 replacement.
 
+#### narrate(text, out_path, , return_cache_status=False, \*\*kw)
+
+Narrate `text` to `out_path`; with `return_cache_status` also say whether the cache served it.
+
+#### render_dialogue(turns, cast, , out_path, return_cache_status=False, \*\*kw)
+
+Render the dialogue `turns` with the `cast` to `out_path`.
+
 ### braidio.tts.Speak
 
 `speak(text, *, voice) -> (audio_bytes, format)`,
@@ -104,6 +112,14 @@ Any other voice: a [`Speak`](#braidio.tts.Speak) callable (a registered backend,
 model, a test). Never cached, and with no one-pass dialogue, so a dialogue
 is spoken turn by turn ([`braidio.conversation.render_turns_sequential()`](braidio.conversation.html.md#braidio.conversation.render_turns_sequential)),
 its per-turn parts removed once the exchange is assembled.
+
+#### narrate(text, out_path, , return_cache_status=False, \*\*kw)
+
+Narrate `text` to `out_path`; with `return_cache_status` also say whether the cache served it.
+
+#### render_dialogue(turns, cast, , out_path, return_cache_status=False, \*\*kw)
+
+Render the dialogue `turns` with the `cast` to `out_path`.
 
 ### *class* braidio.tts.TTSBackend(speak=None, usd_per_1k_chars=None, voice=None)
 
@@ -147,6 +163,14 @@ one-pass dialogue renders it turn by turn through its own `narrate`
 (Not [`braidio.multivoice.Voice`](braidio.multivoice.html.md#braidio.multivoice.Voice), `braidio.Voice`: that is one
 voice of a narration pool, an ElevenLabs id and name.)
 
+#### narrate(text, out_path, , return_cache_status=False, \*\*kw)
+
+Narrate `text` to `out_path`; with `return_cache_status` also say whether the cache served it.
+
+#### render_dialogue(turns, cast, , out_path, return_cache_status=False, \*\*kw)
+
+Render the dialogue `turns` with the `cast` to `out_path`.
+
 ### *class* braidio.tts.VoxyVoice(name, backend, voice=None, model_id=None, instruction=None, voice_map=dict(), options=dict(), cache=True, validate='rate')
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
@@ -181,6 +205,14 @@ register_voxy_voice("seed-tim", backend="fal", voice="tim_en",
                     usd_per_1k_chars=0.03)
 render_format(fmt, script, source=None, config=fmt.weave.with_(tts="seed-tim"))
 ```
+
+#### narrate(text, out_path, , voice_id=None, return_cache_status=False, \*\*\_)
+
+Narrate `text` to `out_path`; with `return_cache_status` also say whether the cache served it.
+
+#### render_dialogue(turns, cast, , out_path, return_cache_status=False, \*\*kw)
+
+Render the dialogue `turns` with the `cast` to `out_path`.
 
 #### validate *: [Any](https://docs.python.org/3/library/typing.html#typing.Any)* *= 'rate'*
 

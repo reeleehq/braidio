@@ -818,7 +818,10 @@ window.runMermaid = runMermaid;</script>
         <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"ffmpeg/ffprobe not found on PATH (brew install ffmpeg)."</span><span class="p">)</span>
 
 
+<div class="viewcode-block" id="duration_s">
+<a class="viewcode-back" href="../../_autosummary/braidio.weave.html#braidio.duration_s">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">duration_s</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The media duration in seconds, read with ``ffprobe``."""</span>
     <span class="n">_require_ffmpeg</span><span class="p">()</span>
     <span class="n">r</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
         <span class="p">[</span><span class="s2">"ffprobe"</span><span class="p">,</span> <span class="s2">"-v"</span><span class="p">,</span> <span class="s2">"quiet"</span><span class="p">,</span> <span class="s2">"-print_format"</span><span class="p">,</span> <span class="s2">"json"</span><span class="p">,</span> <span class="s2">"-show_format"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)],</span>
@@ -826,7 +829,8 @@ window.runMermaid = runMermaid;</script>
         <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span>
-    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">stdout</span><span class="p">)[</span><span class="s2">"format"</span><span class="p">][</span><span class="s2">"duration"</span><span class="p">])</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">stdout</span><span class="p">)[</span><span class="s2">"format"</span><span class="p">][</span><span class="s2">"duration"</span><span class="p">])</span></div>
+
 
 
 <div class="viewcode-block" id="extract_padded">

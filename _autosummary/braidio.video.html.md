@@ -82,6 +82,10 @@ With `footage` set, the panel plays that video over its span and
 `still`/`style`/`zoom` are not rendered: `still` stays the panel’s
 poster (what a storyboard or a picker shows for it).
 
+#### *property* duration *: [float](https://docs.python.org/3/builtins/functions.html#float)*
+
+Length in seconds (`end - start`).
+
 ### *class* braidio.video.Span(start, end, beat_index, kind='', label='')
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
@@ -90,6 +94,10 @@ A stretch of screen time, before any image is chosen for it.
 
 `beat_index` / `kind` / `label` carry the beat this came from, so a
 caller assigning pictures can see what is being said over each span.
+
+#### *property* duration *: [float](https://docs.python.org/3/builtins/functions.html#float)*
+
+Length in seconds (`end - start`).
 
 ### braidio.video.assign_stills(spans, stills, , zoom=1.18)
 

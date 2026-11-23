@@ -538,6 +538,12 @@ a phone video: anything ffmpeg reads.</p>
 poster (what a storyboard or a picker shows for it).</p>
 <dl class="field-list simple">
 </dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="braidio.video.Panel.duration">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">duration</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></span><a class="headerlink" href="#braidio.video.Panel.duration" title="Link to this definition">#</a></dt>
+<dd><p>Length in seconds (<code class="docutils literal notranslate"><span class="pre">end</span> <span class="pre">-</span> <span class="pre">start</span></code>).</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -549,6 +555,12 @@ poster (what a storyboard or a picker shows for it).</p>
 caller assigning pictures can see what is being said over each span.</p>
 <dl class="field-list simple">
 </dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="braidio.video.Span.duration">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">duration</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></span><a class="headerlink" href="#braidio.video.Span.duration" title="Link to this definition">#</a></dt>
+<dd><p>Length in seconds (<code class="docutils literal notranslate"><span class="pre">end</span> <span class="pre">-</span> <span class="pre">start</span></code>).</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py function">
@@ -896,8 +908,14 @@ near-lossless (they are re-encoded once more, by <a class="reference internal" h
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.CANVAS_VERSION"><code class="docutils literal notranslate"><span class="pre">CANVAS_VERSION</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.Footage"><code class="docutils literal notranslate"><span class="pre">Footage</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.Panel"><code class="docutils literal notranslate"><span class="pre">Panel</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.Span"><code class="docutils literal notranslate"><span class="pre">Span</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.Panel"><code class="docutils literal notranslate"><span class="pre">Panel</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.Panel.duration"><code class="docutils literal notranslate"><span class="pre">Panel.duration</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.Span"><code class="docutils literal notranslate"><span class="pre">Span</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.Span.duration"><code class="docutils literal notranslate"><span class="pre">Span.duration</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.assign_stills"><code class="docutils literal notranslate"><span class="pre">assign_stills()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.concat_argv"><code class="docutils literal notranslate"><span class="pre">concat_argv()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#braidio.video.content_keyed_prepare"><code class="docutils literal notranslate"><span class="pre">content_keyed_prepare()</span></code></a></li>

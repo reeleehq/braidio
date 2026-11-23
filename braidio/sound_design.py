@@ -308,6 +308,29 @@ def _foley_score(segments, **kwargs):
     return foley.score(segments, **kwargs)
 
 
+def master_levels(
+    master: Any, *, default_lufs: float = -16.0, default_peak: float = -1.0
+) -> tuple[float, float]:
+    """``(target LUFS, true-peak ceiling dBTP)`` of a designer's delivery profile
+    (``"podcast"``, ``"streaming"``... or a foley ``MasterProfile``), for a mix
+    re-mastered after the design (a bed laid back under it, braidio#262), so it
+    lands where the design asked. Read through ``foley.resolve_master``; when
+    foley is not installed (a host's own designer) or does not know the name,
+    the defaults (the render's own level)."""
+    if master is not None and not isinstance(master, str):
+        lufs = getattr(master, "target_lufs", None)
+        peak = getattr(master, "true_peak_db", None)
+        if lufs is not None and peak is not None:
+            return float(lufs), float(peak)
+    try:
+        from foley import resolve_master
+
+        profile = resolve_master(master)
+    except (ImportError, KeyError, ValueError):
+        return default_lufs, default_peak
+    return float(profile.target_lufs), float(profile.true_peak_db)
+
+
 def level_change_db(before: str | Path, after: str | Path) -> float:
     """How much louder ``after`` is than ``before`` (integrated loudness, dB);
     ``0.0`` when either is silent, so a silent voice moves no bed.

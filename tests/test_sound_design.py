@@ -312,7 +312,9 @@ def test_under_a_bed_the_designer_hears_the_voice_and_the_bed_comes_back(
     )
     song = tone(tmp_path / "song.mp3", 660, 3.0)
     out = braidio.render_production(
-        braidio.Script(title="t", id_slug="bed", beats=[braidio.Narration("Rain fell.")]),
+        braidio.Script(
+            title="t", id_slug="bed", beats=[braidio.Narration("Rain fell.")]
+        ),
         source=_ToneSource(song),
         out_path=tmp_path / "ep.mp3",
         normalize=False,
@@ -328,3 +330,49 @@ def test_under_a_bed_the_designer_hears_the_voice_and_the_bed_comes_back(
     assert rms(decode(out), 0.1, 0.9) > AUDIBLE_RMS  # the bed is back
     record = json.loads(out.with_suffix(SOUND_SIDECAR_SUFFIX).read_text())
     assert "braidio#262" in record["bed"]
+
+
+@needs_ffmpeg
+def test_a_failed_design_under_a_bed_leaves_no_stems_behind(
+    tmp_path, tone_voices, monkeypatch
+):
+    """The stems' temporary folder is removed whatever fails after it is made."""
+    import braidio.render as render_mod
+
+    made = []
+    real = render_mod._stem_paths
+
+    def recording(out):
+        made.append(real(out))
+        return made[-1]
+
+    monkeypatch.setattr(render_mod, "_stem_paths", recording)
+
+    def broken(segments, **kwargs):
+        raise RuntimeError("the designer fell over")
+
+    bed = braidio.MusicBed(str(tone(tmp_path / "bed.wav", 110, 20.0)), gain_db=0.0)
+    with pytest.raises(RuntimeError, match="fell over"):
+        braidio.render_production(
+            braidio.Script(
+                title="t", id_slug="bed", beats=[braidio.Narration("Rain.")]
+            ),
+            source=_ToneSource(tone(tmp_path / "song.mp3", 660, 3.0)),
+            out_path=tmp_path / "ep.mp3",
+            normalize=False,
+            music_bed=bed,
+            sound_design=SoundDesign(designer=broken, writer=_mark),
+            tts_dir=tmp_path / "tts",
+        )
+    ((voice, _bed),) = made
+    assert not voice.parent.exists()
+
+
+def test_master_levels_read_the_designs_profile_and_fall_back():
+    """A bed laid back under a design is mastered where the design asked."""
+    profile = SimpleNamespace(target_lufs=-14.0, true_peak_db=-2.0)
+    assert sd.master_levels(profile) == (-14.0, -2.0)
+    assert sd.master_levels("no-such-profile", default_lufs=-18.0) == (-18.0, -1.0)
+    foley = pytest.importorskip("foley")
+    p = foley.resolve_master("streaming")
+    assert sd.master_levels("streaming") == (p.target_lufs, p.true_peak_db)

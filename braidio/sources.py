@@ -69,6 +69,7 @@ class Segment:
 
     @property
     def duration_s(self) -> float:
+        """Length in seconds (``end_s - start_s``, rounded to ms)."""
         return round(self.end_s - self.start_s, 3)
 
 
@@ -84,6 +85,7 @@ class ResolvedSegment:
 
     @property
     def duration_s(self) -> float:
+        """Length in seconds (``end_s - start_s``, rounded to ms)."""
         return round(self.end_s - self.start_s, 3)
 
 
@@ -91,7 +93,9 @@ class ResolvedSegment:
 class SegmentSource(Protocol):
     """Resolve an opaque ``reference`` to a :class:`ResolvedSegment` (or None)."""
 
-    def resolve(self, reference: str) -> ResolvedSegment | None: ...
+    def resolve(self, reference: str) -> ResolvedSegment | None:
+        """Resolve ``reference`` to a segment, or ``None`` when it names nothing known."""
+        ...
 
 
 def load_timing(path: str | Path) -> list[TimedLine]:
@@ -187,6 +191,7 @@ class TimedLineSegmentSource:
         self._min_score = min_score
 
     def resolve(self, reference: str) -> ResolvedSegment | None:
+        """Resolve ``reference`` to a segment, or ``None`` when it names nothing known."""
         seg = find_segment(
             self._lines, reference, min_score=self._min_score, song_end_s=self._song_end
         )
@@ -224,6 +229,7 @@ class SpanSource:
         self._assets = {name: Path(path) for name, path in assets.items()}
 
     def resolve(self, reference: str) -> ResolvedSegment | None:
+        """Resolve ``reference`` to a segment, or ``None`` when it names nothing known."""
         asset, at, span = reference.strip().rpartition("@")
         path = self._assets.get(asset) if at else None
         start, dash, end = span.partition("-")
@@ -363,5 +369,6 @@ class NamespacedSegmentSource:
         )
 
     def resolve(self, reference: str) -> ResolvedSegment | None:
+        """Resolve ``reference`` to a segment, or ``None`` when it names nothing known."""
         key, body = self.split(reference)
         return self._sources[key].resolve(body)

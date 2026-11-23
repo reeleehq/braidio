@@ -380,7 +380,9 @@ class LineSynthesizer(Protocol):
         api_key: str | None,
         cache,
         refresh: bool,
-    ) -> tuple[bytes, Sequence[DialogueSegment], bool]: ...
+    ) -> tuple[bytes, Sequence[DialogueSegment], bool]:
+        """Synthesize one line of dialogue and return its audio."""
+        ...
 
 
 def synthesize_line(

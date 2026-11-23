@@ -90,6 +90,8 @@ class PlannedBeat:
 
 @dataclass
 class RenderPlan:
+    """What a render will do under a rights profile: the planned beats and what was dropped or substituted."""
+
     profile: Profile
     beats: list[PlannedBeat] = field(default_factory=list)
     dropped: list[str] = field(default_factory=list)

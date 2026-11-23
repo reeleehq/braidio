@@ -94,6 +94,7 @@ class BeatSpan:
 
     @property
     def end(self) -> float:
+        """The end time in seconds (``start + duration``)."""
         return round(self.start + self.duration, 3)
 
 
@@ -139,6 +140,7 @@ class TimelineBreakdown:
         return {k: v / tot for k, v in t.items()}
 
     def to_dict(self) -> dict:
+        """The timeline as a JSON-serialisable dict."""
         return {
             "title": self.title,
             "duration": self.duration,

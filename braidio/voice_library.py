@@ -62,6 +62,7 @@ class SharedVoice:
 
     @classmethod
     def from_api(cls, d: dict) -> SharedVoice:
+        """Build a voice from an API payload, keeping unknown fields in ``extra``."""
         known = {f for f in cls.__dataclass_fields__ if f != "extra"}
         kw = {k: d[k] for k in known if d.get(k) is not None}
         return cls(**kw, extra={k: v for k, v in d.items() if k not in known})

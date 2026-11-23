@@ -247,6 +247,7 @@ class ElevenLabsVoice:
     name: ClassVar[str] = DEFAULT_TTS
 
     def narrate(self, text, out_path, *, return_cache_status: bool = False, **kw):
+        """Narrate ``text`` to ``out_path``; with ``return_cache_status`` also say whether the cache served it."""
         import braidio
 
         if return_cache_status:
@@ -256,6 +257,7 @@ class ElevenLabsVoice:
     def render_dialogue(
         self, turns, cast, *, out_path, return_cache_status: bool = False, **kw
     ):
+        """Render the dialogue ``turns`` with the ``cast`` to ``out_path``."""
         import braidio
 
         if return_cache_status:
@@ -281,12 +283,14 @@ class SpeakVoice:
         object.__setattr__(self, "_narrator", narrator_from_speak(self.speak))
 
     def narrate(self, text, out_path, *, return_cache_status: bool = False, **kw):
+        """Narrate ``text`` to ``out_path``; with ``return_cache_status`` also say whether the cache served it."""
         path = self._narrator(text, out_path, **kw)
         return (path, False) if return_cache_status else path
 
     def render_dialogue(
         self, turns, cast, *, out_path, return_cache_status: bool = False, **kw
     ):
+        """Render the dialogue ``turns`` with the ``cast`` to ``out_path``."""
         import shutil
         import tempfile
 
@@ -362,6 +366,7 @@ class VoxyVoice:
     def narrate(
         self, text, out_path, *, voice_id=None, return_cache_status: bool = False, **_
     ):
+        """Narrate ``text`` to ``out_path``; with ``return_cache_status`` also say whether the cache served it."""
         import voxy
 
         options = dict(self.options)
@@ -387,6 +392,7 @@ class VoxyVoice:
     def render_dialogue(
         self, turns, cast, *, out_path, return_cache_status: bool = False, **kw
     ):
+        """Render the dialogue ``turns`` with the ``cast`` to ``out_path``."""
         # no one-pass dialogue: turn by turn, exactly as SpeakVoice does
         return SpeakVoice.render_dialogue(
             self,
@@ -445,11 +451,15 @@ class VoiceBackend(Protocol):
 
     name: str
 
-    def narrate(self, text, out_path, *, return_cache_status: bool = False, **kw): ...
+    def narrate(self, text, out_path, *, return_cache_status: bool = False, **kw):
+        """Narrate ``text`` to ``out_path``; with ``return_cache_status`` also say whether the cache served it."""
+        ...
 
     def render_dialogue(
         self, turns, cast, *, out_path, return_cache_status: bool = False, **kw
-    ): ...
+    ):
+        """Render the dialogue ``turns`` with the ``cast`` to ``out_path``."""
+        ...
 
     # Both return the file they wrote (it must exist), at ``out_path`` or with
     # its own suffix; a file elsewhere (a voice's own cache) is copied into the

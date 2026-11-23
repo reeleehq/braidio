@@ -141,6 +141,13 @@ class EpisodeToSoundDesign(NarrationToSoundDesign):
         completed = super()._complete_annotation(skeleton, artifact)
         project = _EXECUTING_PROJECT.get()
         if project is None:
+            warnings.warn(
+                f"{self.name}: a design completed outside execute(), so no project "
+                "is known: if its episode has a music bed, the bed is not laid back "
+                "under the design's mix",
+                RuntimeWarning,
+                stacklevel=2,
+            )
             return completed
         index = graph_index(project)
         episode = next(
@@ -156,6 +163,17 @@ class EpisodeToSoundDesign(NarrationToSoundDesign):
         )
 
 
+def _level_change_db(before, after) -> float:
+    """How much louder ``after`` is than ``before`` (integrated loudness, dB);
+    ``0.0`` when either is silent, so a silent voice moves no bed."""
+    import math
+
+    from mixing.loudness import file_loudness
+
+    change = file_loudness(after).integrated_lufs - file_loudness(before).integrated_lufs
+    return change if math.isfinite(change) else 0.0
+
+
 def _stem_ref(body: dict, stem: str) -> dict:
     """``{"artifact_id", "url"}`` of an episode body's ``stem`` (``"voice"`` /
     ``"bed"``), the shape :func:`media_path` reads."""
@@ -166,8 +184,12 @@ def _with_bed(project, episode: Annotation, body: dict, *, index: dict) -> dict:
     """``body`` (a completed ``sound-design/v1``) naming its mix with the
     episode's bed stem laid back under it, mastered as the episode was.
 
-    The design's own mix (without the bed) stays in falaw's content store and is
-    named in ``notes``; ``master_report`` is still foley's, of that mix.
+    foley masters what it designs, so the voice comes back at another level than
+    the voice stem it heard; the bed is moved by the same amount (the design's
+    loudness less the voice stem's) to keep the episode's balance. The design's
+    own mix (without the bed) stays in falaw's content store and is named in
+    ``notes``; ``master_report`` measures the served mix, with foley's report of
+    the design under ``"design"``.
     """
     from falaw.content import default_content_store
     from nw.bodies.sound_design import SoundDesignBodyV1
@@ -180,6 +202,11 @@ def _with_bed(project, episode: Annotation, body: dict, *, index: dict) -> dict:
     bed = media_path(
         project.root, _stem_ref(episode.body, "bed"), what=f"episode {episode.id}'s bed stem"
     )
+    voice = media_path(
+        project.root,
+        _stem_ref(episode.body, "voice"),
+        what=f"episode {episode.id}'s voice stem",
+    )
     cfg = require_tier(resolve_parents(episode, index), TIER_WEAVE_CONFIG)
     weave = WeaveConfig.from_snapshot(cfg.body.get("config", {}))
     with tempfile.TemporaryDirectory(prefix="braidio-bed-") as work:
@@ -191,24 +218,32 @@ def _with_bed(project, episode: Annotation, body: dict, *, index: dict) -> dict:
             designed,
             bed,
             Path(work) / "design-with-bed.flac",
+            bed_gain_db=_level_change_db(voice, designed),
             target_lufs=weave.target_lufs,
             true_peak=weave.true_peak_dbtp,
             sample_rate=weave.sample_rate,
         )
         import braidio
+        from mixing.loudness import file_loudness
 
         duration = float(braidio.duration_s(out))
+        served_lufs = file_loudness(out).integrated_lufs
         bedded_id = store.put_blob(out.read_bytes())
     note = (
         f"the episode's music bed was laid back under the design and the sum "
         f"mastered to {weave.target_lufs:g} LUFS; the design without the bed is "
-        f"{designed_id}, which master_report measures (braidio#227)"
+        f"{designed_id}, which foley's report (master_report.design) measures "
+        "(braidio#227)"
     )
     return SoundDesignBodyV1.model_validate(
         {
             **body,
             "artifact_id": bedded_id,
             "duration_s": duration,
+            "master_report": {
+                "integrated_lufs": served_lufs,
+                "design": body.get("master_report", {}),
+            },
             "notes": [*body.get("notes", []), note],
         }
     ).model_dump(mode="json")

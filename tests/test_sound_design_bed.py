@@ -146,6 +146,8 @@ def test_with_a_bed_foley_hears_the_voice_and_the_served_mix_keeps_the_bed(
     body = episode.body
     voice, bed_stem = _path(body["voice_url"]), _path(body["bed_url"])
     assert body["voice_artifact_id"] and body["bed_artifact_id"]
+    # stems are not deliverables: kept out of the flat data/episodes listing
+    assert voice.parent.name == bed_stem.parent.name == "stems"
 
     # the stems: the voice has no bed in it (the narration is silence), the bed
     # stem is the bed, and the episode's own mix still has it
@@ -201,3 +203,33 @@ def test_without_a_bed_foley_hears_the_episode_and_the_design_is_foleys(
 @pytest.fixture
 def project(tmp_path):
     return braidio.Project.init(tmp_path / "proj", title="bed design")
+
+
+def test_the_stems_laid_back_together_keep_the_episodes_balance(
+    project, source, bed, monkeypatch, tmp_path
+):
+    """The voice stem is mastered on its own, so the bed stem carries that same
+    gain: ``lay_bed(voice, bed)`` must give back the episode's voice-to-bed
+    balance. An audible voice (a tone) then silence: the talk window holds voice
+    and bed, the silent beat the bed alone; their ratio is the balance."""
+    import math
+
+    calls = iter(range(10))
+
+    def fake_narrate(text, out, *, return_cache_status=False, **kw):
+        p = tone(Path(out), 220, 1.0) if next(calls) == 0 else silence(Path(out), 1.0)
+        return (p, False) if return_cache_status else p
+
+    monkeypatch.setattr(braidio, "narrate", fake_narrate)
+    episode = braidio.weave_project(project, _script(), source=source, bed=bed)
+    body = episode.body
+    relaid = braidio.weave.lay_bed(
+        _path(body["voice_url"]), _path(body["bed_url"]), tmp_path / "relaid.flac"
+    )
+
+    def balance_db(pcm):
+        return 20 * math.log10(rms(pcm, 0.1, 0.7) / rms(pcm, 1.2, 1.8))
+
+    assert (
+        abs(balance_db(decode(relaid)) - balance_db(decode(_path(body["url"])))) < 1.5
+    )

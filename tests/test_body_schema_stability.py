@@ -412,6 +412,10 @@ PINNED: dict[str, dict] = {
             "profile": "string",
             # additive (commentary-studio plan §3): the persisted cut points
             "timeline": "object<string,any>|null = null",
+            "voice_artifact_id": "string|null = null",
+            "voice_url": "string|null = null",
+            "bed_artifact_id": "string|null = null",
+            "bed_url": "string|null = null",
             "url": "string|null = null",
         },
     },

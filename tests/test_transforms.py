@@ -57,6 +57,14 @@ def patched_synthesis(monkeypatch):
         p.write_bytes(tag)
         return p
 
+    def _weave(out, *, voice_out_path=None, bed_out_path=None, **kw):
+        # the mixer's contract: with a bed, the stems are written too (braidio#227)
+        if kw.get("bed") is not None:
+            for stem, tag in ((voice_out_path, b"VOICE"), (bed_out_path, b"BED")):
+                if stem is not None:
+                    _write(stem, tag)
+        return _write(out, b"EPISODE")
+
     def _narrate(text, out, *, return_cache_status=False, **kw):
         p = _write(out, b"TTS")  # default: live synth (was_cached=False)
         return (p, False) if return_cache_status else p
@@ -68,7 +76,7 @@ def patched_synthesis(monkeypatch):
         lambda asset, start, end, out, **kw: _write(out, b"CLIP"),
     )
     monkeypatch.setattr(
-        braidio, "weave_timeline", lambda items, out, **kw: _write(out, b"EPISODE")
+        braidio, "weave_timeline", lambda items, out, **kw: _weave(out, **kw)
     )
     # scene breaks: stub the two ffmpeg-backed structure primitives too, so this
     # module stays ffmpeg-free (the real-audio graph path is covered in

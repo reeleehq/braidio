@@ -598,6 +598,28 @@ def _resolve_members(episode: Annotation, index: dict, *, what: str, fix: str) -
     return [index[m] for m in member_ids]
 
 
+#: Where an episode's stems are written, under ``data/episodes`` (braidio#227).
+STEMS_DIR = "stems"
+
+
+def _lacks_its_stems(project, episode: Annotation) -> bool:
+    """Whether ``episode`` has a music bed but no voice stem: woven before the
+    stems were written (braidio#227)."""
+    if episode.body.get("voice_artifact_id") or episode.body.get("voice_url"):
+        return False
+    index = graph_index(project)
+    structure = next(
+        (
+            p
+            for p in resolve_parents(episode, index)
+            if p.tier == TIER_PRODUCTION_STRUCTURE
+        ),
+        None,
+    )
+    body = structure.body if structure is not None else {}
+    return bool(body.get("bed_url") or body.get("bed_asset_id"))
+
+
 @register_transform(NAME)
 class WeaveToEpisode(BaseTransform):
     """All members — renders and scene breaks — (+ weave-config, + the
@@ -668,6 +690,10 @@ class WeaveToEpisode(BaseTransform):
             # Idempotent re-run: the same members under the same, still-fresh
             # config/structure/profile is the episode already there (braidio#51).
             existing = fresh_equivalent(project, skel)
+            if existing is not None and _lacks_its_stems(project, existing):
+                # woven before the stems existed (braidio#227): a design of it
+                # would hear the bed as speech, so it is woven again, once
+                existing = None
             if existing is not None:
                 return TransformResult(
                     annotations=(existing,),
@@ -729,12 +755,15 @@ class WeaveToEpisode(BaseTransform):
         overlap_kw = {"overlap": overlap} if overlap.is_on else {}
         # With a bed, the voice and the bed are also written as stems of the same
         # layout (braidio#227); without one the call is exactly what it was.
+        # in a folder of their own: a stem is not a deliverable, and the
+        # episode listings scan ``data/episodes`` flat
+        stems_dir = out_path.parent / STEMS_DIR
         stems = (
             {}
             if bed is None
             else {
-                "voice": out_path.with_name(f"{skel.id}.voice.mp3"),
-                "bed": out_path.with_name(f"{skel.id}.bed.flac"),
+                "voice": stems_dir / f"{skel.id}.voice.mp3",
+                "bed": stems_dir / f"{skel.id}.bed.flac",
             }
         )
         stem_kw = {f"{k}_out_path": v for k, v in stems.items()}
@@ -750,6 +779,9 @@ class WeaveToEpisode(BaseTransform):
             **overlap_kw,
             **stem_kw,
         )
+        # a mixer that wrote no stems (a substituted weave_timeline) leaves the
+        # episode without them: a design then hears the mix, as before
+        stems = {k: path for k, path in stems.items() if Path(path).is_file()}
         duration = safe_duration(out_path)
         artifact = audio_artifact(
             out_path,

@@ -430,9 +430,13 @@ def weave_timeline(
     (braidio#227), each sample-aligned with ``out`` from time 0:
     ``voice_out_path`` gets the mix without the bed, mastered like ``out`` (what
     a sound designer should listen to: a bed in the "voice" reads as speech to
-    an aligner), and ``bed_out_path`` gets the bed alone, unmastered, at the
-    level it has inside the mix (what :func:`lay_bed` puts back under a designed
-    voice). Without a bed neither is written: ``out`` already is the voice.
+    an aligner), and ``bed_out_path`` gets the bed alone, at the level it has
+    against that voice stem (the voice stem's mastering gain applied; without a
+    voice stem, the bed as it is in the mix before mastering), so
+    ``lay_bed(voice_stem, bed_stem)`` gives the mix's balance back. Without a bed
+    neither is written: ``out`` already is the voice. A bed stem is written
+    lossless (FLAC); a bed that peaks above full scale at that level is clipped
+    there, where the mix's limiter would have held it.
     """
     _require_ffmpeg()
     if not items:
@@ -512,10 +516,11 @@ def weave_timeline(
         sample_rate=sample_rate,
         master=master,
     )
+    voice_gain_db = 0.0
     if bed is not None and voice_out_path is not None:
         voice_out = Path(voice_out_path)
         voice_out.parent.mkdir(parents=True, exist_ok=True)
-        _mix_to(
+        leveled = _mix_to(
             item_inputs,
             item_filters,
             item_labels,
@@ -523,12 +528,22 @@ def weave_timeline(
             sample_rate=sample_rate,
             master=master,
         )
+        voice_gain_db = leveled.gain_db
     if bed is not None and bed_out_path is not None:
         bed_out = Path(bed_out_path)
         bed_out.parent.mkdir(parents=True, exist_ok=True)
-        # the bed inputs keep the indices they have in ``inputs``
+        # the bed inputs keep the indices they have in ``inputs``; the voice
+        # stem's mastering gain puts the bed at the level it has against it
+        gained = [
+            f"{''.join(bed_labels)}amix=inputs={len(bed_labels)}:normalize=0:"
+            f"dropout_transition=0,volume={voice_gain_db:.4f}dB[bedsum]"
+        ]
         _mix_to(
-            inputs, bed_filters, bed_labels, bed_out, sample_rate=sample_rate
+            inputs,
+            bed_filters + gained,
+            ["[bedsum]"],
+            bed_out,
+            sample_rate=sample_rate,
         )
     return out
 
@@ -577,6 +592,7 @@ def lay_bed(
     bed_path: str | Path,
     out_path: str | Path,
     *,
+    bed_gain_db: float = 0.0,
     target_lufs: float = -16.0,
     true_peak: float = -1.0,
     sample_rate: int = 44100,
@@ -584,17 +600,20 @@ def lay_bed(
     """Put a bed stem back under a mix, both from time 0, and master the sum.
 
     ``bed_path`` is what :func:`weave_timeline` wrote to ``bed_out_path``: the
-    bed at the level it had in the episode, so laying it under the voice the
-    episode was woven from (or a sound design of that voice, braidio#227) gives
-    the episode's balance back. Mastered as :func:`weave_timeline` masters.
-    Returns ``out_path``.
+    bed at the level it has against the voice stem, so laying it under that
+    voice gives the episode's balance back. Under a mix made *from* the voice
+    stem at another level (a sound design, which foley masters, braidio#227),
+    pass that change as ``bed_gain_db`` (the mix's loudness less the voice
+    stem's) so the bed follows the voice. Mastered as :func:`weave_timeline`
+    masters. Returns ``out_path``.
     """
     _require_ffmpeg()
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)
+    gain = f",volume={bed_gain_db:.4f}dB" if bed_gain_db else ""
     filters = [
-        f"[{i}:a]aformat=sample_rates={sample_rate}:channel_layouts=stereo[s{i}]"
-        for i in range(2)
+        f"[0:a]aformat=sample_rates={sample_rate}:channel_layouts=stereo[s0]",
+        f"[1:a]aformat=sample_rates={sample_rate}:channel_layouts=stereo{gain}[s1]",
     ]
     _mix_to(
         ["-i", str(mix_path), "-i", str(bed_path)],
@@ -615,12 +634,13 @@ def _mix_to(
     *,
     sample_rate: int,
     master: dict | None = None,
-) -> None:
+):
     """Sum ``labels`` (the outputs of ``filters`` over ``inputs``) into ``out``.
 
     With ``master`` (``target_lufs``, ``true_peak``), the sum is mastered as
-    :func:`weave_timeline` describes; without, it is written as it is (a stem:
-    lossless when ``out`` is FLAC or WAV).
+    :func:`weave_timeline` describes, and what :func:`mixing.loudness.level_file`
+    did (its ``gain_db``) is returned; without, it is written as it is (a stem:
+    lossless when ``out`` is FLAC or WAV) and ``None`` is returned.
     """
     mix = (
         "".join(labels)
@@ -652,7 +672,7 @@ def _mix_to(
 
     if master is None:
         _ffmpeg(out, _STEM_CODECS.get(out.suffix.lower(), "flac"))
-        return
+        return None
 
     # Mix, then master: one measured gain to ``target_lufs`` and a true-peak limit
     # at ``true_peak``. One-pass ``loudnorm`` would ride the gain through the mix
@@ -666,7 +686,7 @@ def _mix_to(
         # named after ``out``: a GainCappedWarning names this file
         unmastered = Path(work) / f"{out.stem}.wav"
         _ffmpeg(unmastered, _UNMASTERED_CODEC)
-        level_file(
+        return level_file(
             unmastered,
             out,
             target_lufs=master["target_lufs"],

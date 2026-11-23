@@ -99,6 +99,7 @@ def _require_ffmpeg() -> None:
 
 
 def duration_s(path: str | Path) -> float:
+    """The media duration in seconds, read with ``ffprobe``."""
     _require_ffmpeg()
     r = subprocess.run(
         ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", str(path)],

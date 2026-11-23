@@ -47,10 +47,12 @@ class Workspace:
 
     @classmethod
     def for_email(cls, email: str, *, root: Path | None = None) -> "Workspace":
+        """The workspace of ``email`` under ``root`` (default: the data root)."""
         return cls(email=email, root=root or data_root())
 
     @property
     def projects_dir(self) -> Path:
+        """The directory holding this user's projects."""
         return (
             self.root
             / "projects"
@@ -59,11 +61,13 @@ class Workspace:
 
     @property
     def renders_dir(self) -> Path:
+        """The directory holding this user's renders."""
         return (
             self.root / "renders" / check_path_segment(self.email.strip(), what="email")
         )
 
     def project_root(self, project_id: str) -> Path:
+        """The root directory of the project ``project_id``."""
         pid = check_path_segment(project_id.strip(), what="project_id")
         return self.projects_dir / pid
 
@@ -167,6 +171,7 @@ class Workspace:
 
     @property
     def assets_dir(self) -> Path:
+        """The directory holding this user's assets."""
         return (
             self.root / "assets" / check_path_segment(self.email.strip(), what="email")
         )

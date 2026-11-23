@@ -72,6 +72,7 @@ _BASE_SETTINGS = {
 
 
 def strip_markup(text: str) -> str:
+    """``text`` with its markup replaced by spaces."""
     return _MARKUP_RE.sub(" ", text)
 
 

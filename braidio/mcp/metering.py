@@ -97,6 +97,7 @@ class UsageLedger:
     store: MutableMapping
 
     def record(self, entry: dict) -> str:
+        """Store a ledger entry under ``<email>/<month>/<id>.json`` and return that key."""
         email = check_path_segment(entry["email"].strip(), what="ledger email")
         key = f"{email}/{entry['month']}/{entry['id']}.json"
         self.store[key] = entry
@@ -213,6 +214,7 @@ class MeteringMiddleware(Middleware):
         return email
 
     async def on_call_tool(self, context, call_next):
+        """Authorize the caller, then run the tool call metered under their email."""
         email = self._authorize()
         token = _CURRENT_EMAIL.set(email)
         try:

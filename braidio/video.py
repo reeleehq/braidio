@@ -149,6 +149,7 @@ class Span:
 
     @property
     def duration(self) -> float:
+        """Length in seconds (``end - start``)."""
         return self.end - self.start
 
 
@@ -184,6 +185,7 @@ class Panel:
 
     @property
     def duration(self) -> float:
+        """Length in seconds (``end - start``)."""
         return self.end - self.start
 
 

@@ -81,6 +81,7 @@ class BedRegion:
 
     @property
     def length_s(self) -> float:
+        """Length in seconds (``end_s - start_s``)."""
         return self.end_s - self.start_s
 
 

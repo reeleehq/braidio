@@ -136,6 +136,7 @@ class WeaveConfig:
 
     @property
     def is_multivoice(self) -> bool:
+        """Whether more than one voice is configured."""
         return len(self.voices) > 1
 
     def turn_overlap(self) -> TurnOverlap:

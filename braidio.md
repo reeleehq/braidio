@@ -1,4 +1,4 @@
-> built 2026-11-23 02:56 UTC from 333328a (main) · braidio 0.0.146. Details: build_info.json
+> built 2026-11-23 11:42 UTC from f276af9 (main) · braidio 0.0.146. Details: build_info.json
 
 # index.html.md
 
@@ -3072,7 +3072,7 @@ treated as absent.
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
 
-### braidio.weave_timeline(items, out_path, , clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, target_lufs=-16.0, true_peak=-1.0, sample_rate=44100, bed=None, overlap=None)
+### braidio.weave_timeline(items, out_path, , clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, target_lufs=-16.0, true_peak=-1.0, sample_rate=44100, bed=None, overlap=None, voice_out_path=None, bed_out_path=None)
 
 Place items on a timeline and mix. Clips overlap neighbours by
 `clip_edge_overlap_s` (their faded edges tuck under narration); narration
@@ -3093,6 +3093,18 @@ the outgoing voice’s talked-over tail (see `layout_placed()`).
 The mix is mastered with one measured gain to `target_lufs` (LUFS) and a
 true-peak limit at `true_peak` (dBTP), so it keeps its own dynamics: a
 quiet passage stays quiet relative to its loud neighbours.
+
+With a `bed`, two stems of the same layout can be written in the same call
+(braidio#227), each sample-aligned with `out` from time 0:
+`voice_out_path` gets the mix without the bed, mastered like `out` (what
+a sound designer should listen to: a bed in the “voice” reads as speech to
+an aligner), and `bed_out_path` gets the bed alone, at the level it has
+against that voice stem (the voice stem’s mastering gain applied; without a
+voice stem, the bed as it is in the mix before mastering), so
+`lay_bed(voice_stem, bed_stem)` gives the mix’s balance back. Without a bed
+neither is written: `out` already is the voice. A bed stem is written
+lossless (FLAC); a bed that peaks above full scale at that level is clipped
+there, where the mix’s limiter would have held it.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
@@ -6251,14 +6263,16 @@ This is the audio counterpart of a video timeline; it consumes plain file paths
 
 ### Functions
 
-| [`duck_regions`](_autosummary/braidio.weave.html.md#braidio.weave.duck_regions)(starts, durs, kinds, ...)          | Per part, the `(from_s, to_s)` span *within its own audio* to duck.    |
-|--------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
-| [`duration_s`](_autosummary/braidio.weave.html.md#braidio.weave.duration_s)(path)                                | The media duration in seconds, read with `ffprobe`.                    |
-| [`extract_padded`](_autosummary/braidio.weave.html.md#braidio.weave.extract_padded)(asset_path, start_s, end_s, ...) | Extract `[start_s-pre_roll, end_s+post_roll]` with in/out fades.       |
-| [`interrupting_boundaries`](_autosummary/braidio.weave.html.md#braidio.weave.interrupting_boundaries)(kinds, placements, ...) | The `(prev, cur)` sequential-part pairs where `cur` interrupts `prev`. |
-| [`layout_placed`](_autosummary/braidio.weave.html.md#braidio.weave.layout_placed)(kinds, durs, placements, \*, ...) | Start offset (s) of each part, placement-aware.                        |
-| [`layout_starts`](_autosummary/braidio.weave.html.md#braidio.weave.layout_starts)(kinds, durs, \*, ...)             | Start offset (s) of each part (all sequential).                        |
-| [`weave_timeline`](_autosummary/braidio.weave.html.md#braidio.weave.weave_timeline)(items, out_path, \*[, ...])      | Place items on a timeline and mix.                                     |
+| [`bed_spans`](_autosummary/braidio.weave.html.md#braidio.weave.bed_spans)(bed, starts, durs, items, \*, ...)     | The bed's files and their start times (seconds) under a laid-out timeline.   |
+|---------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------|
+| [`duck_regions`](_autosummary/braidio.weave.html.md#braidio.weave.duck_regions)(starts, durs, kinds, ...)           | Per part, the `(from_s, to_s)` span *within its own audio* to duck.          |
+| [`duration_s`](_autosummary/braidio.weave.html.md#braidio.weave.duration_s)(path)                                 | The media duration in seconds, read with `ffprobe`.                          |
+| [`extract_padded`](_autosummary/braidio.weave.html.md#braidio.weave.extract_padded)(asset_path, start_s, end_s, ...)  | Extract `[start_s-pre_roll, end_s+post_roll]` with in/out fades.             |
+| [`interrupting_boundaries`](_autosummary/braidio.weave.html.md#braidio.weave.interrupting_boundaries)(kinds, placements, ...)  | The `(prev, cur)` sequential-part pairs where `cur` interrupts `prev`.       |
+| [`lay_bed`](_autosummary/braidio.weave.html.md#braidio.weave.lay_bed)(mix_path, bed_path, out_path, \*[, ...]) | Put a bed stem back under a mix, both from time 0, and master the sum.       |
+| [`layout_placed`](_autosummary/braidio.weave.html.md#braidio.weave.layout_placed)(kinds, durs, placements, \*, ...)  | Start offset (s) of each part, placement-aware.                              |
+| [`layout_starts`](_autosummary/braidio.weave.html.md#braidio.weave.layout_starts)(kinds, durs, \*, ...)              | Start offset (s) of each part (all sequential).                              |
+| [`weave_timeline`](_autosummary/braidio.weave.html.md#braidio.weave.weave_timeline)(items, out_path, \*[, ...])       | Place items on a timeline and mix.                                           |
 
 ### Classes
 
@@ -6327,6 +6341,19 @@ ValueError: TurnOverlap.max_s (WeaveConfig.overlap_turn_s) must be in [0, 0.4], 
 
 Whether a change of speaker is laid out as an interruption.
 
+### braidio.weave.bed_spans(bed, starts, durs, items, , work_dir, stem, sample_rate=44100)
+
+The bed’s files and their start times (seconds) under a laid-out timeline.
+
+One whole-span file posted by `bed.lead_in_s` when no item is spotlit (the
+plain path); else, fade-to-spotlight, the regions around the spotlit items
+([`braidio.music.bed_regions()`](_autosummary/braidio.music.html.md#braidio.music.bed_regions)). `starts`/`durs` are the items’
+positions ([`layout_placed()`](_autosummary/braidio.weave.html.md#braidio.weave.layout_placed)); the files are written in `work_dir`,
+named from `stem`.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`float`](https://docs.python.org/3/builtins/functions.html#float)]]
+
 ### braidio.weave.duck_regions(starts, durs, kinds, placements, speakers, overlap)
 
 Per part, the `(from_s, to_s)` span *within its own audio* to duck.
@@ -6382,6 +6409,21 @@ speaker, and the speakers differ.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`int`](https://docs.python.org/3/builtins/functions.html#int)]]
 
+### braidio.weave.lay_bed(mix_path, bed_path, out_path, , bed_gain_db=0.0, target_lufs=-16.0, true_peak=-1.0, sample_rate=44100)
+
+Put a bed stem back under a mix, both from time 0, and master the sum.
+
+`bed_path` is what [`weave_timeline()`](_autosummary/braidio.weave.html.md#braidio.weave.weave_timeline) wrote to `bed_out_path`: the
+bed at the level it has against the voice stem, so laying it under that
+voice gives the episode’s balance back. Under a mix made *from* the voice
+stem at another level (a sound design, which foley masters, braidio#227),
+pass that change as `bed_gain_db` (the mix’s loudness less the voice
+stem’s) so the bed follows the voice. Mastered as [`weave_timeline()`](_autosummary/braidio.weave.html.md#braidio.weave.weave_timeline)
+masters. Returns `out_path`.
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
 ### braidio.weave.layout_placed(kinds, durs, placements, , clip_edge_overlap_s, narration_crossfade_s, speakers=None, overlap=None)
 
 Start offset (s) of each part, placement-aware. Pure function.
@@ -6424,7 +6466,7 @@ Start offset (s) of each part (all sequential). Thin wrapper over
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]
 
-### braidio.weave.weave_timeline(items, out_path, , clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, target_lufs=-16.0, true_peak=-1.0, sample_rate=44100, bed=None, overlap=None)
+### braidio.weave.weave_timeline(items, out_path, , clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, target_lufs=-16.0, true_peak=-1.0, sample_rate=44100, bed=None, overlap=None, voice_out_path=None, bed_out_path=None)
 
 Place items on a timeline and mix. Clips overlap neighbours by
 `clip_edge_overlap_s` (their faded edges tuck under narration); narration
@@ -6445,6 +6487,18 @@ the outgoing voice’s talked-over tail (see [`layout_placed()`](_autosummary/br
 The mix is mastered with one measured gain to `target_lufs` (LUFS) and a
 true-peak limit at `true_peak` (dBTP), so it keeps its own dynamics: a
 quiet passage stays quiet relative to its loud neighbours.
+
+With a `bed`, two stems of the same layout can be written in the same call
+(braidio#227), each sample-aligned with `out` from time 0:
+`voice_out_path` gets the mix without the bed, mastered like `out` (what
+a sound designer should listen to: a bed in the “voice” reads as speech to
+an aligner), and `bed_out_path` gets the bed alone, at the level it has
+against that voice stem (the voice stem’s mastering gain applied; without a
+voice stem, the bed as it is in the mix before mastering), so
+`lay_bed(voice_stem, bed_stem)` gives the mix’s balance back. Without a bed
+neither is written: `out` already is the voice. A bed stem is written
+lossless (FLAC); a bed that peaks above full scale at that level is clipped
+there, where the mix’s limiter would have held it.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
@@ -6608,18 +6662,20 @@ False
 
 # About this build
 
-This documentation was built on **2026-11-23 02:56 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/333328ad8b99ba982ab53f295e6566a7cedc1a0f"><code>333328a</code></a> on branch <code>main</code>, for **braidio 0.0.146** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-23 11:42 UTC** from commit <a href="https://github.com/reeleehq/braidio/commit/f276af908c6e0fbe79383e13f6295ede10d8e307"><code>f276af9</code></a> on branch <code>main</code>, for **braidio 0.0.146** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.146) is behind the latest release on PyPI (0.0.147): `pip install braidio` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                         |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/reeleehq/braidio/commit/333328ad8b99ba982ab53f295e6566a7cedc1a0f"><code>333328ad8b99ba982ab53f295e6566a7cedc1a0f</code></a> |
+| Commit              | <a href="https://github.com/reeleehq/braidio/commit/f276af908c6e0fbe79383e13f6295ede10d8e307"><code>f276af908c6e0fbe79383e13f6295ede10d8e307</code></a> |
 | Branch              | <code>main</code>                                                                                                                                       |
-| Tags at this commit | <code>0.0.146</code>                                                                                                                                    |
+| Tags at this commit | none                                                                                                                                                    |
 | Working tree        | clean                                                                                                                                                   |
 | Remote              | <code>https://github.com/reeleehq/braidio</code>                                                                                                        |
 
@@ -6628,15 +6684,15 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>reeleehq/braidio</code>                                                              |
-| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/45102396803">45102396803</a>     |
+| Run          | <a href="https://github.com/reeleehq/braidio/actions/runs/45166593703">45166593703</a>     |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>eff2bde3eb5fedb71110285d37cdc7f8461f0b81</code> (in the history of the built commit) |
+| Event commit | <code>f276af908c6e0fbe79383e13f6295ede10d8e307</code> (in the history of the built commit) |
 
 ## Tools
 
 |          |         |
 |----------|---------|
-| epythet  | 0.2.23  |
+| epythet  | 0.2.25  |
 | Sphinx   | 9.1.1   |
 | docutils | 0.22.4  |
 | Python   | 3.12.16 |
@@ -6655,14 +6711,14 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/braidio/0.0.146/">0.0.146</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/braidio/0.0.147/">0.0.147</a>, newer than the documented version (0.0.146).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/reeleehq/braidio && cd braidio
-git checkout 333328ad8b99ba982ab53f295e6566a7cedc1a0f
-pip install "epythet==0.2.23"
+git checkout f276af908c6e0fbe79383e13f6295ede10d8e307
+pip install "epythet==0.2.25"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
 

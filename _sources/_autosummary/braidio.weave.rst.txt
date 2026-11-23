@@ -15,10 +15,12 @@ braidio.weave
 
    .. autosummary::
    
+      bed_spans
       duck_regions
       duration_s
       extract_padded
       interrupting_boundaries
+      lay_bed
       layout_placed
       layout_starts
       weave_timeline

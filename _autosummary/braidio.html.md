@@ -1665,7 +1665,7 @@ treated as absent.
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)]
 
-### braidio.weave_timeline(items, out_path, , clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, target_lufs=-16.0, true_peak=-1.0, sample_rate=44100, bed=None, overlap=None)
+### braidio.weave_timeline(items, out_path, , clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, target_lufs=-16.0, true_peak=-1.0, sample_rate=44100, bed=None, overlap=None, voice_out_path=None, bed_out_path=None)
 
 Place items on a timeline and mix. Clips overlap neighbours by
 `clip_edge_overlap_s` (their faded edges tuck under narration); narration
@@ -1686,6 +1686,18 @@ the outgoing voice’s talked-over tail (see `layout_placed()`).
 The mix is mastered with one measured gain to `target_lufs` (LUFS) and a
 true-peak limit at `true_peak` (dBTP), so it keeps its own dynamics: a
 quiet passage stays quiet relative to its loud neighbours.
+
+With a `bed`, two stems of the same layout can be written in the same call
+(braidio#227), each sample-aligned with `out` from time 0:
+`voice_out_path` gets the mix without the bed, mastered like `out` (what
+a sound designer should listen to: a bed in the “voice” reads as speech to
+an aligner), and `bed_out_path` gets the bed alone, at the level it has
+against that voice stem (the voice stem’s mastering gain applied; without a
+voice stem, the bed as it is in the mix before mastering), so
+`lay_bed(voice_stem, bed_stem)` gives the mix’s balance back. Without a bed
+neither is written: `out` already is the voice. A bed stem is written
+lossless (FLAC); a bed that peaks above full scale at that level is clipped
+there, where the mix’s limiter would have held it.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)

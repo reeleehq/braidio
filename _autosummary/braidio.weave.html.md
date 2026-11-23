@@ -29,14 +29,16 @@ This is the audio counterpart of a video timeline; it consumes plain file paths
 
 ### Functions
 
-| [`duck_regions`](#braidio.weave.duck_regions)(starts, durs, kinds, ...)          | Per part, the `(from_s, to_s)` span *within its own audio* to duck.    |
-|--------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
-| [`duration_s`](#braidio.weave.duration_s)(path)                                | The media duration in seconds, read with `ffprobe`.                    |
-| [`extract_padded`](#braidio.weave.extract_padded)(asset_path, start_s, end_s, ...) | Extract `[start_s-pre_roll, end_s+post_roll]` with in/out fades.       |
-| [`interrupting_boundaries`](#braidio.weave.interrupting_boundaries)(kinds, placements, ...) | The `(prev, cur)` sequential-part pairs where `cur` interrupts `prev`. |
-| [`layout_placed`](#braidio.weave.layout_placed)(kinds, durs, placements, \*, ...) | Start offset (s) of each part, placement-aware.                        |
-| [`layout_starts`](#braidio.weave.layout_starts)(kinds, durs, \*, ...)             | Start offset (s) of each part (all sequential).                        |
-| [`weave_timeline`](#braidio.weave.weave_timeline)(items, out_path, \*[, ...])      | Place items on a timeline and mix.                                     |
+| [`bed_spans`](#braidio.weave.bed_spans)(bed, starts, durs, items, \*, ...)     | The bed's files and their start times (seconds) under a laid-out timeline.   |
+|---------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------|
+| [`duck_regions`](#braidio.weave.duck_regions)(starts, durs, kinds, ...)           | Per part, the `(from_s, to_s)` span *within its own audio* to duck.          |
+| [`duration_s`](#braidio.weave.duration_s)(path)                                 | The media duration in seconds, read with `ffprobe`.                          |
+| [`extract_padded`](#braidio.weave.extract_padded)(asset_path, start_s, end_s, ...)  | Extract `[start_s-pre_roll, end_s+post_roll]` with in/out fades.             |
+| [`interrupting_boundaries`](#braidio.weave.interrupting_boundaries)(kinds, placements, ...)  | The `(prev, cur)` sequential-part pairs where `cur` interrupts `prev`.       |
+| [`lay_bed`](#braidio.weave.lay_bed)(mix_path, bed_path, out_path, \*[, ...]) | Put a bed stem back under a mix, both from time 0, and master the sum.       |
+| [`layout_placed`](#braidio.weave.layout_placed)(kinds, durs, placements, \*, ...)  | Start offset (s) of each part, placement-aware.                              |
+| [`layout_starts`](#braidio.weave.layout_starts)(kinds, durs, \*, ...)              | Start offset (s) of each part (all sequential).                              |
+| [`weave_timeline`](#braidio.weave.weave_timeline)(items, out_path, \*[, ...])       | Place items on a timeline and mix.                                           |
 
 ### Classes
 
@@ -105,6 +107,19 @@ ValueError: TurnOverlap.max_s (WeaveConfig.overlap_turn_s) must be in [0, 0.4], 
 
 Whether a change of speaker is laid out as an interruption.
 
+### braidio.weave.bed_spans(bed, starts, durs, items, , work_dir, stem, sample_rate=44100)
+
+The bed’s files and their start times (seconds) under a laid-out timeline.
+
+One whole-span file posted by `bed.lead_in_s` when no item is spotlit (the
+plain path); else, fade-to-spotlight, the regions around the spotlit items
+([`braidio.music.bed_regions()`](braidio.music.html.md#braidio.music.bed_regions)). `starts`/`durs` are the items’
+positions ([`layout_placed()`](#braidio.weave.layout_placed)); the files are written in `work_dir`,
+named from `stem`.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path), [`float`](https://docs.python.org/3/builtins/functions.html#float)]]
+
 ### braidio.weave.duck_regions(starts, durs, kinds, placements, speakers, overlap)
 
 Per part, the `(from_s, to_s)` span *within its own audio* to duck.
@@ -160,6 +175,21 @@ speaker, and the speakers differ.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`int`](https://docs.python.org/3/builtins/functions.html#int)]]
 
+### braidio.weave.lay_bed(mix_path, bed_path, out_path, , bed_gain_db=0.0, target_lufs=-16.0, true_peak=-1.0, sample_rate=44100)
+
+Put a bed stem back under a mix, both from time 0, and master the sum.
+
+`bed_path` is what [`weave_timeline()`](#braidio.weave.weave_timeline) wrote to `bed_out_path`: the
+bed at the level it has against the voice stem, so laying it under that
+voice gives the episode’s balance back. Under a mix made *from* the voice
+stem at another level (a sound design, which foley masters, braidio#227),
+pass that change as `bed_gain_db` (the mix’s loudness less the voice
+stem’s) so the bed follows the voice. Mastered as [`weave_timeline()`](#braidio.weave.weave_timeline)
+masters. Returns `out_path`.
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
 ### braidio.weave.layout_placed(kinds, durs, placements, , clip_edge_overlap_s, narration_crossfade_s, speakers=None, overlap=None)
 
 Start offset (s) of each part, placement-aware. Pure function.
@@ -202,7 +232,7 @@ Start offset (s) of each part (all sequential). Thin wrapper over
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]
 
-### braidio.weave.weave_timeline(items, out_path, , clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, target_lufs=-16.0, true_peak=-1.0, sample_rate=44100, bed=None, overlap=None)
+### braidio.weave.weave_timeline(items, out_path, , clip_edge_overlap_s=0.5, narration_crossfade_s=0.12, target_lufs=-16.0, true_peak=-1.0, sample_rate=44100, bed=None, overlap=None, voice_out_path=None, bed_out_path=None)
 
 Place items on a timeline and mix. Clips overlap neighbours by
 `clip_edge_overlap_s` (their faded edges tuck under narration); narration
@@ -223,6 +253,18 @@ the outgoing voice’s talked-over tail (see [`layout_placed()`](#braidio.weave.
 The mix is mastered with one measured gain to `target_lufs` (LUFS) and a
 true-peak limit at `true_peak` (dBTP), so it keeps its own dynamics: a
 quiet passage stays quiet relative to its loud neighbours.
+
+With a `bed`, two stems of the same layout can be written in the same call
+(braidio#227), each sample-aligned with `out` from time 0:
+`voice_out_path` gets the mix without the bed, mastered like `out` (what
+a sound designer should listen to: a bed in the “voice” reads as speech to
+an aligner), and `bed_out_path` gets the bed alone, at the level it has
+against that voice stem (the voice stem’s mastering gain applied; without a
+voice stem, the bed as it is in the mix before mastering), so
+`lay_bed(voice_stem, bed_stem)` gives the mix’s balance back. Without a bed
+neither is written: `out` already is the voice. A bed stem is written
+lossless (FLAC); a bed that peaks above full scale at that level is clipped
+there, where the mix’s limiter would have held it.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)

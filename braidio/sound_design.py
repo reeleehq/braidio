@@ -342,7 +342,9 @@ def level_change_db(before: str | Path, after: str | Path) -> float:
 
     from mixing.loudness import file_loudness
 
-    change = file_loudness(after).integrated_lufs - file_loudness(before).integrated_lufs
+    change = (
+        file_loudness(after).integrated_lufs - file_loudness(before).integrated_lufs
+    )
     return change if math.isfinite(change) else 0.0
 
 

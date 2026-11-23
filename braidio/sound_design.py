@@ -308,6 +308,44 @@ def _foley_score(segments, **kwargs):
     return foley.score(segments, **kwargs)
 
 
+def master_levels(
+    master: Any, *, default_lufs: float = -16.0, default_peak: float = -1.0
+) -> tuple[float, float]:
+    """``(target LUFS, true-peak ceiling dBTP)`` of a designer's delivery profile
+    (``"podcast"``, ``"streaming"``... or a foley ``MasterProfile``), for a mix
+    re-mastered after the design (a bed laid back under it, braidio#262), so it
+    lands where the design asked. Read through ``foley.resolve_master``; when
+    foley is not installed (a host's own designer) or does not know the name,
+    the defaults (the render's own level)."""
+    if master is not None and not isinstance(master, str):
+        lufs = getattr(master, "target_lufs", None)
+        peak = getattr(master, "true_peak_db", None)
+        if lufs is not None and peak is not None:
+            return float(lufs), float(peak)
+    try:
+        from foley import resolve_master
+
+        profile = resolve_master(master)
+    except (ImportError, KeyError, ValueError):
+        return default_lufs, default_peak
+    return float(profile.target_lufs), float(profile.true_peak_db)
+
+
+def level_change_db(before: str | Path, after: str | Path) -> float:
+    """How much louder ``after`` is than ``before`` (integrated loudness, dB);
+    ``0.0`` when either is silent, so a silent voice moves no bed.
+
+    What a designer's mastering did to the voice it was handed: the gain a bed
+    stem laid back under the design needs to keep the episode's balance
+    (:func:`braidio.weave.lay_bed`, braidio#227)."""
+    import math
+
+    from mixing.loudness import file_loudness
+
+    change = file_loudness(after).integrated_lufs - file_loudness(before).integrated_lufs
+    return change if math.isfinite(change) else 0.0
+
+
 def _save_mix(woven, dst: Path) -> None:
     """Write a designer's mastered array (``woven.audio`` at ``woven.sr``) to
     ``dst``, an MP3 through ffmpeg. Needs soundfile, not foley, so a host's own

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import tempfile
 from dataclasses import replace
 from pathlib import Path
 
@@ -591,78 +592,110 @@ def render_production(
     # clip edge (braidio#234). The audio is left exactly as it was.
     layout_edge_overlap = edge_overlap if woven else crossfade
 
-    if woven:
-        items = [
-            TimelineItem(
-                k,
-                str(p),
-                placement=pl,
-                duck_db=(duck_db if pl == "under" else 0.0),
-                spotlight=sp,
-                speaker=spk,
-            )
-            for k, p, pl, sp, spk in zip(kinds, parts, placements, spotlights, speakers)
-        ]
-        weave_timeline(
-            items,
-            out,
-            clip_edge_overlap_s=edge_overlap,
-            narration_crossfade_s=crossfade,
-            target_lufs=target_lufs,
-            bed=music_bed,
-            overlap=turn_overlap,
-        )
-    else:
-        # `crossfade`, not `crossfade_s`: the config's crossfade was read by the
-        # woven branch and by the returned TimelineBreakdown, but NOT here — so a
-        # narration-only render used the function default while the breakdown
-        # reported the config's value. Same value at the shared default (0.12),
-        # so this only starts honouring a crossfade a caller explicitly set.
-        concatenate_audio(
-            *[str(p) for p in parts], output=str(out), crossfade=crossfade
-        )
-    # soft landing so the production doesn't cut dead on the last word
-    if end_silence_s > 0 or end_fade_s > 0:
-        _end_tail(out, fade_s=end_fade_s, silence_s=end_silence_s)
-
-    if return_timeline or sound_design is not None:
-        from braidio.timeline import build_timeline, render_settings
-
-        durs = [duration_s(p) for p in parts]
-        tl = build_timeline(
-            kinds=roles,
-            durations=durs,
-            placements=placements,
-            labels=labels,
-            source_spans=spans,
-            clip_edge_overlap_s=layout_edge_overlap,
-            narration_crossfade_s=crossfade,
-            speakers=speakers,
-            overlap=turn_overlap,
-            turns=turn_spans,
-            title=script.title,
-            # The settings that produced these timings, not the ones asked for:
-            # `crossfade`/`edge_overlap`/`target_lufs`/`duck_db` are the values
-            # this render resolved above. Without the record, a re-render months
-            # later can silently cut differently and nothing says why (#63 made
-            # the pacing knobs real, which is what opened that hole).
-            settings=render_settings(
-                config=config,
-                crossfade_s=crossfade,
-                clip_edge_overlap_s=layout_edge_overlap,
+    # A sound design under a bed listens to the voice, not the bedded mix: the
+    # weave also writes the two stems, and the bed goes back after (braidio#262)
+    stems = (
+        _stem_paths(out)
+        if woven and sound_design is not None and music_bed is not None
+        else None
+    )
+    try:
+        if woven:
+            items = [
+                TimelineItem(
+                    k,
+                    str(p),
+                    placement=pl,
+                    duck_db=(duck_db if pl == "under" else 0.0),
+                    spotlight=sp,
+                    speaker=spk,
+                )
+                for k, p, pl, sp, spk in zip(
+                    kinds, parts, placements, spotlights, speakers
+                )
+            ]
+            weave_timeline(
+                items,
+                out,
+                clip_edge_overlap_s=edge_overlap,
+                narration_crossfade_s=crossfade,
                 target_lufs=target_lufs,
-                duck_db=duck_db,
-                delivery=delivery,
-                profile=profile,
-                normalize=normalize,
-                tts=voice.name,
-            ),
-        )
-        if sound_design is not None:
-            tl = _sound_design(out, tl, spoken, design=sound_design, profile=profile)
-        if return_timeline:
-            return out, tl
-    return out
+                bed=music_bed,
+                overlap=turn_overlap,
+                **(
+                    {}
+                    if stems is None
+                    else {"voice_out_path": stems[0], "bed_out_path": stems[1]}
+                ),
+            )
+        else:
+            # `crossfade`, not `crossfade_s`: the config's crossfade was read by the
+            # woven branch and by the returned TimelineBreakdown, but NOT here — so a
+            # narration-only render used the function default while the breakdown
+            # reported the config's value. Same value at the shared default (0.12),
+            # so this only starts honouring a crossfade a caller explicitly set.
+            concatenate_audio(
+                *[str(p) for p in parts], output=str(out), crossfade=crossfade
+            )
+        # soft landing so the production doesn't cut dead on the last word
+        # (with stems the design replaces this mix and applies the tail itself)
+        if stems is None and (end_silence_s > 0 or end_fade_s > 0):
+            _end_tail(out, fade_s=end_fade_s, silence_s=end_silence_s)
+
+        if return_timeline or sound_design is not None:
+            from braidio.timeline import build_timeline, render_settings
+
+            durs = [duration_s(p) for p in parts]
+            tl = build_timeline(
+                kinds=roles,
+                durations=durs,
+                placements=placements,
+                labels=labels,
+                source_spans=spans,
+                clip_edge_overlap_s=layout_edge_overlap,
+                narration_crossfade_s=crossfade,
+                speakers=speakers,
+                overlap=turn_overlap,
+                turns=turn_spans,
+                title=script.title,
+                # The settings that produced these timings, not the ones asked for:
+                # `crossfade`/`edge_overlap`/`target_lufs`/`duck_db` are the values
+                # this render resolved above. Without the record, a re-render months
+                # later can silently cut differently and nothing says why (#63 made
+                # the pacing knobs real, which is what opened that hole).
+                settings=render_settings(
+                    config=config,
+                    crossfade_s=crossfade,
+                    clip_edge_overlap_s=layout_edge_overlap,
+                    target_lufs=target_lufs,
+                    duck_db=duck_db,
+                    delivery=delivery,
+                    profile=profile,
+                    normalize=normalize,
+                    tts=voice.name,
+                ),
+            )
+            if sound_design is not None:
+                tl = _sound_design(
+                    out,
+                    tl,
+                    spoken,
+                    design=sound_design,
+                    profile=profile,
+                    stems=stems,
+                    target_lufs=target_lufs,
+                    tail=(
+                        {"fade_s": end_fade_s, "silence_s": end_silence_s}
+                        if end_silence_s > 0 or end_fade_s > 0
+                        else None
+                    ),
+                )
+            if return_timeline:
+                return out, tl
+        return out
+    finally:
+        if stems is not None:  # the design removes it; this covers a failure before
+            shutil.rmtree(stems[0].parent, ignore_errors=True)
 
 
 def _spoken(pb) -> str:
@@ -677,7 +710,24 @@ def _spoken(pb) -> str:
     return ""
 
 
-def _sound_design(out: Path, tl, spoken, *, design: SoundDesign, profile):
+def _stem_paths(out: Path) -> tuple[Path, Path]:
+    """Where a render's voice and bed stems go while it is sound-designed: a
+    private temporary folder, removed once the bed is back under the design."""
+    work = Path(tempfile.mkdtemp(prefix=f"braidio-stems-{out.stem}-"))
+    return work / "voice.mp3", work / "bed.flac"
+
+
+def _sound_design(
+    out: Path,
+    tl,
+    spoken,
+    *,
+    design: SoundDesign,
+    profile,
+    stems: tuple[Path, Path] | None = None,
+    target_lufs: float = -16.0,
+    tail: dict | None = None,
+):
     """Sound-design the finished mix in place; record it on the timeline.
 
     Only spoken beats are segments (:func:`braidio.sound_design.talk_segments`),
@@ -687,14 +737,68 @@ def _sound_design(out: Path, tl, spoken, *, design: SoundDesign, profile):
     timeline back. foley masters the result to ``design.master``, so the
     record's resolved block says so (its ``target_lufs`` is the level the mix
     had before the design).
+
+    With ``stems`` (the voice and bed stems of a production with a music bed,
+    braidio#262), the designer hears the voice stem, not the bedded mix (a bed in
+    the "voice" reads as speech to an aligner), and the bed stem is laid back
+    under the design, moved by the designer's own level change and mastered to
+    the design's ``master`` profile (``target_lufs`` when it cannot be read);
+    ``tail`` (``_end_tail``'s keywords) is then applied again,
+    since the mix it was applied to is replaced. The stems' folder is removed.
     """
     import json
     from dataclasses import replace
 
     spans = talk_spans(tl.beats, spoken)
-    scored = score_mix(out, spans, design=design, profile=profile, out_path=out)
+    if stems is None:
+        scored = score_mix(out, spans, design=design, profile=profile, out_path=out)
+    else:
+        scored = _design_under_bed(
+            out,
+            spans,
+            stems,
+            design=design,
+            profile=profile,
+            target_lufs=target_lufs,
+            tail=tail,
+        )
     record = {"design": design.to_dict(), **scored.to_dict()}
+    if stems is not None:
+        record["bed"] = (
+            f"the music bed was laid back under the design and the sum mastered "
+            f"to the design's {design.master!s} profile (braidio#262)"
+        )
     out.with_suffix(SOUND_SIDECAR_SUFFIX).write_text(json.dumps(record, indent=2))
     settings = dict(tl.settings or {})
     settings["resolved"] = {**settings.get("resolved", {}), "master": design.master}
     return replace(tl, settings={**settings, "sound_design": record})
+
+
+def _design_under_bed(out, spans, stems, *, design, profile, target_lufs, tail):
+    """Design the voice stem, lay the bed stem back under it into ``out`` (and
+    its tail after); the stems' folder is removed whatever happens."""
+    from dataclasses import replace
+
+    from braidio.sound_design import level_change_db, master_levels
+    from braidio.weave import lay_bed
+
+    voice, bed = stems
+    lufs, peak = master_levels(design.master, default_lufs=target_lufs)
+    try:
+        designed = voice.with_name("designed.flac")
+        scored = score_mix(
+            voice, spans, design=design, profile=profile, out_path=designed
+        )
+        lay_bed(
+            designed,
+            bed,
+            out,
+            bed_gain_db=level_change_db(voice, designed),
+            target_lufs=lufs,
+            true_peak=peak,
+        )
+        if tail is not None:
+            _end_tail(out, **tail)
+        return replace(scored, path=out)
+    finally:
+        shutil.rmtree(voice.parent, ignore_errors=True)

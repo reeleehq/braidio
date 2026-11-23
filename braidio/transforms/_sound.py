@@ -46,7 +46,13 @@ from nw.transforms.sound_design import (
 )
 
 from braidio.bodies._render_nodes import EPISODE_RENDER_V1
-from braidio.sound_design import spoken_of, talk_segments, talk_spans
+from braidio.sound_design import (
+    level_change_db,
+    master_levels,
+    spoken_of,
+    talk_segments,
+    talk_spans,
+)
 from braidio.transforms._common import (
     TIER_EPISODE_RENDER,
     TIER_SOUND_DESIGN,
@@ -164,22 +170,22 @@ class EpisodeToSoundDesign(NarrationToSoundDesign):
             episode.body.get("bed_artifact_id") or episode.body.get("bed_url")
         ):
             return completed
-        return completed.model_copy(
-            update={"body": _with_bed(project, episode, completed.body, index=index)}
+        config = next(
+            (
+                a
+                for a in resolve_parents(skeleton, index)
+                if a.body_schema_uri == SOUND_DESIGN_CONFIG_BODY_SCHEMA_URI
+            ),
+            None,
         )
-
-
-def _level_change_db(before, after) -> float:
-    """How much louder ``after`` is than ``before`` (integrated loudness, dB);
-    ``0.0`` when either is silent, so a silent voice moves no bed."""
-    import math
-
-    from mixing.loudness import file_loudness
-
-    change = (
-        file_loudness(after).integrated_lufs - file_loudness(before).integrated_lufs
-    )
-    return change if math.isfinite(change) else 0.0
+        master = config.body.get("master") if config is not None else None
+        return completed.model_copy(
+            update={
+                "body": _with_bed(
+                    project, episode, completed.body, index=index, master=master
+                )
+            }
+        )
 
 
 def _stem_ref(body: dict, stem: str) -> dict:
@@ -191,7 +197,9 @@ def _stem_ref(body: dict, stem: str) -> dict:
     }
 
 
-def _with_bed(project, episode: Annotation, body: dict, *, index: dict) -> dict:
+def _with_bed(
+    project, episode: Annotation, body: dict, *, index: dict, master=None
+) -> dict:
     """``body`` (a completed ``sound-design/v1``) naming its mix with the
     episode's bed stem laid back under it, mastered as the episode was.
 
@@ -222,6 +230,11 @@ def _with_bed(project, episode: Annotation, body: dict, *, index: dict) -> dict:
     )
     cfg = require_tier(resolve_parents(episode, index), TIER_WEAVE_CONFIG)
     weave = WeaveConfig.from_snapshot(cfg.body.get("config", {}))
+    # the served mix lands where the design's delivery profile asked, as it does
+    # without a bed (foley masters it there)
+    lufs, peak = master_levels(
+        master, default_lufs=weave.target_lufs, default_peak=weave.true_peak_dbtp
+    )
     with tempfile.TemporaryDirectory(prefix="braidio-bed-") as work:
         designed = store.blob_path(designed_id)
         if designed is None:  # an opaque blob backend: spool the bytes
@@ -231,9 +244,9 @@ def _with_bed(project, episode: Annotation, body: dict, *, index: dict) -> dict:
             designed,
             bed,
             Path(work) / "design-with-bed.flac",
-            bed_gain_db=_level_change_db(voice, designed),
-            target_lufs=weave.target_lufs,
-            true_peak=weave.true_peak_dbtp,
+            bed_gain_db=level_change_db(voice, designed),
+            target_lufs=lufs,
+            true_peak=peak,
             sample_rate=weave.sample_rate,
         )
         import braidio
@@ -244,7 +257,8 @@ def _with_bed(project, episode: Annotation, body: dict, *, index: dict) -> dict:
         bedded_id = store.put_blob(out.read_bytes())
     note = (
         f"the episode's music bed was laid back under the design and the sum "
-        f"mastered to {weave.target_lufs:g} LUFS; the design without the bed is "
+        f"mastered to {lufs:g} LUFS (the design's {master or 'default'} profile); "
+        f"the design without the bed is "
         f"{designed_id}, which foley's report (master_report.design) measures "
         "(braidio#227)"
     )

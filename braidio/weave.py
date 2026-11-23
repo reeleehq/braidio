@@ -574,7 +574,9 @@ def bed_spans(
     if not spotlights:
         return [
             (
-                prepare_bed(bed, total_s, work_dir / f"{stem}.mp3", sample_rate=sample_rate),
+                prepare_bed(
+                    bed, total_s, work_dir / f"{stem}.mp3", sample_rate=sample_rate
+                ),
                 bed.lead_in_s,
             )
         ]

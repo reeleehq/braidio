@@ -70,7 +70,9 @@ SOUND_DESIGN_CATALOG_KIND = "audio"
 #: The project an :class:`EpisodeToSoundDesign` is executing in: completing a
 #: design reads the episode's bed stem from it (nw's completion hook gets no
 #: project).
-_EXECUTING_PROJECT: ContextVar = ContextVar("braidio_sound_design_project", default=None)
+_EXECUTING_PROJECT: ContextVar = ContextVar(
+    "braidio_sound_design_project", default=None
+)
 
 
 def episode_talk(project, episode: Annotation) -> tuple[list[str], list[float]]:
@@ -151,7 +153,11 @@ class EpisodeToSoundDesign(NarrationToSoundDesign):
             return completed
         index = graph_index(project)
         episode = next(
-            (a for a in resolve_parents(skeleton, index) if a.tier == TIER_EPISODE_RENDER),
+            (
+                a
+                for a in resolve_parents(skeleton, index)
+                if a.tier == TIER_EPISODE_RENDER
+            ),
             None,
         )
         if episode is None or not (
@@ -170,14 +176,19 @@ def _level_change_db(before, after) -> float:
 
     from mixing.loudness import file_loudness
 
-    change = file_loudness(after).integrated_lufs - file_loudness(before).integrated_lufs
+    change = (
+        file_loudness(after).integrated_lufs - file_loudness(before).integrated_lufs
+    )
     return change if math.isfinite(change) else 0.0
 
 
 def _stem_ref(body: dict, stem: str) -> dict:
     """``{"artifact_id", "url"}`` of an episode body's ``stem`` (``"voice"`` /
     ``"bed"``), the shape :func:`media_path` reads."""
-    return {"artifact_id": body.get(f"{stem}_artifact_id"), "url": body.get(f"{stem}_url")}
+    return {
+        "artifact_id": body.get(f"{stem}_artifact_id"),
+        "url": body.get(f"{stem}_url"),
+    }
 
 
 def _with_bed(project, episode: Annotation, body: dict, *, index: dict) -> dict:
@@ -200,7 +211,9 @@ def _with_bed(project, episode: Annotation, body: dict, *, index: dict) -> dict:
     store = default_content_store()
     designed_id = body["artifact_id"]
     bed = media_path(
-        project.root, _stem_ref(episode.body, "bed"), what=f"episode {episode.id}'s bed stem"
+        project.root,
+        _stem_ref(episode.body, "bed"),
+        what=f"episode {episode.id}'s bed stem",
     )
     voice = media_path(
         project.root,

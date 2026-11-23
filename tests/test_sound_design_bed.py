@@ -50,8 +50,7 @@ class _Serializable(SimpleNamespace):
 def foley(monkeypatch):
     """A ``foley`` stand-in whose design is silence as long as what it was given:
     any sound in the served mix then came from the bed laid back under it."""
-    import numpy as np
-    import soundfile as sf
+    import wave
 
     mod = ModuleType("foley")
     mod.calls = []
@@ -64,7 +63,7 @@ def foley(monkeypatch):
             timeline=_Serializable(items=()),
             events=[],
             weave=SimpleNamespace(
-                audio=np.zeros((n, 2), dtype="float32"),
+                audio=[(0, 0)] * n,
                 sr=rate,
                 credits=_Serializable(entries=()),
                 captions_vtt="WEBVTT\n",
@@ -74,7 +73,12 @@ def foley(monkeypatch):
         )
 
     def save(samples, sample_rate, dst, *, fmt="flac", subtype="PCM_24"):
-        sf.write(dst, samples, sample_rate, format=fmt.upper(), subtype=subtype)
+        # stdlib WAV (16-bit silence): ffmpeg reads a blob by its content
+        with wave.open(dst, "wb") as w:
+            w.setnchannels(2)
+            w.setsampwidth(2)
+            w.setframerate(sample_rate)
+            w.writeframes(b"\x00" * (4 * len(samples)))
 
     mod.score = score
     mod.audio = SimpleNamespace(save=save)
